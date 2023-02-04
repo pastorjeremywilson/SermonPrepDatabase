@@ -3,11 +3,8 @@ import os
 import re
 import shutil
 import sqlite3
-import threading
-from datetime import datetime
 from os.path import exists
 
-from PyQt5.QtCore import QThread
 from PyQt5.QtWidgets import QFileDialog, QDialog, QGridLayout, QLabel, QProgressBar, QPushButton, QWidget
 
 from Dialogs import message_box

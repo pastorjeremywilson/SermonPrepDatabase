@@ -25,19 +25,12 @@ https://www.ghostscript.com/licensing/index.html for more information.
 
 import os
 import re
-import shutil
 import sqlite3
 import sys
-import threading
 from datetime import datetime
-from itertools import islice
 from os.path import exists
-from time import sleep
 
-import pkg_resources
-from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDialog, QGridLayout, QLabel, QFileDialog, QProgressBar, \
-    QPushButton, QDateEdit
-from markdownify import markdownify
+from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDateEdit
 from symspellpy import SymSpell
 
 from Dialogs import yes_no_cancel_box, message_box
@@ -86,8 +79,8 @@ class SermonPrepDatabase:
         self.write_to_log('application directory is ' + self.app_dir)
         self.write_to_log('database location is ' + self.db_loc)
 
-        #self.sym_spell = SymSpell()
-        #self.load_dictionaries()
+        self.sym_spell = SymSpell(max_dictionary_edit_distance=2, prefix_length=7)
+        self.load_dictionaries()
 
         self.gui = GUI(self)
 
@@ -566,8 +559,8 @@ class SermonPrepDatabase:
         logfile.close()
 
     def load_dictionaries(self):
-        self.sym_spell.create_dictionary(self.cwd + 'resources/dictionary_en_us_custom.txt')
-        print(list(islice(self.sym_spell.words.items(), 50)))
+        self.sym_spell.load_dictionary(self.cwd + 'resources/dictionary_en_us', term_index=0, count_index=1)
+        #self.sym_spell.load_dictionary(pkg_resources.resource_filename('symspellpy', 'frequency_dictionary_en_82_765.txt'), term_index=0, count_index=1)
 
         #dictionary_path = pkg_resources.resource_filename(
         #    "symspellpy", "frequency_bigramdictionary_en_243_342.txt"

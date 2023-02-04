@@ -25,12 +25,11 @@ https://www.ghostscript.com/licensing/index.html for more information.
 import os
 import sys
 
-from datetime import datetime
 from Dialogs import message_box
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap
 from PyQt5.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableView, QPushButton, QColorDialog, \
-    QTabWidget, QTextEdit, QHBoxLayout, QComboBox, QScrollArea, QTextBrowser, QDialog
+    QTabWidget, QHBoxLayout, QComboBox, QScrollArea, QTextBrowser, QDialog
 from pynput.keyboard import Key, Controller
 from TopFrame import TopFrame
 
