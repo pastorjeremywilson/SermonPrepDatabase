@@ -3,7 +3,7 @@
 
 Copyright 2022 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.0)
+This file is a part of the Sermon Prep Database program (v.3.3.2)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -29,7 +29,7 @@ import sys
 from os.path import exists
 
 from PyQt5.QtCore import Qt, QSize, QDate, QDateTime
-from PyQt5.QtGui import QIcon, QFont, QKeyEvent
+from PyQt5.QtGui import QIcon, QFont, QKeyEvent, QTextCursor
 from PyQt5.QtWidgets import *
 from symspellpy import Verbosity
 
@@ -56,7 +56,7 @@ class GUI:
         if not exists(self.spd.db_loc):
             response = yes_no_cancel_box(
                 'Database Not Found',
-                'It looks like this is the first time you\'ve run Sermon Prep Database v3.3.0.\n'
+                'It looks like this is the first time you\'ve run Sermon Prep Database v3.3.2.\n'
                 'Would you like to import an old database?',
                 '#ffffff',
                 'Import',
@@ -81,6 +81,8 @@ class GUI:
         self.spd.get_scripture_list()
         self.spd.get_user_settings()
         self.spd.backup_db()
+
+        print(self.spd.user_settings[1])
 
         self.accent_color = self.spd.user_settings[1]
         self.background_color = self.spd.user_settings[2]
@@ -133,7 +135,6 @@ class GUI:
         
         pericope_text_label = QLabel(self.spd.user_settings[6])
         self.scripture_frame_layout.addWidget(pericope_text_label, 2, 0)
-        
         pericope_text_edit = CustomTextEdit(self.win, self)
         pericope_text_edit.cursorPositionChanged.connect(lambda: self.set_style_buttons(pericope_text_edit))
         self.scripture_frame_layout.addWidget(pericope_text_edit, 3, 0)
@@ -408,13 +409,13 @@ class GUI:
             component = self.scripture_frame_layout.itemAt(i).widget()
             if isinstance(component, QLineEdit):
                 if record[0][index]:
-                    component.setText(str(record[0][index].replace('&quot', '"')))
+                    component.setText(str(record[0][index].replace('&quot', '"')).strip())
                 else:
                     component.clear()
                 index += 1
             elif isinstance(component, QTextEdit):
                 if record[0][index]:
-                    component.setMarkdown(record[0][index].replace('&quot', '"'))
+                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
                 else:
                     component.clear()
                 index += 1
@@ -422,7 +423,7 @@ class GUI:
             component = self.exegesis_frame_layout.itemAt(i).widget()
             if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
                 if record[0][index]:
-                    component.setMarkdown(record[0][index].replace('&quot', '"'))
+                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
                 else:
                     component.clear()
                 index += 1
@@ -430,7 +431,7 @@ class GUI:
             component = self.outline_frame_layout.itemAt(i).widget()
             if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
                 if record[0][index]:
-                    component.setMarkdown(record[0][index].replace('&quot', '"'))
+                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
                 else:
                     component.clear()
                 index += 1
@@ -439,7 +440,7 @@ class GUI:
             if isinstance(component, QTextEdit):
                 if record[0][index]:
                     text = self.spd.reformat_string_for_load(record[0][index])
-                    component.setMarkdown(text)
+                    component.setMarkdown(text.strip())
                 else:
                     component.clear()
                 index += 1
@@ -474,7 +475,7 @@ class GUI:
                 index += 1
 
             if isinstance(component, CustomTextEdit):
-                component.setMarkdown(record[0][index].replace('&quot', '"'))
+                component.setMarkdown(record[0][index].replace('&quot', '"').strip())
                 index += 1
 
             if component.objectName() == 'text_box':
@@ -540,52 +541,129 @@ class CustomTextEdit(QTextEdit):
         self.gui = gui
         self.textChanged.connect(self.changes)
 
-    def contextMenuEvent(self, e):
-        menu = self.createStandardContextMenu()
-        clean_whitespace_action = QAction("Remove extra whitespace")
-        clean_whitespace_action.triggered.connect(self.clean_whitespace)
-        menu.insertAction(menu.actions()[0], clean_whitespace_action)
-        menu.insertSeparator(menu.actions()[1])
-        menu.exec(e.globalPos())
-        menu.close()
-
     def changes(self):
-        self.gui.changes = True
-        #Partial spell checking, not implemented
-        '''text = ''
-        cursor_pos = self.textCursor().position()
         self.blockSignals(True)
+        dictionary = self.gui.spd.sym_spell.words
+        chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\u2026', '\u201c', '\u201d']
+        single_quotes = ['\u2018', '\u2019']
 
-        try:
-            words = [i for i in self.toMarkdown().split()]
+        cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.Start)
 
-            dictionary = self.gui.spd.sym_spell.words
-            chars = ['.', ',', ';', ':', '?', '!', '"', '...', '\u2026', '\u201c', '\u201d']
-            single_quotes = ['\u2018', '\u2019']
+        while True:
+            cursor.select(cursor.WordUnderCursor)
+            word = cursor.selection().toPlainText()
 
-            for word in words:
+            if len(word) > 0:
                 cleaned_word = word.lower()
                 for char in chars:
                     cleaned_word = cleaned_word.replace(char, '')
                 for single_quote in single_quotes:
                     cleaned_word = cleaned_word.replace(single_quote, '\'')
                 cleaned_word = cleaned_word.replace('\'s', '')
-                cleaned_word = cleaned_word.replace('s\'', 's')
+                cleaned_word = cleaned_word.replace('s\'', ' ')
                 cleaned_word = cleaned_word.replace("<[.?*]>", '')
+
                 if any(c.isalpha() for c in word):
-                    if not cleaned_word in dictionary:
-                        word = '<span style="background: red">' + word + '</span>'
-                text += word + ' '
+                    char_format = cursor.charFormat()
+                    if cleaned_word not in dictionary:
+                        char_format.setForeground(Qt.red)
+                        cursor.mergeCharFormat(char_format)
 
-            self.setHtml(text)
-            self.blockSignals(False)
+                    else:
+                        if char_format.foreground() == Qt.red:
+                            char_format.setForeground(Qt.black)
+                            cursor.mergeCharFormat(char_format)
 
+            cursor.clearSelection()
+            last_position = cursor.position()
+            cursor.movePosition(QTextCursor.NextWord)
+
+            if cursor.position() == last_position: break
+
+        self.blockSignals(False)
+
+    def contextMenuEvent(self, e):
+        try:
+            menu = self.createStandardContextMenu()
+
+            clean_whitespace_action = QAction("Remove extra whitespace")
+            clean_whitespace_action.triggered.connect(self.clean_whitespace)
+            menu.insertAction(menu.actions()[0], clean_whitespace_action)
+            menu.insertSeparator(menu.actions()[1])
+
+            cursor = self.cursorForPosition(e.pos())
+            cursor.select(QTextCursor.WordUnderCursor)
+            word = cursor.selection().toPlainText()
+
+            chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\u2026', '\u201c', '\u201d']
+            single_quotes = ['\u2018', '\u2019']
+
+            upper = False
+            if word[0].isupper():
+                upper = True
+
+            cleaned_word = word.lower()
+            for char in chars:
+                cleaned_word = cleaned_word.replace(char, '')
+            for single_quote in single_quotes:
+                cleaned_word = cleaned_word.replace(single_quote, '\'')
+            cleaned_word = cleaned_word.replace('\'s', '')
+            cleaned_word = cleaned_word.replace('s\'', 's')
+            cleaned_word = cleaned_word.replace("<[.?*]>", '')
+
+            suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+                                                        include_unknown=True)
+
+            if not (len(suggestions) == 1 and suggestions[0].term == cleaned_word):
+                spell_actions = {}
+
+                number_of_suggestions = len(suggestions)
+                if number_of_suggestions > 10: number_of_suggestions = 11
+
+                for i in range(number_of_suggestions):
+                    term = suggestions[i].term
+                    if upper:
+                        term = term[0].upper() + term[1:]
+                    spell_actions['action% s' % str(i)] = QAction(term)
+                    spell_actions['action% s' % str(i)].setData((cursor, term))
+                    spell_actions['action% s' % str(i)].triggered.connect(self.replace_word)
+                    menu.insertAction(menu.actions()[i], spell_actions['action% s' % str(i)])
+
+                menu.insertSeparator(menu.actions()[11])
+
+            menu.exec(e.globalPos())
+            menu.close()
+        except Exception:
+            logging.exception('')
+
+    def replace_word(self):
+        sender = self.sender()
+        cursor = sender.data()[0]
+        term = sender.data()[1]
+        try:
+            self.setTextCursor(cursor)
+            self.textCursor().removeSelectedText()
             cursor = self.textCursor()
-            cursor.setPosition(cursor_pos)
+            cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor)
             self.setTextCursor(cursor)
 
+            chars = ['.', ',', ';', ':', '?', '!', '"', '*', '-', '_', '\u2026', '\u201c', '\u201d', '\u2018', '\u2019']
+            add_space = True
+            for char in chars:
+                if self.textCursor().selectedText() == char:
+                    add_space = False
+
+            cursor = self.textCursor()
+            cursor.movePosition(QTextCursor.PreviousCharacter, QTextCursor.MoveAnchor)
+            self.setTextCursor(cursor)
+
+            if add_space:
+                self.textCursor().insertText(term + ' ')
+            else:
+                self.textCursor().insertText(term)
         except Exception:
-            logging.exception('')'''
+            logging.exception('')
 
     def clean_whitespace(self):
         component = self.win.focusWidget()
