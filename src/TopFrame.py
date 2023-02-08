@@ -1,7 +1,7 @@
 '''
 @author Jeremy G. Wilson
 
-Copyright 2022 Jeremy G. Wilson
+Copyright 2023 Jeremy G. Wilson
 
 This file is a part of the Sermon Prep Database program (v.3.3.2)
 

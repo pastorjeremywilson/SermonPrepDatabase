@@ -1,7 +1,7 @@
 '''
 @author Jeremy G. Wilson
 
-Copyright 2022 Jeremy G. Wilson
+Copyright 2023 Jeremy G. Wilson
 
 This file is a part of the Sermon Prep Database program (v.3.3.2)
 
@@ -542,6 +542,7 @@ class CustomTextEdit(QTextEdit):
         self.textChanged.connect(self.changes)
 
     def changes(self):
+        self.gui.changes = True
         self.blockSignals(True)
         dictionary = self.gui.spd.sym_spell.words
         chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\u2026', '\u201c', '\u201d']
