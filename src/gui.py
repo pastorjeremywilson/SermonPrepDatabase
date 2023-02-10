@@ -67,7 +67,7 @@ class GUI:
                 from ConvertDatabase import ConvertDatabase
                 ConvertDatabase(self.spd)
             elif response == 1:
-                shutil.copy(self.spd.cwd + 'src/database_template.db', self.spd.db_loc)
+                shutil.copy(self.spd.cwd + 'resources/database_template.db', self.spd.db_loc)
                 message_box('Database Created', 'A new database has been created.', '#ffffff')
             else:
                 print('Cancel pressed')

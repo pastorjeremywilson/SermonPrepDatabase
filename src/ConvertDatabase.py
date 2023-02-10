@@ -48,7 +48,7 @@ class ConvertDatabase(QDialog):
             if not exists(app_dir):
                 os.mkdir(app_dir)
 
-            shutil.copy('database_template.db', self.spd.db_loc)
+            shutil.copy(self.spd.cwd + 'resources/database_template.db', self.spd.db_loc)
 
             message_box('Database Created', 'A new database has been created.', '#ffffff')
             return 0
@@ -59,7 +59,7 @@ class ConvertDatabase(QDialog):
             if not exists(self.spd.app_dir):
                 os.mkdir(self.spd.app_dir)
 
-            shutil.copy('database_template.db', self.spd.db_loc)
+            shutil.copy(self.spd.cwd + 'resources/database_template.db', self.spd.db_loc)
 
             conn = sqlite3.connect(self.spd.db_loc)
             cur = conn.cursor()
