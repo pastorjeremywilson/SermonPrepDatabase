@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.2)
+This file is a part of the Sermon Prep Database program (v.3.3.4)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -94,8 +94,7 @@ class SermonPrepDatabase:
 
             self.loading_box.change_text('Loading dictionaries')
 
-            self.sym_spell = SymSpell()
-            self.sym_spell.create_dictionary(self.cwd + 'resources/dictionary_en_us_custom.txt')
+            self.load_dictionary()
 
             self.loading_box.change_text('Building GUI')
 
@@ -111,6 +110,26 @@ class SermonPrepDatabase:
             app.exec()
         except Exception:
             logging.exception('')
+
+    def load_dictionary(self):
+        self.sym_spell = SymSpell()
+        self.sym_spell.create_dictionary(self.cwd + 'resources/dictionary_en_us_custom.txt')
+        with open(self.cwd + 'resources/custom_words.txt', 'r') as file:
+            custom_words = file.readlines()
+        for entry in custom_words:
+            self.sym_spell.create_dictionary_entry(entry.strip(), 1)
+
+    def add_to_dictionary(self, widget, word):
+        try:
+            self.sym_spell.create_dictionary_entry(word, 1)
+            with open(self.cwd + 'resources/custom_words.txt', 'a') as file:
+                file.write(word + '\n')
+            text = widget.toMarkdown()
+            widget.setMarkdown(text)
+
+        except Exception:
+            logging.exception('')
+
 
     # retrieve the list of ID numbers from the database
     def get_ids(self):

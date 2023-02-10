@@ -1,2 +1,1 @@
-Fix partial loading of progress_widget
-Work on spell checker
+Add ability to add words to dictionary (and maybe take them back out)

@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.2)
+This file is a part of the Sermon Prep Database program (v.3.3.4)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -56,7 +56,7 @@ class GUI:
         if not exists(self.spd.db_loc):
             response = yes_no_cancel_box(
                 'Database Not Found',
-                'It looks like this is the first time you\'ve run Sermon Prep Database v3.3.2.\n'
+                'It looks like this is the first time you\'ve run Sermon Prep Database v3.3.4.\n'
                 'Would you like to import an old database?',
                 '#ffffff',
                 'Import',
@@ -264,6 +264,7 @@ class GUI:
         self.research_frame_layout.addWidget(research_label, 0, 0)
         
         research_text = CustomTextEdit(self.win, self)
+        research_text.setObjectName('research')
         research_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(research_text))
         self.research_frame_layout.addWidget(research_text, 1, 0)
 
@@ -545,8 +546,9 @@ class CustomTextEdit(QTextEdit):
         self.gui.changes = True
         self.blockSignals(True)
         dictionary = self.gui.spd.sym_spell.words
-        chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\u2026', '\u201c', '\u201d']
+        chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\n', '\u2026', '\u201c', '\u201d']
         single_quotes = ['\u2018', '\u2019']
+        contractions = ['\'s', '\'ve', '\'t', '\'ll', '\'d', '\'re']
 
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.Start)
@@ -561,9 +563,15 @@ class CustomTextEdit(QTextEdit):
                     cleaned_word = cleaned_word.replace(char, '')
                 for single_quote in single_quotes:
                     cleaned_word = cleaned_word.replace(single_quote, '\'')
-                cleaned_word = cleaned_word.replace('\'s', '')
-                cleaned_word = cleaned_word.replace('s\'', ' ')
-                cleaned_word = cleaned_word.replace("<[.?*]>", '')
+
+                if cleaned_word.startswith('\'') and cleaned_word.endswith('\''):
+                    cleaned_word = cleaned_word.replace('\'', '')
+                elif cleaned_word.startswith('\''):
+                    cleaned_word = cleaned_word.replace('\'', '')
+
+                cleaned_word = cleaned_word.replace('s\'', '')
+                for cont in contractions:
+                    cleaned_word = cleaned_word.replace(cont, '')
 
                 if any(c.isalpha() for c in word):
                     char_format = cursor.charFormat()
@@ -631,7 +639,11 @@ class CustomTextEdit(QTextEdit):
                     spell_actions['action% s' % str(i)].triggered.connect(self.replace_word)
                     menu.insertAction(menu.actions()[i], spell_actions['action% s' % str(i)])
 
-                menu.insertSeparator(menu.actions()[11])
+                menu.insertSeparator(menu.actions()[i + 1])
+                action = QAction('Add to dictionary')
+                action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, cleaned_word))
+                menu.insertAction(menu.actions()[i + 2], action)
+                menu.insertSeparator(menu.actions()[i + 3])
 
             menu.exec(e.globalPos())
             menu.close()
@@ -649,7 +661,7 @@ class CustomTextEdit(QTextEdit):
             cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor)
             self.setTextCursor(cursor)
 
-            chars = ['.', ',', ';', ':', '?', '!', '"', '*', '-', '_', '\u2026', '\u201c', '\u201d', '\u2018', '\u2019']
+            chars = ['.', ',', ';', ':', '?', '!', '"', '*', '-', '_', '\n', ' ', '\u2026', '\u201c', '\u201d', '\u2018', '\u2019']
             add_space = True
             for char in chars:
                 if self.textCursor().selectedText() == char:

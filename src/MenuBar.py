@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.2)
+This file is a part of the Sermon Prep Database program (v.3.3.4)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -83,23 +83,27 @@ class MenuBar:
         paste_action = edit_menu.addAction('Paste (Ctrl-V)')
         paste_action.triggered.connect(self.press_ctrl_v)
 
-        confit_menu = edit_menu.addMenu('Configure')
+        config_menu = edit_menu.addMenu('Configure')
 
-        bg_color_action = confit_menu.addAction('Change Accent Color')
+        bg_color_action = config_menu.addAction('Change Accent Color')
         bg_color_action.setStatusTip('Choose a different color for accents and borders')
         bg_color_action.triggered.connect(lambda: self.color_change('bg'))
 
-        fg_color_action = confit_menu.addAction('Change Background Color')
+        fg_color_action = config_menu.addAction('Change Background Color')
         fg_color_action.setStatusTip('Choose a different color for the background')
         fg_color_action.triggered.connect(lambda: self.color_change('fg'))
 
-        rename_action = confit_menu.addAction('Rename Labels')
+        rename_action = config_menu.addAction('Rename Labels')
         rename_action.setStatusTip('Rename the labels in this program')
         rename_action.triggered.connect(self.rename_labels)
 
-        font_action = confit_menu.addAction('Change Font')
-        font_action.setStatusTip(('Change the font and font size used in the program'))
+        font_action = config_menu.addAction('Change Font')
+        font_action.setStatusTip('Change the font and font size used in the program')
         font_action.triggered.connect(self.change_font)
+
+        remove_words_item = config_menu.addAction('Remove custom words from dictionary')
+        remove_words_item.setStatusTip('Choose words to remove from the dictionary that have been added by you')
+        remove_words_item.triggered.connect(self.remove_words)
 
         record_menu = menu_bar.addMenu('Record')
         record_menu.setStyleSheet(menu_style)
@@ -449,7 +453,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.3.3.2')
+        about_label = QLabel('Sermon Prep Database v.3.3.4')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 
@@ -483,6 +487,10 @@ class MenuBar:
         about_layout.addWidget(about_text)
 
         about_win.show()
+
+    def remove_words(self):
+        from Dialogs import RemoveCustomWords
+        self.rcm = RemoveCustomWords(self.spd)
 
     def change_font(self):
         fonts = QFontDatabase()

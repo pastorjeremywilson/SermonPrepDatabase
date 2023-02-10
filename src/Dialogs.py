@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.2)
+This file is a part of the Sermon Prep Database program (v.3.3.4)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -22,9 +22,10 @@ The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
 '''
+import logging
 
 from PyQt5.QtCore import QSize, Qt, QTimer
-from PyQt5.QtWidgets import QDialog, QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget, QHBoxLayout
+from PyQt5.QtWidgets import QDialog, QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QListWidget
 
 
 # function to show a simple OK dialog box
@@ -110,3 +111,57 @@ def timed_popup(message, millis, bg):
     timer.singleShot(millis, lambda: dialog.done(0))
 
     dialog.show()
+
+class RemoveCustomWords:
+    def __init__(self, spd):
+        self.changes = False
+        try:
+            self.spd = spd
+            self.widget = QWidget()
+            self.widget.setWindowTitle('Sermon Prep Database - Remove Custom Words')
+
+            layout = QVBoxLayout()
+            self.widget.setLayout(layout)
+
+            with open(spd.cwd + 'resources/custom_words.txt') as file:
+                custom_words = file.readlines()
+
+            self.word_list = QListWidget()
+            for word in custom_words:
+                self.word_list.addItem(word.strip())
+            layout.addWidget(self.word_list)
+
+            button_widget = QWidget()
+            button_layout = QHBoxLayout()
+            button_widget.setLayout(button_layout)
+
+            remove_button = QPushButton('Remove')
+            remove_button.pressed.connect(self.remove_word)
+            button_layout.addWidget(remove_button)
+
+            close_button = QPushButton('Close')
+            close_button.pressed.connect(self.close)
+            button_layout.addWidget(close_button)
+
+            layout.addWidget(button_widget)
+
+            self.widget.show()
+        except Exception:
+            logging.exception('')
+
+    def remove_word(self):
+        self.changes = True
+        self.word_list.takeItem(self.word_list.currentRow())
+
+    def close(self):
+        if self.changes:
+            lines = []
+            file = open(self.spd.cwd + 'resources/custom_words.txt', 'w')
+            try:
+                for r in range(len(self.word_list)):
+                    lines.append(self.word_list.item(r).text() + '\n')
+                file.writelines(lines)
+                file.close()
+            except Exception:
+                logging.exception('')
+        self.widget.close()
