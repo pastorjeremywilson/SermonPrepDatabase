@@ -24,9 +24,8 @@ https://www.ghostscript.com/licensing/index.html for more information.
 '''
 
 from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtGui import QStandardItemModel, QStandardItem, QTextCharFormat, QFont, QTextListFormat, QTextCursor
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel, QComboBox, QLineEdit, QTextEdit, QVBoxLayout, \
-    QTableView
+from PyQt5.QtGui import QTextCharFormat, QFont, QTextListFormat, QTextCursor, QIcon
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel, QComboBox, QLineEdit, QTextEdit
 
 
 class TopFrame(QWidget):
@@ -236,99 +235,11 @@ class TopFrame(QWidget):
                 self.gui.background_color
             )
         else:
-            global results_widget
-            results_widget = QWidget()
-            results_widget.setWindowFlag(Qt.Window)
-            results_widget.resize(920, 400)
-            results_widget_layout = QVBoxLayout()
-            results_widget.setLayout(results_widget_layout)
-            results_widget.setStyleSheet('''
-                QWidget {
-                    background-color: ''' + self.gui.background_color + ''';}
-                QLabel {
-                    font-family: "Helvetica";
-                    font-size: 16px;
-                    padding: 10px;
-                    font-color: ''' + self.gui.accent_color + ''';}
-                QTableView {
-                    background-color: white;
-                    font-family: "Helvetica";
-                    font-size: 16px;
-                    padding: 3px;}
-                ''')
-
-            results_label = QLabel()
-            results_widget_layout.addWidget(results_label)
-
-            filtered_results = []
-            for line in result_list:
-
-                counter = 0
-                for item in line[0]:
-                    counter += 1
-
-                words_found = str(line[1])
-                words_found = words_found.replace('[', '')
-                words_found = words_found.replace(']', '')
-                words_found = words_found.replace("\'", '')
-                filtered_results.append((
-                    str(line[0][0]),
-                    str(line[2]),
-                    words_found,
-                    line[0][3],
-                    line[0][16],
-                    line[0][17],
-                    line[0][21][0:100] + '...'))
-
-            model = QStandardItemModel(len(filtered_results), 5)
-            for i in range(len(filtered_results)):
-                for n in range(len(filtered_results[i])):
-                    item = QStandardItem(filtered_results[i][n])
-                    item.setEditable(False)
-                    model.setItem(i, n, item)
-            model.setHeaderData(0, Qt.Horizontal, 'ID')
-            model.setHeaderData(1, Qt.Horizontal, '# of\r\nMatches')
-            model.setHeaderData(2, Qt.Horizontal, 'Word(s) Found')
-            model.setHeaderData(3, Qt.Horizontal, 'Sermon Text')
-            model.setHeaderData(4, Qt.Horizontal, 'Sermon Title')
-            model.setHeaderData(5, Qt.Horizontal, 'Sermon Date')
-            model.setHeaderData(6, Qt.Horizontal, 'Sermon Snippet')
-
-            results_table_view = QTableView()
-            results_table_view.setModel(model)
-            results_table_view.setColumnWidth(0, 30)
-            results_table_view.setColumnWidth(1, 60)
-            results_table_view.setColumnWidth(2, 150)
-            results_table_view.setColumnWidth(3, 200)
-            results_table_view.setColumnWidth(4, 200)
-            results_table_view.setColumnWidth(5, 100)
-            results_table_view.setColumnWidth(6, 500)
-            results_table_view.setShowGrid(False)
-            results_table_view.setSelectionBehavior(QTableView.SelectRows)
-            results_table_view.doubleClicked.connect(
-                lambda: self.retrieve_selection(model, results_table_view.selectionModel().currentIndex().row()))
-            results_widget_layout.addWidget(results_table_view)
-
-            if len(filtered_results) == 1:
-                results_label.setText(str(len(
-                    filtered_results)) + ' result found.\nDouble-click a result below to open it. Close this window when done.')
-            else:
-                results_label.setText(str(len(
-                    filtered_results)) + ' results found.\nDouble-click a result below to open it. Close this window when done.')
-            results_widget.show()
-
-    def retrieve_selection(self, model, selection):
-        goon = True
-        if self.gui.changes:
-            goon = self.spd.ask_save()
-        if goon:
-            id_ = model.index(selection, 0).data()
-            index = 0
-            for item in self.spd.ids:
-                if int(item) == int(id_):
-                    break
-                index += 1
-            self.spd.get_by_index(index)
+            from gui import SearchBox
+            search_box = SearchBox(self.gui)
+            self.gui.tabbed_frame.addTab(search_box, QIcon(self.gui.spd.cwd + 'resources/searchIcon.png'), 'Search')
+            search_box.show_results(result_list)
+            self.gui.tabbed_frame.setCurrentWidget(search_box)
 
     def set_bold(self):
         component = self.win.focusWidget()

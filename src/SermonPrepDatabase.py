@@ -22,20 +22,19 @@ The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
 '''
+
 import logging
 import os
 import re
 import sqlite3
 import sys
-import threading
 import time
 from datetime import datetime
 from os.path import exists
 
 from PyQt5.QtCore import QThread, Qt, QObject
-from PyQt5.QtGui import QMovie, QFont
-from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDateEdit, QWidget, QLabel, QGridLayout, QStatusBar, \
-    QProgressBar
+from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDateEdit, QWidget, QLabel, QGridLayout, QProgressBar
 from symspellpy import SymSpell
 
 from Dialogs import yes_no_cancel_box

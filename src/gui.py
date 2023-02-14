@@ -29,7 +29,7 @@ import sys
 from os.path import exists
 
 from PyQt5.QtCore import Qt, QSize, QDate, QDateTime
-from PyQt5.QtGui import QIcon, QFont, QKeyEvent, QTextCursor
+from PyQt5.QtGui import QIcon, QFont, QKeyEvent, QTextCursor, QStandardItemModel, QStandardItem
 from PyQt5.QtWidgets import *
 from symspellpy import Verbosity
 
@@ -103,12 +103,14 @@ class GUI:
         self.menu_bar = MenuBar(self.win, self, self.spd)
         self.top_frame = TopFrame(self.win, self, self.spd)
         self.layout.addWidget(self.top_frame)
+
         self.build_tabbed_frame()
         self.build_scripture_tab()
         self.build_exegesis_tab()
         self.build_outline_tab()
         self.build_research_tab()
         self.build_sermon_tab()
+
         self.set_style_sheets()
 
         self.win.show()
@@ -152,6 +154,10 @@ class GUI:
         self.sermon_text_edit = CustomTextEdit(self.win, self)
         self.sermon_text_edit.cursorPositionChanged.connect(lambda: self.set_style_buttons(self.sermon_text_edit))
         self.scripture_frame_layout.addWidget(self.sermon_text_edit, 3, 2)
+
+        self.search_box = SearchBox(self)
+        self.scripture_frame_layout.addWidget(self.search_box, 0, 3, 4, 1)
+        self.search_box.setVisible(False)
         
         self.tabbed_frame.addTab(self.scripture_frame, QIcon(self.spd.cwd + 'resources/scriptureIcon.png'), 'Scripture')
         
@@ -484,10 +490,10 @@ class GUI:
                 index += 1
 
         num_tabs = self.tabbed_frame.count()
-        for i in range(num_tabs):
-            if i > 0:
-                frame = self.tabbed_frame.widget(i)
-                widget = frame.findChild(QWidget, 'text_box')
+        for i in range(1, num_tabs):
+            frame = self.tabbed_frame.widget(i)
+            widget = frame.findChild(QWidget, 'text_box')
+            if widget:
                 text_title = widget.findChild(QLabel, 'text_title')
                 text_edit = widget.findChild(QTextEdit, 'text_edit')
                 text_edit.setText(self.sermon_text_edit.toPlainText())
@@ -763,3 +769,118 @@ class ScriptureBox(QWidget):
 
     def clear(self):
         self.text_edit.clear()
+
+class SearchBox(QWidget):
+    def __init__(self, gui):
+        self.gui = gui
+        super().__init__()
+
+    def show_results(self, result_list):
+        results_widget_layout = QVBoxLayout()
+        self.setLayout(results_widget_layout)
+        self.setStyleSheet('''
+                        QWidget {
+                            background-color: ''' + self.gui.background_color + ''';}
+                        QLabel {
+                            font-family: "Helvetica";
+                            font-size: 16px;
+                            padding: 10px;
+                            font-color: ''' + self.gui.accent_color + ''';}
+                        QTableView {
+                            background-color: white;
+                            font-family: "Helvetica";
+                            font-size: 16px;
+                            padding: 3px;}
+                        ''')
+
+        results_header = QWidget()
+        header_layout = QHBoxLayout()
+        results_header.setLayout(header_layout)
+
+        results_label = QLabel()
+        header_layout.addWidget(results_label)
+
+        close_button = QPushButton()
+        close_button.setIcon(QIcon(self.gui.spd.cwd + 'resources/closeIcon.png'))
+        close_button.setStyleSheet('background-color: ' + self.gui.accent_color)
+        close_button.setToolTip('Close the search tab')
+        close_button.pressed.connect(self.remove_self)
+        header_layout.addStretch()
+        header_layout.addWidget(close_button)
+
+        results_widget_layout.addWidget(results_header)
+
+        filtered_results = []
+        for line in result_list:
+
+            counter = 0
+            for item in line[0]:
+                counter += 1
+
+            words_found = str(line[1])
+            words_found = words_found.replace('[', '')
+            words_found = words_found.replace(']', '')
+            words_found = words_found.replace("\'", '')
+            filtered_results.append((
+                str(line[0][0]),
+                str(line[2]),
+                words_found,
+                line[0][3],
+                line[0][16],
+                line[0][17],
+                line[0][21][0:100] + '...'))
+
+        model = QStandardItemModel(len(filtered_results), 5)
+        for i in range(len(filtered_results)):
+            for n in range(len(filtered_results[i])):
+                item = QStandardItem(filtered_results[i][n])
+                item.setEditable(False)
+                model.setItem(i, n, item)
+        model.setHeaderData(0, Qt.Horizontal, 'ID')
+        model.setHeaderData(1, Qt.Horizontal, '# of\r\nMatches')
+        model.setHeaderData(2, Qt.Horizontal, 'Word(s) Found')
+        model.setHeaderData(3, Qt.Horizontal, 'Sermon Text')
+        model.setHeaderData(4, Qt.Horizontal, 'Sermon Title')
+        model.setHeaderData(5, Qt.Horizontal, 'Sermon Date')
+        model.setHeaderData(6, Qt.Horizontal, 'Sermon Snippet')
+
+        results_table_view = QTableView()
+        results_table_view.setModel(model)
+        results_table_view.setColumnWidth(0, 30)
+        results_table_view.setColumnWidth(1, 60)
+        results_table_view.setColumnWidth(2, 150)
+        results_table_view.setColumnWidth(3, 200)
+        results_table_view.setColumnWidth(4, 200)
+        results_table_view.setColumnWidth(5, 100)
+        results_table_view.setColumnWidth(6, 500)
+        results_table_view.setShowGrid(False)
+        results_table_view.setSelectionBehavior(QTableView.SelectRows)
+        results_table_view.doubleClicked.connect(
+            lambda: self.retrieve_selection(model, results_table_view.selectionModel().currentIndex().row()))
+        results_widget_layout.addWidget(results_table_view)
+
+        if len(filtered_results) == 1:
+            results_label.setText(str(len(
+                filtered_results)) + ' result found.\nDouble-click a result below to open it.')
+        else:
+            results_label.setText(str(len(
+                filtered_results)) + ' results found.\nDouble-click a result below to open it.')
+
+    def retrieve_selection(self, model, selection):
+        goon = True
+        if self.gui.changes:
+            goon = self.gui.spd.ask_save()
+        if goon:
+            id_ = model.index(selection, 0).data()
+            index = 0
+            for item in self.gui.spd.ids:
+                if int(item) == int(id_):
+                    break
+                index += 1
+            self.gui.spd.get_by_index(index)
+            self.gui.tabbed_frame.setCurrentWidget(self.gui.tabbed_frame.widget(0))
+
+    def remove_self(self):
+        self.gui.tabbed_frame.removeTab(5)
+        self.gui.tabbed_frame.setCurrentWidget(self.gui.tabbed_frame.widget(0))
+        self.destroy()

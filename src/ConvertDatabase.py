@@ -1,3 +1,28 @@
+'''
+@author Jeremy G. Wilson
+
+Copyright 2023 Jeremy G. Wilson
+
+This file is a part of the Sermon Prep Database program (v.3.3.4)
+
+Sermon Prep Database is free software: you can redistribute it and/or
+modify it under the terms of the GNU General Public License (GNU GPL)
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+The Sermon Prep Database program includes Artifex Software's GhostScript,
+licensed under the GNU Affero General Public License (GNU AGPL). See
+https://www.ghostscript.com/licensing/index.html for more information.
+'''
+
 # class to convert databases from previous versions of Sermon Prep Database to be compatible with this one
 import os
 import re
@@ -5,7 +30,7 @@ import shutil
 import sqlite3
 from os.path import exists
 
-from PyQt5.QtWidgets import QFileDialog, QDialog, QGridLayout, QLabel, QProgressBar, QPushButton, QWidget
+from PyQt5.QtWidgets import QFileDialog, QDialog, QGridLayout, QLabel, QProgressBar, QPushButton
 
 from Dialogs import message_box
 
