@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.4)
+This file is a part of the Sermon Prep Database program (v.3.3.5)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -32,8 +32,8 @@ import time
 from datetime import datetime
 from os.path import exists
 
-from PyQt5.QtCore import QThread, Qt, QObject
-from PyQt5.QtGui import QFont
+from PyQt5.QtCore import QThread, Qt, QObject, pyqtSignal
+from PyQt5.QtGui import QFont, QMovie
 from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDateEdit, QWidget, QLabel, QGridLayout, QProgressBar
 from symspellpy import SymSpell
 
@@ -43,7 +43,10 @@ from gui import GUI
 
 # The main program class that handles startup functions such as checking for/creating a new database, instantiating
 # the gui, and polling the database for data. Also handles any database reading and writing functions.
-class SermonPrepDatabase:
+class SermonPrepDatabase(QThread):
+    change_text = pyqtSignal(str)
+    finished = pyqtSignal()
+
     gui = None
     ids = []
     dates = []
@@ -57,58 +60,44 @@ class SermonPrepDatabase:
     sym_spell = None
 
     # On startup, initialize a QApplication, get the platform, set the app_dir and db_loc, instantiate the GUI
-    def __init__(self):
-        try:
-            self.platform = sys.platform
+    def run(self):
+        time.sleep(1.0)
+        self.change_text.emit('Getting Platform')
+        time.sleep(0.5)
+        self.platform = sys.platform
 
-            self.cwd = os.getcwd().replace('\\', '/')
-            if str(self.cwd).endswith('src'):
-                self.cwd = self.cwd.replace('src', '')
-            else:
-                self.cwd = self.cwd + '/'
+        self.cwd = os.getcwd().replace('\\', '/')
+        if str(self.cwd).endswith('src'):
+            self.cwd = self.cwd.replace('src', '')
+        else:
+            self.cwd = self.cwd + '/'
 
-            self.loading_box = loading_box()
-            self.loading_box.make_box(self.cwd, 4)
-            thread = QThread()
-            self.loading_box.moveToThread(thread)
-            thread.start()
+        self.change_text.emit('Getting Directories')
+        time.sleep(0.5)
+        user_dir = os.path.expanduser('~')
+        if self.platform == 'win32':
+            self.app_dir = user_dir + '/AppData/Roaming/Sermon Prep Database'
+        elif self.platform == 'linux':
+            self.app_dir = user_dir + '/.sermonPrepDatabase'
+            os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+        self.db_loc = self.app_dir + '/sermon_prep_database.db'
 
-            self.loading_box.change_text('Getting directories')
+        if not exists(self.app_dir):
+            os.mkdir(self.app_dir)
 
-            user_dir = os.path.expanduser('~')
-            if self.platform == 'win32':
-                self.app_dir = user_dir + '/AppData/Roaming/Sermon Prep Database'
-            elif self.platform == 'linux':
-                self.app_dir = user_dir + '/.sermonPrepDatabase'
-                os.environ['QT_QPA_PLATFORM'] = 'offscreen'
-            self.db_loc = self.app_dir + '/sermon_prep_database.db'
+        self.write_to_log('platform is ' + self.platform)
+        self.write_to_log('current working directory is ' + self.cwd)
+        self.write_to_log('application directory is ' + self.app_dir)
+        self.write_to_log('database location is ' + self.db_loc)
 
-            if not exists(self.app_dir):
-                os.mkdir(self.app_dir)
+        self.change_text.emit('Loading Dictionaries')
+        time.sleep(0.5)
+        self.load_dictionary()
 
-            self.write_to_log('platform is ' + self.platform)
-            self.write_to_log('current working directory is ' + self.cwd)
-            self.write_to_log('application directory is ' + self.app_dir)
-            self.write_to_log('database location is ' + self.db_loc)
+        self.change_text.emit('Creating GUI')
+        time.sleep(0.5)
 
-            self.loading_box.change_text('Loading dictionaries')
-
-            self.load_dictionary()
-
-            self.loading_box.change_text('Building GUI')
-
-            self.gui = GUI(self)
-
-            self.loading_box.change_text('Getting latest record')
-
-            self.current_rec_index = len(self.ids) - 1
-            self.get_by_index(self.current_rec_index)
-
-            self.loading_box.end()
-
-            app.exec()
-        except Exception:
-            logging.exception('')
+        self.finished.emit()
 
     def load_dictionary(self):
         self.sym_spell = SymSpell()
@@ -599,38 +588,48 @@ class SermonPrepDatabase:
         logfile.writelines(string)
         logfile.close()
 
-class loading_box(QObject):
-    def make_box(self, cwd, bar_max):
-        self.widget = QWidget()
-        self.widget.setWindowFlag(Qt.FramelessWindowHint)
-        self.widget.setMinimumWidth(300)
-        self.widget.setStyleSheet('background: #202050;')
+class LoadingBox(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.spd = SermonPrepDatabase()
+        self.spd.finished.connect(self.end)
+        self.spd.change_text.connect(self.change_text)
+        self.spd.start()
+
+        self.setWindowFlag(Qt.FramelessWindowHint)
+        self.setMinimumWidth(300)
+        self.setStyleSheet('background: white;')
 
         layout = QGridLayout()
-        self.widget.setLayout(layout)
+        self.setLayout(layout)
+
+        self.working_label = QLabel()
+        movie = QMovie('../resources/waitIcon.gif')
+        self.working_label.setMovie(movie)
+        layout.addWidget(self.working_label, 0, 0, Qt.AlignHCenter)
+        movie.start()
 
         self.status_label = QLabel('Starting...')
         self.status_label.setFont(QFont('Helvetica', 16))
-        self.status_label.setStyleSheet('color: white; text-align: center;')
-        layout.addWidget(self.status_label, 0, 0, Qt.AlignHCenter)
+        self.status_label.setStyleSheet('color: #000080; text-align: center;')
+        layout.addWidget(self.status_label, 1, 0, Qt.AlignHCenter)
 
-        self.working_bar = QProgressBar()
-        self.working_bar.setRange(1, bar_max)
-        self.working_bar.setTextVisible(False)
-        self.working_bar.setStyleSheet('QProgressBar { border: 2px solid white; background-color: white; } QProgressBar::chunk { background-color: #202050 }')
-        layout.addWidget(self.working_bar, 1, 0, Qt.AlignHCenter)
-
-        self.widget.show()
+        self.show()
 
     def change_text(self, text):
         self.status_label.setText(text)
-        self.working_bar.setValue(self.working_bar.value() + 1)
         app.processEvents()
-        time.sleep(.5)
 
     def end(self):
-        self.widget.destroy()
+        self.spd.gui = GUI(self.spd)
+        self.spd.current_rec_index = len(self.spd.ids) - 1
+        self.spd.get_by_index(self.spd.current_rec_index)
+        self.close()
 
 if __name__ == '__main__':
-    app = QApplication(sys.argv)
-    SermonPrepDatabase()
+    try:
+        app = QApplication(sys.argv)
+        loading_box = LoadingBox()
+        app.exec()
+    except Exception:
+        logging.exception('')

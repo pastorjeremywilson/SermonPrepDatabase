@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.4)
+This file is a part of the Sermon Prep Database program (v.3.3.5)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -82,15 +82,13 @@ class GUI:
         self.spd.get_user_settings()
         self.spd.backup_db()
 
-        print(self.spd.user_settings[1])
-
         self.accent_color = self.spd.user_settings[1]
         self.background_color = self.spd.user_settings[2]
         self.font_family = self.spd.user_settings[3]
         self.font_size = self.spd.user_settings[4]
 
         self.win = Win(self)
-        self.win.setWindowIcon(QIcon(self.spd.cwd + 'resources/unityIcon.png'))
+        self.win.setWindowIcon(QIcon(self.spd.cwd + 'resources/icon.png'))
 
         self.layout = QBoxLayout(QBoxLayout.TopToBottom)
         self.main_widget = QWidget()
@@ -113,7 +111,7 @@ class GUI:
 
         self.set_style_sheets()
 
-        self.win.show()
+        self.win.showMaximized()
     
     def build_tabbed_frame(self):
         self.tabbed_frame = QTabWidget()
