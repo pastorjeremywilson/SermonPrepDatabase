@@ -88,7 +88,7 @@ class GUI:
         self.font_size = self.spd.user_settings[4]
 
         self.win = Win(self)
-        self.win.setWindowIcon(QIcon(self.spd.cwd + 'resources/icon.png'))
+        self.win.setWindowIcon(QIcon(self.spd.cwd + 'resources/svg/icon.svg'))
 
         self.layout = QBoxLayout(QBoxLayout.TopToBottom)
         self.main_widget = QWidget()
@@ -480,7 +480,10 @@ class GUI:
                 index += 1
 
             if isinstance(component, CustomTextEdit):
-                component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                if record[0][index]:
+                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                else:
+                    component.clear()
                 index += 1
 
             if component.objectName() == 'text_box':

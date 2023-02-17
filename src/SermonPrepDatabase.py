@@ -66,12 +66,6 @@ class SermonPrepDatabase(QThread):
         time.sleep(0.5)
         self.platform = sys.platform
 
-        self.cwd = os.getcwd().replace('\\', '/')
-        if str(self.cwd).endswith('src'):
-            self.cwd = self.cwd.replace('src', '')
-        else:
-            self.cwd = self.cwd + '/'
-
         self.change_text.emit('Getting Directories')
         time.sleep(0.5)
         user_dir = os.path.expanduser('~')
@@ -592,6 +586,13 @@ class LoadingBox(QWidget):
     def __init__(self):
         super().__init__()
         self.spd = SermonPrepDatabase()
+
+        self.spd.cwd = os.getcwd().replace('\\', '/')
+        if str(self.spd.cwd).endswith('src'):
+            self.spd.cwd = self.spd.cwd.replace('src', '')
+        else:
+            self.spd.cwd = self.spd.cwd + '/'
+
         self.spd.finished.connect(self.end)
         self.spd.change_text.connect(self.change_text)
         self.spd.start()
@@ -604,7 +605,7 @@ class LoadingBox(QWidget):
         self.setLayout(layout)
 
         self.working_label = QLabel()
-        movie = QMovie('../resources/waitIcon.gif')
+        movie = QMovie(self.spd.cwd + 'resources/waitIcon.gif')
         self.working_label.setMovie(movie)
         layout.addWidget(self.working_label, 0, 0, Qt.AlignHCenter)
         movie.start()
