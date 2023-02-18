@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.5)
+This file is a part of the Sermon Prep Database program (v.3.3.6)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -33,8 +33,9 @@ from datetime import datetime
 from os.path import exists
 
 from PyQt5.QtCore import QThread, Qt, QObject, pyqtSignal
-from PyQt5.QtGui import QFont, QMovie
-from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDateEdit, QWidget, QLabel, QGridLayout, QProgressBar
+from PyQt5.QtGui import QFont, QMovie, QColor
+from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDateEdit, QWidget, QLabel, QGridLayout, QProgressBar, \
+    QDialog
 from symspellpy import SymSpell
 
 from Dialogs import yes_no_cancel_box
@@ -305,7 +306,7 @@ class SermonPrepDatabase(QThread):
         conn.commit()
 
         from Dialogs import timed_popup
-        timed_popup('Record Saved', 1500, self.gui.accent_color)
+        timed_popup('Record Saved', 1000, self.gui.accent_color)
         self.write_to_log('Database saved - ' + self.db_loc)
 
         self.gui.changes = False
@@ -582,7 +583,7 @@ class SermonPrepDatabase(QThread):
         logfile.writelines(string)
         logfile.close()
 
-class LoadingBox(QWidget):
+class LoadingBox(QDialog):
     def __init__(self):
         super().__init__()
         self.spd = SermonPrepDatabase()
@@ -598,21 +599,24 @@ class LoadingBox(QWidget):
         self.spd.start()
 
         self.setWindowFlag(Qt.FramelessWindowHint)
+        self.setModal(True)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setStyleSheet('background-color: transparent')
         self.setMinimumWidth(300)
-        self.setStyleSheet('background: white;')
 
         layout = QGridLayout()
         self.setLayout(layout)
 
         self.working_label = QLabel()
-        movie = QMovie(self.spd.cwd + 'resources/waitIcon.gif')
+        self.working_label.setAutoFillBackground(False)
+        movie = QMovie(self.spd.cwd + 'resources/waitIcon.webp')
         self.working_label.setMovie(movie)
         layout.addWidget(self.working_label, 0, 0, Qt.AlignHCenter)
         movie.start()
 
         self.status_label = QLabel('Starting...')
-        self.status_label.setFont(QFont('Helvetica', 16))
-        self.status_label.setStyleSheet('color: #000080; text-align: center;')
+        self.status_label.setFont(QFont('Helvetica', 16, QFont.Bold))
+        self.status_label.setStyleSheet('color: #d7d7f4; text-align: center;')
         layout.addWidget(self.status_label, 1, 0, Qt.AlignHCenter)
 
         self.show()

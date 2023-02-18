@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.5)
+This file is a part of the Sermon Prep Database program (v.3.3.6)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -94,23 +94,24 @@ def yes_no_cancel_box(*args):
 
 # function to show a timed popup message, takes a message string and milliseconds to display as arguments
 def timed_popup(message, millis, bg):
-    dialog = QDialog()
-    dialog.setWindowFlag(Qt.FramelessWindowHint)
-    dialog.setBaseSize(QSize(200, 75))
-    dialog.setStyleSheet('background: ' + bg)
-    dialog.setModal(True)
+        dialog = QDialog()
+        dialog.setWindowFlag(Qt.FramelessWindowHint)
+        dialog.setWindowOpacity(0.75)
+        dialog.setBaseSize(QSize(200, 75))
+        dialog.setStyleSheet('background-color: ' + bg)
+        dialog.setModal(True)
 
-    layout = QVBoxLayout()
-    dialog.setLayout(layout)
+        layout = QVBoxLayout()
+        dialog.setLayout(layout)
 
-    label = QLabel(message)
-    label.setStyleSheet('font-size: 18pt; color: white')
-    layout.addWidget(label)
+        label = QLabel(message)
+        label.setStyleSheet('font-size: 18pt; color: white;')
+        layout.addWidget(label)
 
-    timer = QTimer()
-    timer.singleShot(millis, lambda: dialog.done(0))
+        timer = QTimer()
+        timer.singleShot(millis, lambda: dialog.done(0))
 
-    dialog.show()
+        dialog.show()
 
 class RemoveCustomWords:
     def __init__(self, spd):

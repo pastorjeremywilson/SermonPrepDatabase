@@ -89,6 +89,6 @@
  "nonPyinstallerOptions": {
   "increaseRecursionLimit": true,
   "manualArguments": "",
-  "outputDirectory": "C:\Users\pasto\Nextcloud\Documents\Python Workspace\Sermon Prep Database\compile configs and installers\output"
+  "outputDirectory": "C:/Users/pasto/Nextcloud/Documents/Python Workspace/Sermon Prep Database/compile configs and installers/output"
  }
 }

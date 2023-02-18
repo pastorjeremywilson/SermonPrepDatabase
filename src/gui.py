@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.5)
+This file is a part of the Sermon Prep Database program (v.3.3.6)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -29,7 +29,7 @@ import sys
 from os.path import exists
 
 from PyQt5.QtCore import Qt, QSize, QDate, QDateTime
-from PyQt5.QtGui import QIcon, QFont, QKeyEvent, QTextCursor, QStandardItemModel, QStandardItem
+from PyQt5.QtGui import QIcon, QFont, QKeyEvent, QTextCursor, QStandardItemModel, QStandardItem, QPixmap
 from PyQt5.QtWidgets import *
 from symspellpy import Verbosity
 
@@ -86,9 +86,12 @@ class GUI:
         self.background_color = self.spd.user_settings[2]
         self.font_family = self.spd.user_settings[3]
         self.font_size = self.spd.user_settings[4]
-
-        self.win = Win(self)
-        self.win.setWindowIcon(QIcon(self.spd.cwd + 'resources/svg/icon.svg'))
+        try:
+            self.win = Win(self)
+            icon_pixmap = QPixmap(self.spd.cwd + 'resources/icon.png')
+            self.win.setWindowIcon(QIcon(icon_pixmap))
+        except Exception:
+            logging.exception('')
 
         self.layout = QBoxLayout(QBoxLayout.TopToBottom)
         self.main_widget = QWidget()
