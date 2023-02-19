@@ -70,7 +70,6 @@ class GUI:
                 shutil.copy(self.spd.cwd + 'resources/database_template.db', self.spd.db_loc)
                 message_box('Database Created', 'A new database has been created.', '#ffffff')
             else:
-                print('Cancel pressed')
                 quit(0)
 
         self.spd.write_to_log('checkForDB completed')
@@ -86,12 +85,10 @@ class GUI:
         self.background_color = self.spd.user_settings[2]
         self.font_family = self.spd.user_settings[3]
         self.font_size = self.spd.user_settings[4]
-        try:
-            self.win = Win(self)
-            icon_pixmap = QPixmap(self.spd.cwd + 'resources/icon.png')
-            self.win.setWindowIcon(QIcon(icon_pixmap))
-        except Exception:
-            logging.exception('')
+
+        self.win = Win(self)
+        icon_pixmap = QPixmap(self.spd.cwd + 'resources/icon.png')
+        self.win.setWindowIcon(QIcon(icon_pixmap))
 
         self.layout = QBoxLayout(QBoxLayout.TopToBottom)
         self.main_widget = QWidget()
@@ -603,90 +600,85 @@ class CustomTextEdit(QTextEdit):
         self.blockSignals(False)
 
     def contextMenuEvent(self, e):
-        try:
-            menu = self.createStandardContextMenu()
+        menu = self.createStandardContextMenu()
 
-            clean_whitespace_action = QAction("Remove extra whitespace")
-            clean_whitespace_action.triggered.connect(self.clean_whitespace)
-            menu.insertAction(menu.actions()[0], clean_whitespace_action)
-            menu.insertSeparator(menu.actions()[1])
+        clean_whitespace_action = QAction("Remove extra whitespace")
+        clean_whitespace_action.triggered.connect(self.clean_whitespace)
+        menu.insertAction(menu.actions()[0], clean_whitespace_action)
+        menu.insertSeparator(menu.actions()[1])
 
-            cursor = self.cursorForPosition(e.pos())
-            cursor.select(QTextCursor.WordUnderCursor)
-            word = cursor.selection().toPlainText()
+        cursor = self.cursorForPosition(e.pos())
+        cursor.select(QTextCursor.WordUnderCursor)
+        word = cursor.selection().toPlainText()
 
-            chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\u2026', '\u201c', '\u201d']
-            single_quotes = ['\u2018', '\u2019']
+        chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\u2026', '\u201c', '\u201d']
+        single_quotes = ['\u2018', '\u2019']
 
-            upper = False
-            if word[0].isupper():
-                upper = True
+        upper = False
+        if word[0].isupper():
+            upper = True
 
-            cleaned_word = word.lower()
-            for char in chars:
-                cleaned_word = cleaned_word.replace(char, '')
-            for single_quote in single_quotes:
-                cleaned_word = cleaned_word.replace(single_quote, '\'')
-            cleaned_word = cleaned_word.replace('\'s', '')
-            cleaned_word = cleaned_word.replace('s\'', 's')
-            cleaned_word = cleaned_word.replace("<[.?*]>", '')
+        cleaned_word = word.lower()
+        for char in chars:
+            cleaned_word = cleaned_word.replace(char, '')
+        for single_quote in single_quotes:
+            cleaned_word = cleaned_word.replace(single_quote, '\'')
+        cleaned_word = cleaned_word.replace('\'s', '')
+        cleaned_word = cleaned_word.replace('s\'', 's')
+        cleaned_word = cleaned_word.replace("<[.?*]>", '')
 
-            suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
-                                                        include_unknown=True)
+        suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+                                                    include_unknown=True)
 
-            if not (len(suggestions) == 1 and suggestions[0].term == cleaned_word):
-                spell_actions = {}
+        if not (len(suggestions) == 1 and suggestions[0].term == cleaned_word):
+            spell_actions = {}
 
-                number_of_suggestions = len(suggestions)
-                if number_of_suggestions > 10: number_of_suggestions = 11
+            number_of_suggestions = len(suggestions)
+            if number_of_suggestions > 10: number_of_suggestions = 11
 
-                for i in range(number_of_suggestions):
-                    term = suggestions[i].term
-                    if upper:
-                        term = term[0].upper() + term[1:]
-                    spell_actions['action% s' % str(i)] = QAction(term)
-                    spell_actions['action% s' % str(i)].setData((cursor, term))
-                    spell_actions['action% s' % str(i)].triggered.connect(self.replace_word)
-                    menu.insertAction(menu.actions()[i], spell_actions['action% s' % str(i)])
+            for i in range(number_of_suggestions):
+                term = suggestions[i].term
+                if upper:
+                    term = term[0].upper() + term[1:]
+                spell_actions['action% s' % str(i)] = QAction(term)
+                spell_actions['action% s' % str(i)].setData((cursor, term))
+                spell_actions['action% s' % str(i)].triggered.connect(self.replace_word)
+                menu.insertAction(menu.actions()[i], spell_actions['action% s' % str(i)])
 
-                menu.insertSeparator(menu.actions()[i + 1])
-                action = QAction('Add to dictionary')
-                action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, cleaned_word))
-                menu.insertAction(menu.actions()[i + 2], action)
-                menu.insertSeparator(menu.actions()[i + 3])
+            menu.insertSeparator(menu.actions()[i + 1])
+            action = QAction('Add to dictionary')
+            action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, cleaned_word))
+            menu.insertAction(menu.actions()[i + 2], action)
+            menu.insertSeparator(menu.actions()[i + 3])
 
-            menu.exec(e.globalPos())
-            menu.close()
-        except Exception:
-            logging.exception('')
+        menu.exec(e.globalPos())
+        menu.close()
 
     def replace_word(self):
         sender = self.sender()
         cursor = sender.data()[0]
         term = sender.data()[1]
-        try:
-            self.setTextCursor(cursor)
-            self.textCursor().removeSelectedText()
-            cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor)
-            self.setTextCursor(cursor)
 
-            chars = ['.', ',', ';', ':', '?', '!', '"', '*', '-', '_', '\n', ' ', '\u2026', '\u201c', '\u201d', '\u2018', '\u2019']
-            add_space = True
-            for char in chars:
-                if self.textCursor().selectedText() == char:
-                    add_space = False
+        self.setTextCursor(cursor)
+        self.textCursor().removeSelectedText()
+        cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor)
+        self.setTextCursor(cursor)
 
-            cursor = self.textCursor()
-            cursor.movePosition(QTextCursor.PreviousCharacter, QTextCursor.MoveAnchor)
-            self.setTextCursor(cursor)
+        chars = ['.', ',', ';', ':', '?', '!', '"', '*', '-', '_', '\n', ' ', '\u2026', '\u201c', '\u201d', '\u2018', '\u2019']
+        add_space = True
+        for char in chars:
+            if self.textCursor().selectedText() == char:
+                add_space = False
 
-            if add_space:
-                self.textCursor().insertText(term + ' ')
-            else:
-                self.textCursor().insertText(term)
-        except Exception:
-            logging.exception('')
+        cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.PreviousCharacter, QTextCursor.MoveAnchor)
+        self.setTextCursor(cursor)
+
+        if add_space:
+            self.textCursor().insertText(term + ' ')
+        else:
+            self.textCursor().insertText(term)
 
     def clean_whitespace(self):
         component = self.win.focusWidget()

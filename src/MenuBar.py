@@ -140,183 +140,170 @@ class MenuBar:
         about_action.triggered.connect(self.show_about)
 
     def print_rec(self):
-        try:
-            goon = True
-            if self.gui.changes:
-                goon = self.spd.ask_save()
-            if goon:
-                from reportlab.lib.pagesizes import letter
-                from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-                from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate, Paragraph
-                import os
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate, Paragraph
+        import os
 
-                #get text from gui
-                text = []
-                for i in range(self.gui.scripture_frame_layout.count()):
-                    component = self.gui.scripture_frame_layout.itemAt(i).widget()
+        #get text from gui
+        text = []
+        for i in range(self.gui.scripture_frame_layout.count()):
+            component = self.gui.scripture_frame_layout.itemAt(i).widget()
 
-                    if isinstance(component, QLineEdit):
-                        text.append(component.text())
-                    elif isinstance(component, QTextEdit):
-                        text.append(self.format_paragraph(component.toHtml()))
+            if isinstance(component, QLineEdit):
+                text.append(component.text())
+            elif isinstance(component, QTextEdit):
+                text.append(self.format_paragraph(component.toHtml()))
 
-                for i in range(self.gui.exegesis_frame_layout.count()):
-                    component = self.gui.exegesis_frame_layout.itemAt(i).widget()
+        for i in range(self.gui.exegesis_frame_layout.count()):
+            component = self.gui.exegesis_frame_layout.itemAt(i).widget()
 
-                    if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                        text.append(self.format_paragraph(component.toHtml()))
+            if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                text.append(self.format_paragraph(component.toHtml()))
 
-                for i in range(self.gui.outline_frame_layout.count()):
-                    component = self.gui.outline_frame_layout.itemAt(i).widget()
+        for i in range(self.gui.outline_frame_layout.count()):
+            component = self.gui.outline_frame_layout.itemAt(i).widget()
 
-                    if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                        text.append(self.format_paragraph(component.toHtml()))
+            if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                text.append(self.format_paragraph(component.toHtml()))
 
-                for i in range(self.gui.research_frame_layout.count()):
-                    component = self.gui.research_frame_layout.itemAt(i).widget()
+        for i in range(self.gui.research_frame_layout.count()):
+            component = self.gui.research_frame_layout.itemAt(i).widget()
 
-                    if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                        text.append(self.format_paragraph(component.toHtml()))
+            if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                text.append(self.format_paragraph(component.toHtml()))
 
-                for i in range(self.gui.sermon_frame_layout.count()):
-                    component = self.gui.sermon_frame_layout.itemAt(i).widget()
+        for i in range(self.gui.sermon_frame_layout.count()):
+            component = self.gui.sermon_frame_layout.itemAt(i).widget()
 
-                    if isinstance(component, QLineEdit) or isinstance(component, QDateEdit):
-                        if isinstance(component, QLineEdit):
-                            text.append(component.text())
+            if isinstance(component, QLineEdit) or isinstance(component, QDateEdit):
+                if isinstance(component, QLineEdit):
+                    text.append(component.text())
+                else:
+                    text.append(component.date().toString('yyyy-MM-dd'))
+            elif isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                text.append(self.format_paragraph(component.toHtml()))
+
+        print_file_loc = self.spd.app_dir + '/print.pdf'
+
+        normal = ParagraphStyle(
+            name='Normal',
+            fontName='Helvetica',
+            fontSize=11,
+            firstLineIndent=18,
+            leading=16,
+            spaceBefore=3,
+            spaceAfter=6
+        )
+
+        bullet = ParagraphStyle(
+            name='Normal',
+            fontName='Helvetica',
+            fontSize=11,
+            leading=16,
+            bulletIndent=20,
+            leftIndent=30
+        )
+
+        heading = ParagraphStyle(
+            name='Heading',
+            fontName='Helvetica-Bold',
+            fontSize=11,
+            spaceBefore=6,
+            spaceAfter=3
+        )
+
+        doc = BaseDocTemplate(print_file_loc, pagesize=letter)
+        frame = Frame(
+            doc.leftMargin,
+            doc.bottomMargin,
+            doc.width,
+            doc.height,
+            0, 0, 0, 0,
+            id='normal')
+        template = PageTemplate(id='test', frames=frame)
+        doc.addPageTemplates([template])
+
+        doc_text = []
+        for i in range(0, len(text)):
+            paragraph_text = text[i]
+            if len(paragraph_text) > 0:
+                doc_text.append(Paragraph(self.spd.user_settings[i + 5], heading))
+                if isinstance(paragraph_text, str):
+                    if '<bullet>' in paragraph_text:
+                        doc_text.append(Paragraph(paragraph_text, bullet))
+                    else:
+                        doc_text.append(Paragraph(paragraph_text, normal))
+                else:
+                    for paragraph in paragraph_text:
+                        if '<bullet>' in paragraph:
+                            doc_text.append(Paragraph(paragraph, bullet))
                         else:
-                            text.append(component.date().toString('yyyy-MM-dd'))
-                    elif isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                        text.append(self.format_paragraph(component.toHtml()))
+                            doc_text.append(Paragraph(paragraph, normal))
+        doc.build(doc_text)
 
-                print_file_loc = self.spd.app_dir + '/print.pdf'
+        from subprocess import Popen, PIPE
+        self.spd.write_to_log('Opening print subprocess')
 
-                normal = ParagraphStyle(
-                    name='Normal',
-                    fontName='Helvetica',
-                    fontSize=11,
-                    firstLineIndent=18,
-                    leading=16,
-                    spaceBefore=3,
-                    spaceAfter=6
-                )
+        if sys.platform == 'win32':
+            print('beginning win32 print process')
+            CREATE_NO_WINDOW = 0x08000000
+            p = Popen(
+                [
+                    self.spd.cwd + 'ghostscript/gsprint.exe',
+                    print_file_loc,
+                    '-ghostscript',
+                    self.spd.cwd + 'ghostscript/gswin64.exe',
+                    '-query'],
+                creationflags=CREATE_NO_WINDOW,
+                stdout=PIPE,
+                stderr=PIPE)
 
-                bullet = ParagraphStyle(
-                    name='Normal',
-                    fontName='Helvetica',
-                    fontSize=11,
-                    leading=16,
-                    bulletIndent=20,
-                    leftIndent=30
-                )
+            self.spd.write_to_log('Capturing print subprocess sdtout & stderr')
+            stdout, stderr = p.communicate()
+            self.spd.write_to_log('stdout:' + str(stdout))
+            self.spd.write_to_log('stderr:' + str(stderr))
 
-                heading = ParagraphStyle(
-                    name='Heading',
-                    fontName='Helvetica-Bold',
-                    fontSize=11,
-                    spaceBefore=6,
-                    spaceAfter=3
-                )
+            os.remove(print_file_loc)
 
-                doc = BaseDocTemplate(print_file_loc, pagesize=letter)
-                frame = Frame(
-                    doc.leftMargin,
-                    doc.bottomMargin,
-                    doc.width,
-                    doc.height,
-                    0, 0, 0, 0,
-                    id='normal')
-                template = PageTemplate(id='test', frames=frame)
-                doc.addPageTemplates([template])
+        elif sys.platform == 'linux':
+            p = Popen(['/usr/bin/lpstat', '-a'], stdin = PIPE, stdout = PIPE, stderr = PIPE)
+            stdout, stderr = p.communicate()
+            stdout = str(stdout).replace('b\'', '')
+            stdout = stdout.replace('\'', '')
+            lines = stdout.split('\\n')
 
-                doc_text = []
-                try:
-                    for i in range(0, len(text)):
-                        paragraph_text = text[i]
-                        if len(paragraph_text) > 0:
-                            doc_text.append(Paragraph(self.spd.user_settings[i + 5], heading))
-                            if isinstance(paragraph_text, str):
-                                if '<bullet>' in paragraph_text:
-                                    doc_text.append(Paragraph(paragraph_text, bullet))
-                                else:
-                                    doc_text.append(Paragraph(paragraph_text, normal))
-                            else:
-                                for paragraph in paragraph_text:
-                                    if '<bullet>' in paragraph:
-                                        doc_text.append(Paragraph(paragraph, bullet))
-                                    else:
-                                        doc_text.append(Paragraph(paragraph, normal))
-                    doc.build(doc_text)
-                except Exception:
-                    logging.exception('')
+            printers = []
+            for line in lines:
+                printers.append(line.split(' ')[0].replace('_', ' '))
 
-            from subprocess import Popen, PIPE
-            self.spd.write_to_log('Opening print subprocess')
+            print_dialog = QDialog(self.gui.main_widget)
+            layout = QVBoxLayout()
+            print_dialog.setLayout(layout)
 
-            if sys.platform == 'win32':
-                print('beginning win32 print process')
-                CREATE_NO_WINDOW = 0x08000000
-                try:
-                    p = Popen(
-                        [
-                            self.spd.cwd + 'ghostscript/gsprint.exe',
-                            print_file_loc,
-                            '-ghostscript',
-                            self.spd.cwd + 'ghostscript/gswin64.exe',
-                            '-query'],
-                        creationflags=CREATE_NO_WINDOW,
-                        stdout=PIPE,
-                        stderr=PIPE)
+            label = QLabel('Choose Printer:')
+            layout.addWidget(label)
 
-                    self.spd.write_to_log('Capturing print subprocess sdtout & stderr')
-                    stdout, stderr = p.communicate()
-                    self.spd.write_to_log('stdout:' + str(stdout))
-                    self.spd.write_to_log('stderr:' + str(stderr))
+            printer_combobox = QComboBox()
+            for printer in printers:
+                printer_combobox.addItem(printer)
+            layout.addWidget(printer_combobox)
 
-                    os.remove(print_file_loc)
+            button_widget = QWidget()
+            button_layout = QHBoxLayout()
+            button_widget.setLayout(button_layout)
 
-                except Exception as err:
-                    self.spd.write_to_log('MenuBar.print_rec: ' + str(err))
-            elif sys.platform == 'linux':
-                p = Popen(['/usr/bin/lpstat', '-a'], stdin = PIPE, stdout = PIPE, stderr = PIPE)
-                stdout, stderr = p.communicate()
-                stdout = str(stdout).replace('b\'', '')
-                stdout = stdout.replace('\'', '')
-                lines = stdout.split('\\n')
+            ok_button = QPushButton('OK')
+            ok_button.pressed.connect(lambda: self.linux_print(print_dialog, printer_combobox.currentText(), print_file_loc))
+            button_layout.addWidget(ok_button)
 
-                printers = []
-                for line in lines:
-                    printers.append(line.split(' ')[0].replace('_', ' '))
+            cancel_button = QPushButton('Cancel')
+            cancel_button.pressed.connect(print_dialog.destroy)
+            button_layout.addWidget(cancel_button)
 
-                print_dialog = QDialog(self.gui.main_widget)
-                layout = QVBoxLayout()
-                print_dialog.setLayout(layout)
+            layout.addWidget(button_widget)
 
-                label = QLabel('Choose Printer:')
-                layout.addWidget(label)
-
-                printer_combobox = QComboBox()
-                for printer in printers:
-                    printer_combobox.addItem(printer)
-                layout.addWidget(printer_combobox)
-
-                button_widget = QWidget()
-                button_layout = QHBoxLayout()
-                button_widget.setLayout(button_layout)
-
-                ok_button = QPushButton('OK')
-                ok_button.pressed.connect(lambda: self.linux_print(print_dialog, printer_combobox.currentText(), print_file_loc))
-                button_layout.addWidget(ok_button)
-
-                cancel_button = QPushButton('Cancel')
-                cancel_button.pressed.connect(print_dialog.destroy)
-                button_layout.addWidget(cancel_button)
-
-                layout.addWidget(button_widget)
-
-                print_dialog.show()
-        except Exception:
-            logging.exception()
+            print_dialog.show()
 
     def format_paragraph(self, comp_text):
         comp_text = re.sub('<p.*?>', '', comp_text, flags=re.DOTALL)
@@ -325,7 +312,6 @@ class MenuBar:
         slice = re.findall('<span.*?span>', comp_text)
         for item in slice:
             addition = ['', '']
-            print(item)
             if 'font-weight' in item:
                 addition[0] = '<strong>' + addition[0]
                 addition[1] = addition[1] + '</strong>'
@@ -342,7 +328,6 @@ class MenuBar:
 
         slice = re.findall('<li.*?</li>', comp_text)
         for item in slice:
-            print(slice)
             new_string = re.sub('<li.*?>', '<bullet>&bull;</bullet>', item)
             new_string = re.sub('</li>', '<br><br>', new_string)
             comp_text = comp_text.replace(item, new_string)

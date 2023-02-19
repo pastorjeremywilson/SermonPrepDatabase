@@ -110,8 +110,8 @@ class SermonPrepDatabase(QThread):
             text = widget.toMarkdown()
             widget.setMarkdown(text)
 
-        except Exception:
-            logging.exception('')
+        except Exception as ex:
+            self.write_to_log(str(ex))
 
 
     # retrieve the list of ID numbers from the database
@@ -310,8 +310,8 @@ class SermonPrepDatabase(QThread):
             self.write_to_log('Database saved - ' + self.db_loc)
 
             self.gui.changes = False
-        except Exception:
-            logging.exception('')
+        except Exception as ex:
+            self.write_to_log(str(ex))
 
     # QTextEdit borks up the formatting when reloading markdown characters, so convert them to
     # HTML tags instead
@@ -395,33 +395,30 @@ class SermonPrepDatabase(QThread):
         add_item = True
         for line in all_data:
             for item in line:
-                try:
-                    for word in text_split:
-                        num_matches = str(item).lower().count(word.lower())
-                        words_found.append(word)
-                        add_word = True
-                        cleaned_words_found = []
+                for word in text_split:
+                    num_matches = str(item).lower().count(word.lower())
+                    words_found.append(word)
+                    add_word = True
+                    cleaned_words_found = []
 
-                        for word in words_found:
-                            for new_word in cleaned_words_found:
-                                if word == new_word:
-                                    add_word = False
-                            if add_word:
-                                cleaned_words_found.append(word)
+                    for word in words_found:
+                        for new_word in cleaned_words_found:
+                            if word == new_word:
+                                add_word = False
+                        if add_word:
+                            cleaned_words_found.append(word)
 
-                    if num_matches > 0:
-                        for a in full_text_result_list:
-                            if a[0][0] == line[0]:
-                                add_item = False
-                        for a in individual_word_result_list:
-                            if a[0][0] == line[0]:
-                                add_item = False
-                        if add_item:
-                            individual_word_result_list.append([line, cleaned_words_found, num_matches])
+                if num_matches > 0:
+                    for a in full_text_result_list:
+                        if a[0][0] == line[0]:
+                            add_item = False
+                    for a in individual_word_result_list:
+                        if a[0][0] == line[0]:
+                            add_item = False
+                    if add_item:
+                        individual_word_result_list.append([line, cleaned_words_found, num_matches])
 
-                    words_found = []
-                except Exception as ex:
-                    print(ex)
+                words_found = []
             add_item = True
 
         # reorder the search results based on number of matches, full text first
@@ -634,9 +631,6 @@ class LoadingBox(QDialog):
         self.close()
 
 if __name__ == '__main__':
-    try:
-        app = QApplication(sys.argv)
-        loading_box = LoadingBox()
-        app.exec()
-    except Exception:
-        logging.exception('')
+    app = QApplication(sys.argv)
+    loading_box = LoadingBox()
+    app.exec()

@@ -116,39 +116,37 @@ def timed_popup(message, millis, bg):
 class RemoveCustomWords:
     def __init__(self, spd):
         self.changes = False
-        try:
-            self.spd = spd
-            self.widget = QWidget()
-            self.widget.setWindowTitle('Sermon Prep Database - Remove Custom Words')
 
-            layout = QVBoxLayout()
-            self.widget.setLayout(layout)
+        self.spd = spd
+        self.widget = QWidget()
+        self.widget.setWindowTitle('Sermon Prep Database - Remove Custom Words')
 
-            with open(spd.cwd + 'resources/custom_words.txt') as file:
-                custom_words = file.readlines()
+        layout = QVBoxLayout()
+        self.widget.setLayout(layout)
 
-            self.word_list = QListWidget()
-            for word in custom_words:
-                self.word_list.addItem(word.strip())
-            layout.addWidget(self.word_list)
+        with open(spd.cwd + 'resources/custom_words.txt') as file:
+            custom_words = file.readlines()
 
-            button_widget = QWidget()
-            button_layout = QHBoxLayout()
-            button_widget.setLayout(button_layout)
+        self.word_list = QListWidget()
+        for word in custom_words:
+            self.word_list.addItem(word.strip())
+        layout.addWidget(self.word_list)
 
-            remove_button = QPushButton('Remove')
-            remove_button.pressed.connect(self.remove_word)
-            button_layout.addWidget(remove_button)
+        button_widget = QWidget()
+        button_layout = QHBoxLayout()
+        button_widget.setLayout(button_layout)
 
-            close_button = QPushButton('Close')
-            close_button.pressed.connect(self.close)
-            button_layout.addWidget(close_button)
+        remove_button = QPushButton('Remove')
+        remove_button.pressed.connect(self.remove_word)
+        button_layout.addWidget(remove_button)
 
-            layout.addWidget(button_widget)
+        close_button = QPushButton('Close')
+        close_button.pressed.connect(self.close)
+        button_layout.addWidget(close_button)
 
-            self.widget.show()
-        except Exception:
-            logging.exception('')
+        layout.addWidget(button_widget)
+
+        self.widget.show()
 
     def remove_word(self):
         self.changes = True
@@ -163,6 +161,6 @@ class RemoveCustomWords:
                     lines.append(self.word_list.item(r).text() + '\n')
                 file.writelines(lines)
                 file.close()
-            except Exception:
-                logging.exception('')
+            except Exception as ex:
+                self.spd.write_to_log(ex)
         self.widget.close()
