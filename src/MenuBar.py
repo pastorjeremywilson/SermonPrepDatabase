@@ -22,15 +22,16 @@ The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
 '''
-
+import logging
 import os
+import re
 import sys
 
 from Dialogs import message_box
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap
 from PyQt5.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableView, QPushButton, QColorDialog, \
-    QTabWidget, QHBoxLayout, QComboBox, QScrollArea, QTextBrowser, QDialog
+    QTabWidget, QHBoxLayout, QComboBox, QScrollArea, QTextBrowser, QDialog, QLineEdit, QTextEdit, QDateEdit
 from pynput.keyboard import Key, Controller
 from TopFrame import TopFrame
 
@@ -139,53 +140,115 @@ class MenuBar:
         about_action.triggered.connect(self.show_about)
 
     def print_rec(self):
-        goon = True
-        if self.gui.changes:
-            goon = self.spd.ask_save()
-        if goon:
-            from reportlab.lib.pagesizes import letter
-            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-            from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate, Paragraph
-            import os
+        try:
+            goon = True
+            if self.gui.changes:
+                goon = self.spd.ask_save()
+            if goon:
+                from reportlab.lib.pagesizes import letter
+                from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+                from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate, Paragraph
+                import os
 
-            record = self.spd.get_record_data()[0]
+                #get text from gui
+                text = []
+                for i in range(self.gui.scripture_frame_layout.count()):
+                    component = self.gui.scripture_frame_layout.itemAt(i).widget()
 
-            print_file_loc = self.spd.app_dir + '/print.pdf'
+                    if isinstance(component, QLineEdit):
+                        text.append(component.text())
+                    elif isinstance(component, QTextEdit):
+                        text.append(self.format_paragraph(component.toHtml()))
 
-            styles = getSampleStyleSheet()
+                for i in range(self.gui.exegesis_frame_layout.count()):
+                    component = self.gui.exegesis_frame_layout.itemAt(i).widget()
 
-            normal = ParagraphStyle(
-                name='Normal',
-                fontName='Helvetica',
-                fontSize=11
-            )
+                    if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                        text.append(self.format_paragraph(component.toHtml()))
 
-            heading = ParagraphStyle(
-                name='Heading',
-                fontName='Helvetica-Bold',
-                fontSize=11,
-                spaceBefore=5,
-                spaceAfter=2
-            )
+                for i in range(self.gui.outline_frame_layout.count()):
+                    component = self.gui.outline_frame_layout.itemAt(i).widget()
 
-            doc = BaseDocTemplate(print_file_loc, pagesize=letter)
-            frame = Frame(
-                doc.leftMargin,
-                doc.bottomMargin,
-                doc.width,
-                doc.height,
-                id='normal')
-            template = PageTemplate(id='test', frames=frame)
-            doc.addPageTemplates([template])
+                    if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                        text.append(self.format_paragraph(component.toHtml()))
 
-            text = []
-            for i in range(1, len(record)):
-                text.append(Paragraph(self.spd.user_settings[i + 4], heading))
-                paragraph_text = record[i]
-                paragraph_text = paragraph_text.replace('\n\n', '<br/>')
-                paragraph_text = paragraph_text.replace('\n', '<br/>')
-                text.append(Paragraph(paragraph_text, normal))
-            doc.build(text)
+                for i in range(self.gui.research_frame_layout.count()):
+                    component = self.gui.research_frame_layout.itemAt(i).widget()
+
+                    if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                        text.append(self.format_paragraph(component.toHtml()))
+
+                for i in range(self.gui.sermon_frame_layout.count()):
+                    component = self.gui.sermon_frame_layout.itemAt(i).widget()
+
+                    if isinstance(component, QLineEdit) or isinstance(component, QDateEdit):
+                        if isinstance(component, QLineEdit):
+                            text.append(component.text())
+                        else:
+                            text.append(component.date().toString('yyyy-MM-dd'))
+                    elif isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                        text.append(self.format_paragraph(component.toHtml()))
+
+                print_file_loc = self.spd.app_dir + '/print.pdf'
+
+                normal = ParagraphStyle(
+                    name='Normal',
+                    fontName='Helvetica',
+                    fontSize=11,
+                    firstLineIndent=18,
+                    leading=16,
+                    spaceBefore=3,
+                    spaceAfter=6
+                )
+
+                bullet = ParagraphStyle(
+                    name='Normal',
+                    fontName='Helvetica',
+                    fontSize=11,
+                    leading=16,
+                    bulletIndent=20,
+                    leftIndent=30
+                )
+
+                heading = ParagraphStyle(
+                    name='Heading',
+                    fontName='Helvetica-Bold',
+                    fontSize=11,
+                    spaceBefore=6,
+                    spaceAfter=3
+                )
+
+                doc = BaseDocTemplate(print_file_loc, pagesize=letter)
+                frame = Frame(
+                    doc.leftMargin,
+                    doc.bottomMargin,
+                    doc.width,
+                    doc.height,
+                    0, 0, 0, 0,
+                    id='normal')
+                template = PageTemplate(id='test', frames=frame)
+                doc.addPageTemplates([template])
+
+                doc_text = []
+                try:
+                    for i in range(0, len(text)):
+                        paragraph_text = text[i]
+                        if len(paragraph_text) > 0:
+                            doc_text.append(Paragraph(self.spd.user_settings[i + 5], heading))
+                            if isinstance(paragraph_text, str):
+                                if '<bullet>' in paragraph_text:
+                                    doc_text.append(Paragraph(paragraph_text, bullet))
+                                else:
+                                    doc_text.append(Paragraph(paragraph_text, normal))
+                            else:
+                                for paragraph in paragraph_text:
+                                    if '<bullet>' in paragraph:
+                                        doc_text.append(Paragraph(paragraph, bullet))
+                                    else:
+                                        doc_text.append(Paragraph(paragraph, normal))
+                    doc.build(doc_text)
+                except Exception:
+                    logging.exception('')
 
             from subprocess import Popen, PIPE
             self.spd.write_to_log('Opening print subprocess')
@@ -252,6 +315,45 @@ class MenuBar:
                 layout.addWidget(button_widget)
 
                 print_dialog.show()
+        except Exception:
+            logging.exception()
+
+    def format_paragraph(self, comp_text):
+        comp_text = re.sub('<p.*?>', '', comp_text, flags=re.DOTALL)
+        comp_text = re.sub('</p>', '<br><br>', comp_text)
+
+        slice = re.findall('<span.*?span>', comp_text)
+        for item in slice:
+            addition = ['', '']
+            print(item)
+            if 'font-weight' in item:
+                addition[0] = '<strong>' + addition[0]
+                addition[1] = addition[1] + '</strong>'
+            if 'text-decoration' in item:
+                addition[0] = '<u>' + addition[0]
+                addition[1] = addition[1] + '</u>'
+            if 'font-style' in item:
+                addition[0] = '<i>' + addition[0]
+                addition[1] = addition[1] + '</i>'
+
+            new_string = re.sub('<span.*?>', addition[0], item)
+            new_string = re.sub('</span>', addition[1], new_string)
+            comp_text = comp_text.replace(item, new_string)
+
+        slice = re.findall('<li.*?</li>', comp_text)
+        for item in slice:
+            print(slice)
+            new_string = re.sub('<li.*?>', '<bullet>&bull;</bullet>', item)
+            new_string = re.sub('</li>', '<br><br>', new_string)
+            comp_text = comp_text.replace(item, new_string)
+
+        comp_text = re.sub('<span.*?>', '', comp_text)
+        comp_text = re.sub('</span>', '', comp_text)
+        comp_text = re.sub('<style?(.*?)style>', '', comp_text, flags=re.DOTALL)
+
+        text_split = comp_text.split('<br><br>')
+
+        return text_split
 
     def linux_print(self, print_dialog, item_text, printFileLoc):
         print_dialog.destroy()
