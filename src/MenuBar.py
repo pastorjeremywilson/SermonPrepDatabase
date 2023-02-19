@@ -227,19 +227,32 @@ class MenuBar:
         doc_text = []
         for i in range(0, len(text)):
             paragraph_text = text[i]
-            if len(paragraph_text) > 0:
-                doc_text.append(Paragraph(self.spd.user_settings[i + 5], heading))
-                if isinstance(paragraph_text, str):
+            if isinstance(paragraph_text, str)\
+                    and any(c.isalpha() for c in paragraph_text)\
+                    or 'date' in self.spd.user_settings[i + 5].lower():
+                t = re.sub('<.*?>', '', paragraph_text)
+                if any(c.isalpha for c in t):
+                    doc_text.append(Paragraph(self.spd.user_settings[i + 5], heading))
                     if '<bullet>' in paragraph_text:
                         doc_text.append(Paragraph(paragraph_text, bullet))
                     else:
                         doc_text.append(Paragraph(paragraph_text, normal))
-                else:
+            else:
+                has_contents = False
+                for paragraph in paragraph_text:
+                    t = re.sub('<.*?>', '', paragraph)
+                    if any(c.isalpha() for c in t):
+                        has_contents = True
+
+                if has_contents:
+                    doc_text.append(Paragraph(self.spd.user_settings[i + 5], heading))
+
                     for paragraph in paragraph_text:
-                        if '<bullet>' in paragraph:
-                            doc_text.append(Paragraph(paragraph, bullet))
-                        else:
-                            doc_text.append(Paragraph(paragraph, normal))
+                        if any(c.isalpha() for c in paragraph):
+                            if '<bullet>' in paragraph:
+                                doc_text.append(Paragraph(paragraph, bullet))
+                            else:
+                                doc_text.append(Paragraph(paragraph, normal))
         doc.build(doc_text)
 
         from subprocess import Popen, PIPE
