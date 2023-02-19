@@ -248,68 +248,70 @@ class SermonPrepDatabase(QThread):
 
     # save the user's data from all elements of the GUI
     def save_rec(self):
-        conn = sqlite3.connect(self.db_loc)
-        cur = conn.cursor()
-        sql = "SELECT * FROM sermon_prep_database where 1=0;"
-        cur.execute(sql)
+        try:
+            conn = sqlite3.connect(self.db_loc)
+            cur = conn.cursor()
+            sql = "SELECT * FROM sermon_prep_database where 1=0;"
+            cur.execute(sql)
 
-        columns = [d[0] for d in cur.description]
+            columns = [d[0] for d in cur.description]
 
-        sql = 'UPDATE sermon_prep_database SET '
-        rec_id = self.ids[self.current_rec_index]
-        sql += '"' + columns[0] + '" = "' + str(rec_id) + '",'
+            sql = 'UPDATE sermon_prep_database SET '
+            rec_id = self.ids[self.current_rec_index]
+            sql += '"' + columns[0] + '" = "' + str(rec_id) + '",'
 
-        index = 1
-        for i in range(self.gui.scripture_frame_layout.count()):
-            component = self.gui.scripture_frame_layout.itemAt(i).widget()
-            if isinstance(component, QLineEdit):
-                sql += '"' + columns[index] + '" = "' + component.text().replace('"', '&quot') + '",'
-                index += 1
-            elif isinstance(component, QTextEdit):
-                string = self.reformat_string_for_save(component.toMarkdown())
-                sql += '"' + columns[index] + '" = "' + string + '",'
-                index += 1
-        for i in range(self.gui.exegesis_frame_layout.count()):
-            component = self.gui.exegesis_frame_layout.itemAt(i).widget()
-            if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                string = self.reformat_string_for_save(component.toMarkdown())
-                sql += '"' + columns[index] + '" = "' + string + '",'
-                index += 1
-        for i in range(self.gui.outline_frame_layout.count()):
-            component = self.gui.outline_frame_layout.itemAt(i).widget()
-            if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                string = self.reformat_string_for_save(component.toMarkdown())
-                sql += '"' + columns[index] + '" = "' + string + '",'
-                index += 1
-        for i in range(self.gui.research_frame_layout.count()):
-            component = self.gui.research_frame_layout.itemAt(i).widget()
-            if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                string = self.reformat_string_for_save(component.toMarkdown())
-                sql += '"' + columns[index] + '" = "' + string + '",'
-                index += 1
-        for i in range(self.gui.sermon_frame_layout.count()):
-            component = self.gui.sermon_frame_layout.itemAt(i).widget()
-            if isinstance(component, QLineEdit) or isinstance(component, QDateEdit):
+            index = 1
+            for i in range(self.gui.scripture_frame_layout.count()):
+                component = self.gui.scripture_frame_layout.itemAt(i).widget()
                 if isinstance(component, QLineEdit):
                     sql += '"' + columns[index] + '" = "' + component.text().replace('"', '&quot') + '",'
-                else:
-                    print(component.date().toString('yyyy-MM-dd'))
-                    sql += '"' + columns[index] + '" = "' + component.date().toString('yyyy-MM-dd') + '",'
-                index += 1
-            elif isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                string = self.reformat_string_for_save(component.toMarkdown())
-                sql += '"' + columns[index] + '" = "' + string + '" WHERE ID = "' + str(rec_id) + '"'
+                    index += 1
+                elif isinstance(component, QTextEdit):
+                    string = self.reformat_string_for_save(component.toMarkdown())
+                    sql += '"' + columns[index] + '" = "' + string + '",'
+                    index += 1
+            for i in range(self.gui.exegesis_frame_layout.count()):
+                component = self.gui.exegesis_frame_layout.itemAt(i).widget()
+                if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                    string = self.reformat_string_for_save(component.toMarkdown())
+                    sql += '"' + columns[index] + '" = "' + string + '",'
+                    index += 1
+            for i in range(self.gui.outline_frame_layout.count()):
+                component = self.gui.outline_frame_layout.itemAt(i).widget()
+                if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                    string = self.reformat_string_for_save(component.toMarkdown())
+                    sql += '"' + columns[index] + '" = "' + string + '",'
+                    index += 1
+            for i in range(self.gui.research_frame_layout.count()):
+                component = self.gui.research_frame_layout.itemAt(i).widget()
+                if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                    string = self.reformat_string_for_save(component.toMarkdown())
+                    sql += '"' + columns[index] + '" = "' + string + '",'
+                    index += 1
+            for i in range(self.gui.sermon_frame_layout.count()):
+                component = self.gui.sermon_frame_layout.itemAt(i).widget()
+                if isinstance(component, QLineEdit) or isinstance(component, QDateEdit):
+                    if isinstance(component, QLineEdit):
+                        sql += '"' + columns[index] + '" = "' + component.text().replace('"', '&quot') + '",'
+                    else:
+                        sql += '"' + columns[index] + '" = "' + component.date().toString('yyyy-MM-dd') + '",'
+                    index += 1
+                elif isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                    string = self.reformat_string_for_save(component.toMarkdown())
+                    sql += '"' + columns[index] + '" = "' + string + '" WHERE ID = "' + str(rec_id) + '"'
 
-        conn = sqlite3.connect(self.db_loc)
-        cur = conn.cursor()
-        cur.execute(sql)
-        conn.commit()
+            conn = sqlite3.connect(self.db_loc)
+            cur = conn.cursor()
+            cur.execute(sql)
+            conn.commit()
 
-        from Dialogs import timed_popup
-        timed_popup('Record Saved', 1000, self.gui.accent_color)
-        self.write_to_log('Database saved - ' + self.db_loc)
+            from Dialogs import timed_popup
+            timed_popup('Record Saved', 1000, self.gui.accent_color)
+            self.write_to_log('Database saved - ' + self.db_loc)
 
-        self.gui.changes = False
+            self.gui.changes = False
+        except Exception:
+            logging.exception('')
 
     # QTextEdit borks up the formatting when reloading markdown characters, so convert them to
     # HTML tags instead
@@ -334,7 +336,7 @@ class SermonPrepDatabase(QThread):
                 new_string = '<u><i>' + new_string + '</i></u>'
                 string = string.replace(item, new_string)
             else:
-                new_string = new_string.replace('_', '')
+                new_string = item.replace('_', '')
                 new_string = '<u>' + new_string + '</u>'
                 string = string.replace(item, new_string)
 
