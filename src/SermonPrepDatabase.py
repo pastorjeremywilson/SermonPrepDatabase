@@ -96,7 +96,7 @@ class SermonPrepDatabase(QThread):
 
     def load_dictionary(self):
         self.sym_spell = SymSpell()
-        self.sym_spell.create_dictionary(self.cwd + 'resources/dictionary_en_us_custom.txt')
+        self.sym_spell.create_dictionary(self.cwd + 'resources/default_dictionary.txt')
         with open(self.cwd + 'resources/custom_words.txt', 'r') as file:
             custom_words = file.readlines()
         for entry in custom_words:
