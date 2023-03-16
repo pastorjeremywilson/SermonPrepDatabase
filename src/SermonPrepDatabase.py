@@ -32,10 +32,9 @@ import time
 from datetime import datetime
 from os.path import exists
 
-from PyQt5.QtCore import QThread, Qt, QObject, pyqtSignal
-from PyQt5.QtGui import QFont, QMovie, QColor
-from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDateEdit, QWidget, QLabel, QGridLayout, QProgressBar, \
-    QDialog
+from PyQt5.QtCore import QThread, Qt, pyqtSignal
+from PyQt5.QtGui import QFont, QMovie
+from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDateEdit, QLabel, QGridLayout, QDialog
 from symspellpy import SymSpell
 
 from Dialogs import yes_no_cancel_box
