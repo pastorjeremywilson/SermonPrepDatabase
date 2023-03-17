@@ -552,10 +552,6 @@ class CustomTextEdit(QTextEdit):
     def changes(self):
         self.gui.changes = True
         self.blockSignals(True)
-        dictionary = self.gui.spd.sym_spell.words
-        chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\n', '\u2026', '\u201c', '\u201d']
-        single_quotes = ['\u2018', '\u2019']
-        contractions = ['\'s', '\'ve', '\'t', '\'ll', '\'d', '\'re']
 
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.Start)
@@ -563,33 +559,41 @@ class CustomTextEdit(QTextEdit):
         while True:
             cursor.select(cursor.WordUnderCursor)
             word = cursor.selection().toPlainText()
+            cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+            if cursor.selection().toPlainText().endswith('\''):
+                cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+                if re.search('[a-z]$', cursor.selection().toPlainText()):
+                    word = cursor.selection().toPlainText()
 
-            if len(word) > 0:
-                cleaned_word = word.lower()
-                for char in chars:
-                    cleaned_word = cleaned_word.replace(char, '')
-                for single_quote in single_quotes:
-                    cleaned_word = cleaned_word.replace(single_quote, '\'')
+            chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\u2026', '\u201c', '\u201d']
+            single_quotes = ['\u2018', '\u2019']
 
-                if cleaned_word.startswith('\'') and cleaned_word.endswith('\''):
-                    cleaned_word = cleaned_word.replace('\'', '')
-                elif cleaned_word.startswith('\''):
-                    cleaned_word = cleaned_word.replace('\'', '')
+            cleaned_word = word.lower()
+            for char in chars:
+                cleaned_word = cleaned_word.replace(char, '')
+            for single_quote in single_quotes:
+                cleaned_word = cleaned_word.replace(single_quote, '\'')
+            cleaned_word = cleaned_word.replace('\'s', '')
+            cleaned_word = cleaned_word.replace('s\'', 's')
+            cleaned_word = cleaned_word.replace("<[.?*]>", '')
+            if cleaned_word.startswith('\''):
+                cleaned_word = cleaned_word[1:len(cleaned_word)]
+            if cleaned_word.endswith('\''):
+                cleaned_word = cleaned_word[0:len(cleaned_word) - 1]
 
-                cleaned_word = cleaned_word.replace('s\'', '')
-                for cont in contractions:
-                    cleaned_word = cleaned_word.replace(cont, '')
+            if any(c.isalpha() for c in cleaned_word):
+                suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+                                                            include_unknown=True)
 
-                if any(c.isalpha() for c in word):
-                    char_format = cursor.charFormat()
-                    if cleaned_word not in dictionary:
-                        char_format.setForeground(Qt.red)
+                char_format = cursor.charFormat()
+                if not suggestions[0].term == cleaned_word:
+                    char_format.setForeground(Qt.red)
+                    cursor.mergeCharFormat(char_format)
+
+                else:
+                    if char_format.foreground() == Qt.red:
+                        char_format.setForeground(Qt.black)
                         cursor.mergeCharFormat(char_format)
-
-                    else:
-                        if char_format.foreground() == Qt.red:
-                            char_format.setForeground(Qt.black)
-                            cursor.mergeCharFormat(char_format)
 
             cursor.clearSelection()
             last_position = cursor.position()
@@ -611,6 +615,11 @@ class CustomTextEdit(QTextEdit):
             cursor = self.cursorForPosition(e.pos())
             cursor.select(QTextCursor.WordUnderCursor)
             word = cursor.selection().toPlainText()
+            cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+            if cursor.selection().toPlainText().endswith('\''):
+                cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+                if re.search('[a-z]$', cursor.selection().toPlainText()):
+                    word = cursor.selection().toPlainText()
 
             chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\u2026', '\u201c', '\u201d']
             single_quotes = ['\u2018', '\u2019']
@@ -627,11 +636,15 @@ class CustomTextEdit(QTextEdit):
             cleaned_word = cleaned_word.replace('\'s', '')
             cleaned_word = cleaned_word.replace('s\'', 's')
             cleaned_word = cleaned_word.replace("<[.?*]>", '')
+            if cleaned_word.startswith('\''):
+                cleaned_word = cleaned_word[1:len(cleaned_word)]
+            if cleaned_word.endswith('\''):
+                cleaned_word = cleaned_word[0:len(cleaned_word) - 1]
 
             suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
                                                         include_unknown=True)
 
-            if not (len(suggestions) == 1 and suggestions[0].term == cleaned_word):
+            if not suggestions[0].term == cleaned_word:
                 spell_actions = {}
 
                 number_of_suggestions = len(suggestions)
