@@ -408,100 +408,103 @@ class GUI:
             self.top_frame.bullet_button.setChecked(False)
         
     def fill_values(self, record):
-        index = 1;
-        self.win.setWindowTitle('Sermon Prep Database - ' + str(record[0][17]) + ' - ' + str(record[0][3]))
-        for i in range(self.scripture_frame_layout.count()):
-            component = self.scripture_frame_layout.itemAt(i).widget()
-            if isinstance(component, QLineEdit):
-                if record[0][index]:
-                    component.setText(str(record[0][index].replace('&quot', '"')).strip())
-                else:
-                    component.clear()
-                index += 1
-            elif isinstance(component, QTextEdit):
-                if record[0][index]:
-                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
-                else:
-                    component.clear()
-                index += 1
-        for i in range(self.exegesis_frame_layout.count()):
-            component = self.exegesis_frame_layout.itemAt(i).widget()
-            if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
-                if record[0][index]:
-                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
-                else:
-                    component.clear()
-                index += 1
-        for i in range(self.outline_frame_layout.count()):
-            component = self.outline_frame_layout.itemAt(i).widget()
-            if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
-                if record[0][index]:
-                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
-                else:
-                    component.clear()
-                index += 1
-        for i in range(self.research_frame_layout.count()):
-            component = self.research_frame_layout.itemAt(i).widget()
-            if isinstance(component, QTextEdit):
-                if record[0][index]:
-                    text = self.spd.reformat_string_for_load(record[0][index])
-                    component.setMarkdown(text.strip())
-                else:
-                    component.clear()
-                index += 1
-        for i in range(self.sermon_frame_layout.count()):
-            component = self.sermon_frame_layout.itemAt(i).widget()
-            if isinstance(component, QLineEdit):
-                if record[0][index]:
-                    component.setText(record[0][index].replace('&quot', '"'))
-                else:
-                    component.clear()
-                index += 1
+        try:
+            index = 1
+            self.win.setWindowTitle('Sermon Prep Database - ' + str(record[0][17]) + ' - ' + str(record[0][3]))
+            for i in range(self.scripture_frame_layout.count()):
+                component = self.scripture_frame_layout.itemAt(i).widget()
+                if isinstance(component, QLineEdit):
+                    if record[0][index]:
+                        component.setText(str(record[0][index].replace('&quot', '"')).strip())
+                    else:
+                        component.clear()
+                    index += 1
+                elif isinstance(component, QTextEdit):
+                    if record[0][index]:
+                        component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    else:
+                        component.clear()
+                    index += 1
+            for i in range(self.exegesis_frame_layout.count()):
+                component = self.exegesis_frame_layout.itemAt(i).widget()
+                if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
+                    if record[0][index]:
+                        component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    else:
+                        component.clear()
+                    index += 1
+            for i in range(self.outline_frame_layout.count()):
+                component = self.outline_frame_layout.itemAt(i).widget()
+                if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
+                    if record[0][index]:
+                        component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    else:
+                        component.clear()
+                    index += 1
+            for i in range(self.research_frame_layout.count()):
+                component = self.research_frame_layout.itemAt(i).widget()
+                if isinstance(component, QTextEdit):
+                    if record[0][index]:
+                        text = self.spd.reformat_string_for_load(record[0][index])
+                        component.setMarkdown(text.strip())
+                    else:
+                        component.clear()
+                    index += 1
+            for i in range(self.sermon_frame_layout.count()):
+                component = self.sermon_frame_layout.itemAt(i).widget()
+                if isinstance(component, QLineEdit):
+                    if record[0][index]:
+                        component.setText(record[0][index].replace('&quot', '"'))
+                    else:
+                        component.clear()
+                    index += 1
 
-            if isinstance(component, QDateEdit):
-                date = record[0][index]
-                unusable_date = False
-                if '/' in date:
-                    date_split = date.split('/')
-                elif '\\' in date:
-                    date_split = date.split('\\')
-                elif '-' in date:
-                    date_split = date.split('-')
-                else:
-                    unusable_date = True
-                if not unusable_date:
-                    if int(date_split[0]) > 31:
-                        component.setDate(QDate(int(date_split[0]), int(date_split[1]), int(date_split[2])))
-                    elif date_split[2] > 31:
-                        component.setDate(QDate(int(date_split[2]), int(date_split[0]), int(date_split[1])))
-                else:
-                    self.spd.write_to_log('unusable date in record #' + str(record[0][0]))
-                    component.setDate(QDateTime.currentDateTime().date())
-                index += 1
+                if isinstance(component, QDateEdit):
+                    date = record[0][index]
+                    unusable_date = False
+                    if '/' in date:
+                        date_split = date.split('/')
+                    elif '\\' in date:
+                        date_split = date.split('\\')
+                    elif '-' in date:
+                        date_split = date.split('-')
+                    else:
+                        unusable_date = True
+                    if not unusable_date:
+                        if int(date_split[0]) > 31:
+                            component.setDate(QDate(int(date_split[0]), int(date_split[1]), int(date_split[2])))
+                        elif date_split[2] > 31:
+                            component.setDate(QDate(int(date_split[2]), int(date_split[0]), int(date_split[1])))
+                    else:
+                        self.spd.write_to_log('unusable date in record #' + str(record[0][0]))
+                        component.setDate(QDateTime.currentDateTime().date())
+                    index += 1
 
-            if isinstance(component, CustomTextEdit):
-                if record[0][index]:
-                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
-                else:
+                if isinstance(component, CustomTextEdit):
+                    if record[0][index]:
+                        component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    else:
+                        component.clear()
+                    index += 1
+
+                if component.objectName() == 'text_box':
                     component.clear()
-                index += 1
+                    index += 1
 
-            if component.objectName() == 'text_box':
-                component.clear()
-                index += 1
+            num_tabs = self.tabbed_frame.count()
+            for i in range(1, num_tabs):
+                frame = self.tabbed_frame.widget(i)
+                widget = frame.findChild(QWidget, 'text_box')
+                if widget:
+                    text_title = widget.findChild(QLabel, 'text_title')
+                    text_edit = widget.findChild(QTextEdit, 'text_edit')
+                    text_edit.setText(self.sermon_text_edit.toPlainText())
+                    text_title.setText(self.sermon_reference_field.text())
 
-        num_tabs = self.tabbed_frame.count()
-        for i in range(1, num_tabs):
-            frame = self.tabbed_frame.widget(i)
-            widget = frame.findChild(QWidget, 'text_box')
-            if widget:
-                text_title = widget.findChild(QLabel, 'text_title')
-                text_edit = widget.findChild(QTextEdit, 'text_edit')
-                text_edit.setText(self.sermon_text_edit.toPlainText())
-                text_title.setText(self.sermon_reference_field.text())
-
-        self.top_frame.id_label.setText('ID: ' + str(record[0][0]))
-        self.changes = False
+            self.top_frame.id_label.setText('ID: ' + str(record[0][0]))
+            self.changes = False
+        except Exception:
+            logging.exception('')
 
     def changes_detected(self):
         self.changes = True

@@ -556,6 +556,11 @@ class MenuBar:
             self.spd.write_spell_check_changes()
         else:
             self.spd.disable_spell_check = False
+            if not self.spd.sym_spell:
+                from Dialogs import timed_popup
+                timed_popup('Please wait while the dictionary is loaded...', 5000, self.gui.accent_color)
+                self.spd.app.processEvents()
+                self.spd.load_dictionary()
             self.spd.write_spell_check_changes()
 
     def show_help(self):
