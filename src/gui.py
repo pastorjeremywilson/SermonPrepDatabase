@@ -648,6 +648,10 @@ class CustomTextEdit(QTextEdit):
             if cleaned_word.endswith('\''):
                 cleaned_word = cleaned_word[0:len(cleaned_word) - 1]
 
+            # there's a chance that utf-8-sig artifacts will be attatched to the word
+            # encoding to utf-8 then decoding as ascii removes them
+            cleaned_word = cleaned_word.encode('utf-8').decode('ascii', errors='ignore')
+
             suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
                                                         include_unknown=True)
 
