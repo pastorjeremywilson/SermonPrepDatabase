@@ -22,12 +22,14 @@ The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
 '''
+import itertools
 import logging
 import re
 import shutil
 import sys
 from os.path import exists
 
+import chardet
 from PyQt5.QtCore import Qt, QSize, QDate, QDateTime
 from PyQt5.QtGui import QIcon, QFont, QKeyEvent, QTextCursor, QStandardItemModel, QStandardItem, QPixmap
 from PyQt5.QtWidgets import *
@@ -565,7 +567,8 @@ class CustomTextEdit(QTextEdit):
                 if re.search('[a-z]$', cursor.selection().toPlainText()):
                     word = cursor.selection().toPlainText()
 
-            chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\u2026', '\u201c', '\u201d']
+            chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_',
+                     '\n', '\u2026', '\u201c', '\u201d', '\xff', '\xfe']
             single_quotes = ['\u2018', '\u2019']
 
             cleaned_word = word.lower()
@@ -580,6 +583,10 @@ class CustomTextEdit(QTextEdit):
                 cleaned_word = cleaned_word[1:len(cleaned_word)]
             if cleaned_word.endswith('\''):
                 cleaned_word = cleaned_word[0:len(cleaned_word) - 1]
+
+            # there's a chance that utf-8-sig artifacts will be attatched to the word
+            # encoding to utf-8 then decoding as ascii removes them
+            cleaned_word = cleaned_word.encode('utf-8').decode('ascii', errors='ignore')
 
             if any(c.isalpha() for c in cleaned_word):
                 suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
@@ -621,7 +628,7 @@ class CustomTextEdit(QTextEdit):
                 if re.search('[a-z]$', cursor.selection().toPlainText()):
                     word = cursor.selection().toPlainText()
 
-            chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\u2026', '\u201c', '\u201d']
+            chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\n', '\u2026', '\u201c', '\u201d']
             single_quotes = ['\u2018', '\u2019']
 
             upper = False
