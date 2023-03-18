@@ -567,26 +567,7 @@ class CustomTextEdit(QTextEdit):
                 if re.search('[a-z]$', cursor.selection().toPlainText()):
                     word = cursor.selection().toPlainText()
 
-            chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_',
-                     '\n', '\u2026', '\u201c', '\u201d', '\xff', '\xfe']
-            single_quotes = ['\u2018', '\u2019']
-
-            cleaned_word = word.lower()
-            for char in chars:
-                cleaned_word = cleaned_word.replace(char, '')
-            for single_quote in single_quotes:
-                cleaned_word = cleaned_word.replace(single_quote, '\'')
-            cleaned_word = cleaned_word.replace('\'s', '')
-            cleaned_word = cleaned_word.replace('s\'', 's')
-            cleaned_word = cleaned_word.replace("<[.?*]>", '')
-            if cleaned_word.startswith('\''):
-                cleaned_word = cleaned_word[1:len(cleaned_word)]
-            if cleaned_word.endswith('\''):
-                cleaned_word = cleaned_word[0:len(cleaned_word) - 1]
-
-            # there's a chance that utf-8-sig artifacts will be attatched to the word
-            # encoding to utf-8 then decoding as ascii removes them
-            cleaned_word = cleaned_word.encode('utf-8').decode('ascii', errors='ignore')
+            cleaned_word = self.clean_word(word)
 
             if any(c.isalpha() for c in cleaned_word):
                 suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
@@ -628,29 +609,11 @@ class CustomTextEdit(QTextEdit):
                 if re.search('[a-z]$', cursor.selection().toPlainText()):
                     word = cursor.selection().toPlainText()
 
-            chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\n', '\u2026', '\u201c', '\u201d']
-            single_quotes = ['\u2018', '\u2019']
-
             upper = False
             if word[0].isupper():
                 upper = True
 
-            cleaned_word = word.lower()
-            for char in chars:
-                cleaned_word = cleaned_word.replace(char, '')
-            for single_quote in single_quotes:
-                cleaned_word = cleaned_word.replace(single_quote, '\'')
-            cleaned_word = cleaned_word.replace('\'s', '')
-            cleaned_word = cleaned_word.replace('s\'', 's')
-            cleaned_word = cleaned_word.replace("<[.?*]>", '')
-            if cleaned_word.startswith('\''):
-                cleaned_word = cleaned_word[1:len(cleaned_word)]
-            if cleaned_word.endswith('\''):
-                cleaned_word = cleaned_word[0:len(cleaned_word) - 1]
-
-            # there's a chance that utf-8-sig artifacts will be attatched to the word
-            # encoding to utf-8 then decoding as ascii removes them
-            cleaned_word = cleaned_word.encode('utf-8').decode('ascii', errors='ignore')
+            cleaned_word = self.clean_word(word)
 
             suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
                                                         include_unknown=True)
@@ -678,6 +641,30 @@ class CustomTextEdit(QTextEdit):
 
         menu.exec(e.globalPos())
         menu.close()
+
+    def clean_word(self, word):
+        chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_',
+                 '\n', '\u2026', '\u201c', '\u201d']
+        single_quotes = ['\u2018', '\u2019']
+
+        cleaned_word = word.lower()
+        for char in chars:
+            cleaned_word = cleaned_word.replace(char, '')
+        for single_quote in single_quotes:
+            cleaned_word = cleaned_word.replace(single_quote, '\'')
+        cleaned_word = cleaned_word.replace('\'s', '')
+        cleaned_word = cleaned_word.replace('s\'', 's')
+        cleaned_word = cleaned_word.replace("<[.?*]>", '')
+        if cleaned_word.startswith('\''):
+            cleaned_word = cleaned_word[1:len(cleaned_word)]
+        if cleaned_word.endswith('\''):
+            cleaned_word = cleaned_word[0:len(cleaned_word) - 1]
+
+        # there's a chance that utf-8-sig artifacts will be attatched to the word
+        # encoding to utf-8 then decoding as ascii removes them
+        cleaned_word = cleaned_word.encode('utf-8').decode('ascii', errors='ignore')
+
+        return cleaned_word
 
     def replace_word(self):
         sender = self.sender()
