@@ -31,6 +31,7 @@ import sys
 import time
 from datetime import datetime
 from os.path import exists
+from sqlite3 import OperationalError
 
 from PyQt5.QtCore import QThread, Qt, pyqtSignal
 from PyQt5.QtGui import QFont, QMovie
@@ -98,15 +99,22 @@ class SermonPrepDatabase(QThread):
         self.finished.emit()
 
     def check_spell_check(self):
-        conn = sqlite3.connect(self.db_loc)
-        cursor = conn.cursor()
-        result = cursor.execute('SELECT disable_spell_check FROM user_settings').fetchone()
-        conn.close()
+        try:
+            conn = sqlite3.connect(self.db_loc)
+            cursor = conn.cursor()
+            result = cursor.execute('SELECT disable_spell_check FROM user_settings').fetchone()
+            conn.close()
 
-        if result[0] == 0:
+            if result[0] == 0:
+                return False
+            else:
+                return True
+        except OperationalError:
+            cursor.execute('ALTER TABLE user_settings ADD disable_spell_check TEXT;')
+            conn.commit()
+            cursor.execute('UPDATE user_settings SET disable_spell_check=0 WHERE ID="1";')
+            conn.commit()
             return False
-        else:
-            return True
 
     def write_spell_check_changes(self):
         conn = sqlite3.connect(self.db_loc)
