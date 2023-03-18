@@ -237,48 +237,45 @@ class SermonPrepDatabase(QThread):
 
     # retrieve the data for a specific record based on the index of the ids array
     def get_by_index(self, index):
-        try:
-            if len(self.ids) > 0:
-                self.current_rec_index = index
-                counter = 0
-                id_to_find = self.ids[index]
-                for item in self.references:
-                    if item[1] == id_to_find:
-                        break
-                    counter += 1
+        if len(self.ids) > 0:
+            self.current_rec_index = index
+            counter = 0
+            id_to_find = self.ids[index]
+            for item in self.references:
+                if item[1] == id_to_find:
+                    break
+                counter += 1
 
-                self.gui.top_frame.dates_cb.blockSignals(True)
-                self.gui.top_frame.references_cb.blockSignals(True)
-                self.gui.top_frame.dates_cb.setCurrentIndex(index)
-                self.gui.top_frame.references_cb.setCurrentIndex(counter)
-                self.gui.top_frame.dates_cb.blockSignals(False)
-                self.gui.top_frame.references_cb.blockSignals(False)
+            self.gui.top_frame.dates_cb.blockSignals(True)
+            self.gui.top_frame.references_cb.blockSignals(True)
+            self.gui.top_frame.dates_cb.setCurrentIndex(index)
+            self.gui.top_frame.references_cb.setCurrentIndex(counter)
+            self.gui.top_frame.dates_cb.blockSignals(False)
+            self.gui.top_frame.references_cb.blockSignals(False)
 
-                conn = sqlite3.connect(self.db_loc)
-                cur = conn.cursor()
-                results = cur.execute("SELECT * FROM sermon_prep_database WHERE ID = " + str(self.ids[index]))
-                record = results.fetchall()
-                self.gui.fill_values(record)
+            conn = sqlite3.connect(self.db_loc)
+            cur = conn.cursor()
+            results = cur.execute("SELECT * FROM sermon_prep_database WHERE ID = " + str(self.ids[index]))
+            record = results.fetchall()
+            self.gui.fill_values(record)
 
-                if index == 0:
-                    self.gui.top_frame.first_rec_button.setEnabled(False)
-                    self.gui.top_frame.prev_rec_button.setEnabled(False)
-                    self.gui.top_frame.next_rec_button.setEnabled(True)
-                    self.gui.top_frame.last_rec_button.setEnabled(True)
-                elif index == len(self.ids) - 1:
-                    self.gui.top_frame.first_rec_button.setEnabled(True)
-                    self.gui.top_frame.prev_rec_button.setEnabled(True)
-                    self.gui.top_frame.next_rec_button.setEnabled(False)
-                    self.gui.top_frame.last_rec_button.setEnabled(False)
-                else:
-                    self.gui.top_frame.first_rec_button.setEnabled(True)
-                    self.gui.top_frame.prev_rec_button.setEnabled(True)
-                    self.gui.top_frame.next_rec_button.setEnabled(True)
-                    self.gui.top_frame.last_rec_button.setEnabled(True)
+            if index == 0:
+                self.gui.top_frame.first_rec_button.setEnabled(False)
+                self.gui.top_frame.prev_rec_button.setEnabled(False)
+                self.gui.top_frame.next_rec_button.setEnabled(True)
+                self.gui.top_frame.last_rec_button.setEnabled(True)
+            elif index == len(self.ids) - 1:
+                self.gui.top_frame.first_rec_button.setEnabled(True)
+                self.gui.top_frame.prev_rec_button.setEnabled(True)
+                self.gui.top_frame.next_rec_button.setEnabled(False)
+                self.gui.top_frame.last_rec_button.setEnabled(False)
             else:
-                self.new_rec()
-        except Exception:
-            logging.exception('')
+                self.gui.top_frame.first_rec_button.setEnabled(True)
+                self.gui.top_frame.prev_rec_button.setEnabled(True)
+                self.gui.top_frame.next_rec_button.setEnabled(True)
+                self.gui.top_frame.last_rec_button.setEnabled(True)
+        else:
+            self.new_rec()
 
     # save the user's data from all elements of the GUI
     def save_rec(self):
@@ -490,16 +487,13 @@ class SermonPrepDatabase(QThread):
 
     # retrieve the previous record of the database and set the current index less by 1
     def prev_rec(self):
-        try:
-            goon = True
-            if self.gui.changes:
-                goon = self.ask_save()
-            if goon:
-                if self.current_rec_index != 0:
-                    self.current_rec_index = self.current_rec_index - 1
-                    self.get_by_index(self.current_rec_index)
-        except Exception:
-            logging.exception()
+        goon = True
+        if self.gui.changes:
+            goon = self.ask_save()
+        if goon:
+            if self.current_rec_index != 0:
+                self.current_rec_index = self.current_rec_index - 1
+                self.get_by_index(self.current_rec_index)
 
     # retrieve the next record of the database and set the current index up by 1
     def next_rec(self):

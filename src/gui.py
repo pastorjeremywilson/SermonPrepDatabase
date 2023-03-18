@@ -408,103 +408,100 @@ class GUI:
             self.top_frame.bullet_button.setChecked(False)
         
     def fill_values(self, record):
-        try:
-            index = 1
-            self.win.setWindowTitle('Sermon Prep Database - ' + str(record[0][17]) + ' - ' + str(record[0][3]))
-            for i in range(self.scripture_frame_layout.count()):
-                component = self.scripture_frame_layout.itemAt(i).widget()
-                if isinstance(component, QLineEdit):
-                    if record[0][index]:
-                        component.setText(str(record[0][index].replace('&quot', '"')).strip())
-                    else:
-                        component.clear()
-                    index += 1
-                elif isinstance(component, QTextEdit):
-                    if record[0][index]:
-                        component.setMarkdown(record[0][index].replace('&quot', '"').strip())
-                    else:
-                        component.clear()
-                    index += 1
-            for i in range(self.exegesis_frame_layout.count()):
-                component = self.exegesis_frame_layout.itemAt(i).widget()
-                if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
-                    if record[0][index]:
-                        component.setMarkdown(record[0][index].replace('&quot', '"').strip())
-                    else:
-                        component.clear()
-                    index += 1
-            for i in range(self.outline_frame_layout.count()):
-                component = self.outline_frame_layout.itemAt(i).widget()
-                if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
-                    if record[0][index]:
-                        component.setMarkdown(record[0][index].replace('&quot', '"').strip())
-                    else:
-                        component.clear()
-                    index += 1
-            for i in range(self.research_frame_layout.count()):
-                component = self.research_frame_layout.itemAt(i).widget()
-                if isinstance(component, QTextEdit):
-                    if record[0][index]:
-                        text = self.spd.reformat_string_for_load(record[0][index])
-                        component.setMarkdown(text.strip())
-                    else:
-                        component.clear()
-                    index += 1
-            for i in range(self.sermon_frame_layout.count()):
-                component = self.sermon_frame_layout.itemAt(i).widget()
-                if isinstance(component, QLineEdit):
-                    if record[0][index]:
-                        component.setText(record[0][index].replace('&quot', '"'))
-                    else:
-                        component.clear()
-                    index += 1
-
-                if isinstance(component, QDateEdit):
-                    date = record[0][index]
-                    unusable_date = False
-                    if '/' in date:
-                        date_split = date.split('/')
-                    elif '\\' in date:
-                        date_split = date.split('\\')
-                    elif '-' in date:
-                        date_split = date.split('-')
-                    else:
-                        unusable_date = True
-                    if not unusable_date:
-                        if int(date_split[0]) > 31:
-                            component.setDate(QDate(int(date_split[0]), int(date_split[1]), int(date_split[2])))
-                        elif date_split[2] > 31:
-                            component.setDate(QDate(int(date_split[2]), int(date_split[0]), int(date_split[1])))
-                    else:
-                        self.spd.write_to_log('unusable date in record #' + str(record[0][0]))
-                        component.setDate(QDateTime.currentDateTime().date())
-                    index += 1
-
-                if isinstance(component, CustomTextEdit):
-                    if record[0][index]:
-                        component.setMarkdown(record[0][index].replace('&quot', '"').strip())
-                    else:
-                        component.clear()
-                    index += 1
-
-                if component.objectName() == 'text_box':
+        index = 1
+        self.win.setWindowTitle('Sermon Prep Database - ' + str(record[0][17]) + ' - ' + str(record[0][3]))
+        for i in range(self.scripture_frame_layout.count()):
+            component = self.scripture_frame_layout.itemAt(i).widget()
+            if isinstance(component, QLineEdit):
+                if record[0][index]:
+                    component.setText(str(record[0][index].replace('&quot', '"')).strip())
+                else:
                     component.clear()
-                    index += 1
+                index += 1
+            elif isinstance(component, QTextEdit):
+                if record[0][index]:
+                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                else:
+                    component.clear()
+                index += 1
+        for i in range(self.exegesis_frame_layout.count()):
+            component = self.exegesis_frame_layout.itemAt(i).widget()
+            if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
+                if record[0][index]:
+                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                else:
+                    component.clear()
+                index += 1
+        for i in range(self.outline_frame_layout.count()):
+            component = self.outline_frame_layout.itemAt(i).widget()
+            if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
+                if record[0][index]:
+                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                else:
+                    component.clear()
+                index += 1
+        for i in range(self.research_frame_layout.count()):
+            component = self.research_frame_layout.itemAt(i).widget()
+            if isinstance(component, QTextEdit):
+                if record[0][index]:
+                    text = self.spd.reformat_string_for_load(record[0][index])
+                    component.setMarkdown(text.strip())
+                else:
+                    component.clear()
+                index += 1
+        for i in range(self.sermon_frame_layout.count()):
+            component = self.sermon_frame_layout.itemAt(i).widget()
+            if isinstance(component, QLineEdit):
+                if record[0][index]:
+                    component.setText(record[0][index].replace('&quot', '"'))
+                else:
+                    component.clear()
+                index += 1
 
-            num_tabs = self.tabbed_frame.count()
-            for i in range(1, num_tabs):
-                frame = self.tabbed_frame.widget(i)
-                widget = frame.findChild(QWidget, 'text_box')
-                if widget:
-                    text_title = widget.findChild(QLabel, 'text_title')
-                    text_edit = widget.findChild(QTextEdit, 'text_edit')
-                    text_edit.setText(self.sermon_text_edit.toPlainText())
-                    text_title.setText(self.sermon_reference_field.text())
+            if isinstance(component, QDateEdit):
+                date = record[0][index]
+                unusable_date = False
+                if '/' in date:
+                    date_split = date.split('/')
+                elif '\\' in date:
+                    date_split = date.split('\\')
+                elif '-' in date:
+                    date_split = date.split('-')
+                else:
+                    unusable_date = True
+                if not unusable_date:
+                    if int(date_split[0]) > 31:
+                        component.setDate(QDate(int(date_split[0]), int(date_split[1]), int(date_split[2])))
+                    elif date_split[2] > 31:
+                        component.setDate(QDate(int(date_split[2]), int(date_split[0]), int(date_split[1])))
+                else:
+                    self.spd.write_to_log('unusable date in record #' + str(record[0][0]))
+                    component.setDate(QDateTime.currentDateTime().date())
+                index += 1
 
-            self.top_frame.id_label.setText('ID: ' + str(record[0][0]))
-            self.changes = False
-        except Exception:
-            logging.exception('')
+            if isinstance(component, CustomTextEdit):
+                if record[0][index]:
+                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                else:
+                    component.clear()
+                index += 1
+
+            if component.objectName() == 'text_box':
+                component.clear()
+                index += 1
+
+        num_tabs = self.tabbed_frame.count()
+        for i in range(1, num_tabs):
+            frame = self.tabbed_frame.widget(i)
+            widget = frame.findChild(QWidget, 'text_box')
+            if widget:
+                text_title = widget.findChild(QLabel, 'text_title')
+                text_edit = widget.findChild(QTextEdit, 'text_edit')
+                text_edit.setText(self.sermon_text_edit.toPlainText())
+                text_title.setText(self.sermon_reference_field.text())
+
+        self.top_frame.id_label.setText('ID: ' + str(record[0][0]))
+        self.changes = False
 
     def changes_detected(self):
         self.changes = True
@@ -607,72 +604,69 @@ class CustomTextEdit(QTextEdit):
         self.blockSignals(False)
 
     def contextMenuEvent(self, e):
-        try:
-            menu = self.createStandardContextMenu()
+        menu = self.createStandardContextMenu()
 
-            clean_whitespace_action = QAction("Remove extra whitespace")
-            clean_whitespace_action.triggered.connect(self.clean_whitespace)
-            menu.insertAction(menu.actions()[0], clean_whitespace_action)
-            menu.insertSeparator(menu.actions()[1])
+        clean_whitespace_action = QAction("Remove extra whitespace")
+        clean_whitespace_action.triggered.connect(self.clean_whitespace)
+        menu.insertAction(menu.actions()[0], clean_whitespace_action)
+        menu.insertSeparator(menu.actions()[1])
 
-            if not self.gui.spd.disable_spell_check:
-                cursor = self.cursorForPosition(e.pos())
-                cursor.select(QTextCursor.WordUnderCursor)
-                word = cursor.selection().toPlainText()
+        if not self.gui.spd.disable_spell_check:
+            cursor = self.cursorForPosition(e.pos())
+            cursor.select(QTextCursor.WordUnderCursor)
+            word = cursor.selection().toPlainText()
+            cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+            if cursor.selection().toPlainText().endswith('\''):
                 cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
-                if cursor.selection().toPlainText().endswith('\''):
-                    cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
-                    if re.search('[a-z]$', cursor.selection().toPlainText()):
-                        word = cursor.selection().toPlainText()
+                if re.search('[a-z]$', cursor.selection().toPlainText()):
+                    word = cursor.selection().toPlainText()
 
-                chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\u2026', '\u201c', '\u201d']
-                single_quotes = ['\u2018', '\u2019']
+            chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\u2026', '\u201c', '\u201d']
+            single_quotes = ['\u2018', '\u2019']
 
-                upper = False
-                if word[0].isupper():
-                    upper = True
+            upper = False
+            if word[0].isupper():
+                upper = True
 
-                cleaned_word = word.lower()
-                for char in chars:
-                    cleaned_word = cleaned_word.replace(char, '')
-                for single_quote in single_quotes:
-                    cleaned_word = cleaned_word.replace(single_quote, '\'')
-                cleaned_word = cleaned_word.replace('\'s', '')
-                cleaned_word = cleaned_word.replace('s\'', 's')
-                cleaned_word = cleaned_word.replace("<[.?*]>", '')
-                if cleaned_word.startswith('\''):
-                    cleaned_word = cleaned_word[1:len(cleaned_word)]
-                if cleaned_word.endswith('\''):
-                    cleaned_word = cleaned_word[0:len(cleaned_word) - 1]
+            cleaned_word = word.lower()
+            for char in chars:
+                cleaned_word = cleaned_word.replace(char, '')
+            for single_quote in single_quotes:
+                cleaned_word = cleaned_word.replace(single_quote, '\'')
+            cleaned_word = cleaned_word.replace('\'s', '')
+            cleaned_word = cleaned_word.replace('s\'', 's')
+            cleaned_word = cleaned_word.replace("<[.?*]>", '')
+            if cleaned_word.startswith('\''):
+                cleaned_word = cleaned_word[1:len(cleaned_word)]
+            if cleaned_word.endswith('\''):
+                cleaned_word = cleaned_word[0:len(cleaned_word) - 1]
 
-                suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
-                                                            include_unknown=True)
+            suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+                                                        include_unknown=True)
 
-                if not suggestions[0].term == cleaned_word:
-                    spell_actions = {}
+            if not suggestions[0].term == cleaned_word:
+                spell_actions = {}
 
-                    number_of_suggestions = len(suggestions)
-                    if number_of_suggestions > 10: number_of_suggestions = 11
+                number_of_suggestions = len(suggestions)
+                if number_of_suggestions > 10: number_of_suggestions = 11
 
-                    for i in range(number_of_suggestions):
-                        term = suggestions[i].term
-                        if upper:
-                            term = term[0].upper() + term[1:]
-                        spell_actions['action% s' % str(i)] = QAction(term)
-                        spell_actions['action% s' % str(i)].setData((cursor, term))
-                        spell_actions['action% s' % str(i)].triggered.connect(self.replace_word)
-                        menu.insertAction(menu.actions()[i], spell_actions['action% s' % str(i)])
+                for i in range(number_of_suggestions):
+                    term = suggestions[i].term
+                    if upper:
+                        term = term[0].upper() + term[1:]
+                    spell_actions['action% s' % str(i)] = QAction(term)
+                    spell_actions['action% s' % str(i)].setData((cursor, term))
+                    spell_actions['action% s' % str(i)].triggered.connect(self.replace_word)
+                    menu.insertAction(menu.actions()[i], spell_actions['action% s' % str(i)])
 
-                    menu.insertSeparator(menu.actions()[i + 1])
-                    action = QAction('Add to dictionary')
-                    action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, cleaned_word))
-                    menu.insertAction(menu.actions()[i + 2], action)
-                    menu.insertSeparator(menu.actions()[i + 3])
+                menu.insertSeparator(menu.actions()[i + 1])
+                action = QAction('Add to dictionary')
+                action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, cleaned_word))
+                menu.insertAction(menu.actions()[i + 2], action)
+                menu.insertSeparator(menu.actions()[i + 3])
 
-            menu.exec(e.globalPos())
-            menu.close()
-        except Exception:
-            logging.exception()
+        menu.exec(e.globalPos())
+        menu.close()
 
     def replace_word(self):
         sender = self.sender()
