@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.6)
+This file is a part of the Sermon Prep Database program (v.3.3.7)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -556,7 +556,7 @@ class CustomTextEdit(QTextEdit):
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.Start)
 
-        while True:
+        while not self.gui.spd.disable_spell_check:
             cursor.select(cursor.WordUnderCursor)
             word = cursor.selection().toPlainText()
             cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
@@ -612,58 +612,59 @@ class CustomTextEdit(QTextEdit):
             menu.insertAction(menu.actions()[0], clean_whitespace_action)
             menu.insertSeparator(menu.actions()[1])
 
-            cursor = self.cursorForPosition(e.pos())
-            cursor.select(QTextCursor.WordUnderCursor)
-            word = cursor.selection().toPlainText()
-            cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
-            if cursor.selection().toPlainText().endswith('\''):
+            if not self.gui.spd.disable_spell_check:
+                cursor = self.cursorForPosition(e.pos())
+                cursor.select(QTextCursor.WordUnderCursor)
+                word = cursor.selection().toPlainText()
                 cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
-                if re.search('[a-z]$', cursor.selection().toPlainText()):
-                    word = cursor.selection().toPlainText()
+                if cursor.selection().toPlainText().endswith('\''):
+                    cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+                    if re.search('[a-z]$', cursor.selection().toPlainText()):
+                        word = cursor.selection().toPlainText()
 
-            chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\u2026', '\u201c', '\u201d']
-            single_quotes = ['\u2018', '\u2019']
+                chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\u2026', '\u201c', '\u201d']
+                single_quotes = ['\u2018', '\u2019']
 
-            upper = False
-            if word[0].isupper():
-                upper = True
+                upper = False
+                if word[0].isupper():
+                    upper = True
 
-            cleaned_word = word.lower()
-            for char in chars:
-                cleaned_word = cleaned_word.replace(char, '')
-            for single_quote in single_quotes:
-                cleaned_word = cleaned_word.replace(single_quote, '\'')
-            cleaned_word = cleaned_word.replace('\'s', '')
-            cleaned_word = cleaned_word.replace('s\'', 's')
-            cleaned_word = cleaned_word.replace("<[.?*]>", '')
-            if cleaned_word.startswith('\''):
-                cleaned_word = cleaned_word[1:len(cleaned_word)]
-            if cleaned_word.endswith('\''):
-                cleaned_word = cleaned_word[0:len(cleaned_word) - 1]
+                cleaned_word = word.lower()
+                for char in chars:
+                    cleaned_word = cleaned_word.replace(char, '')
+                for single_quote in single_quotes:
+                    cleaned_word = cleaned_word.replace(single_quote, '\'')
+                cleaned_word = cleaned_word.replace('\'s', '')
+                cleaned_word = cleaned_word.replace('s\'', 's')
+                cleaned_word = cleaned_word.replace("<[.?*]>", '')
+                if cleaned_word.startswith('\''):
+                    cleaned_word = cleaned_word[1:len(cleaned_word)]
+                if cleaned_word.endswith('\''):
+                    cleaned_word = cleaned_word[0:len(cleaned_word) - 1]
 
-            suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
-                                                        include_unknown=True)
+                suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+                                                            include_unknown=True)
 
-            if not suggestions[0].term == cleaned_word:
-                spell_actions = {}
+                if not suggestions[0].term == cleaned_word:
+                    spell_actions = {}
 
-                number_of_suggestions = len(suggestions)
-                if number_of_suggestions > 10: number_of_suggestions = 11
+                    number_of_suggestions = len(suggestions)
+                    if number_of_suggestions > 10: number_of_suggestions = 11
 
-                for i in range(number_of_suggestions):
-                    term = suggestions[i].term
-                    if upper:
-                        term = term[0].upper() + term[1:]
-                    spell_actions['action% s' % str(i)] = QAction(term)
-                    spell_actions['action% s' % str(i)].setData((cursor, term))
-                    spell_actions['action% s' % str(i)].triggered.connect(self.replace_word)
-                    menu.insertAction(menu.actions()[i], spell_actions['action% s' % str(i)])
+                    for i in range(number_of_suggestions):
+                        term = suggestions[i].term
+                        if upper:
+                            term = term[0].upper() + term[1:]
+                        spell_actions['action% s' % str(i)] = QAction(term)
+                        spell_actions['action% s' % str(i)].setData((cursor, term))
+                        spell_actions['action% s' % str(i)].triggered.connect(self.replace_word)
+                        menu.insertAction(menu.actions()[i], spell_actions['action% s' % str(i)])
 
-                menu.insertSeparator(menu.actions()[i + 1])
-                action = QAction('Add to dictionary')
-                action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, cleaned_word))
-                menu.insertAction(menu.actions()[i + 2], action)
-                menu.insertSeparator(menu.actions()[i + 3])
+                    menu.insertSeparator(menu.actions()[i + 1])
+                    action = QAction('Add to dictionary')
+                    action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, cleaned_word))
+                    menu.insertAction(menu.actions()[i + 2], action)
+                    menu.insertSeparator(menu.actions()[i + 3])
 
             menu.exec(e.globalPos())
             menu.close()

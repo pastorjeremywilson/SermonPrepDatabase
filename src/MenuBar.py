@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.6)
+This file is a part of the Sermon Prep Database program (v.3.3.7)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -22,6 +22,7 @@ The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
 '''
+import logging
 import os
 import re
 import sys
@@ -30,7 +31,7 @@ from Dialogs import message_box
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap
 from PyQt5.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableView, QPushButton, QColorDialog, \
-    QTabWidget, QHBoxLayout, QComboBox, QScrollArea, QTextBrowser, QDialog, QLineEdit, QTextEdit, QDateEdit
+    QTabWidget, QHBoxLayout, QComboBox, QScrollArea, QTextBrowser, QDialog, QLineEdit, QTextEdit, QDateEdit, QMenuBar
 from pynput.keyboard import Key, Controller
 from TopFrame import TopFrame
 
@@ -105,6 +106,15 @@ class MenuBar:
         remove_words_item = config_menu.addAction('Remove custom words from dictionary')
         remove_words_item.setStatusTip('Choose words to remove from the dictionary that have been added by you')
         remove_words_item.triggered.connect(self.remove_words)
+
+        self.disable_spell_check_action = config_menu.addAction('Disable Spell Check')
+        self.disable_spell_check_action.setStatusTip('Disabling spell check improves performance and memory usage')
+        self.disable_spell_check_action.setCheckable(True)
+        if self.spd.disable_spell_check:
+            self.disable_spell_check_action.setChecked(True)
+        else:
+            self.disable_spell_check_action.setChecked(False)
+        self.disable_spell_check_action.triggered.connect(self.disable_spell_check)
 
         record_menu = menu_bar.addMenu('Record')
         record_menu.setStyleSheet(menu_style)
@@ -540,6 +550,14 @@ class MenuBar:
         self.gui.set_style_sheets()
         self.spd.write_color_changes()
 
+    def disable_spell_check(self):
+        if self.disable_spell_check_action.isChecked():
+            self.spd.disable_spell_check = True
+            self.spd.write_spell_check_changes()
+        else:
+            self.spd.disable_spell_check = False
+            self.spd.write_spell_check_changes()
+
     def show_help(self):
         global sh
         sh = ShowHelp(self.gui.background_color, self.gui.accent_color, self.gui.font_family, self.gui.font_size, self.spd)
@@ -553,7 +571,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.3.3.6')
+        about_label = QLabel('Sermon Prep Database v.3.3.7')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 

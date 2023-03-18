@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.6)
+This file is a part of the Sermon Prep Database program (v.3.3.7)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -52,6 +52,7 @@ class SermonPrepDatabase(QThread):
     dates = []
     references = []
     db_loc = None
+    disable_spell_check = None
     current_rec_index = 0
     user_settings = None
     app = None
@@ -84,14 +85,38 @@ class SermonPrepDatabase(QThread):
         self.write_to_log('application directory is ' + self.app_dir)
         self.write_to_log('database location is ' + self.db_loc)
 
-        self.change_text.emit('Loading Dictionaries')
-        time.sleep(0.5)
-        self.load_dictionary()
+        self.disable_spell_check = self.check_spell_check()
+
+        if not self.disable_spell_check:
+            self.change_text.emit('Loading Dictionaries')
+            time.sleep(0.5)
+            self.load_dictionary()
 
         self.change_text.emit('Creating GUI')
         time.sleep(0.5)
 
         self.finished.emit()
+
+    def check_spell_check(self):
+        conn = sqlite3.connect(self.db_loc)
+        cursor = conn.cursor()
+        result = cursor.execute('SELECT disable_spell_check FROM user_settings').fetchone()
+        conn.close()
+
+        if result[0] == 0:
+            return False
+        else:
+            return True
+
+    def write_spell_check_changes(self):
+        conn = sqlite3.connect(self.db_loc)
+        cursor = conn.cursor()
+        if self.disable_spell_check:
+            cursor.execute('UPDATE user_settings SET disable_spell_check=1 WHERE ID="1";')
+        else:
+            cursor.execute('UPDATE user_settings SET disable_spell_check=0 WHERE ID="1";')
+        conn.commit()
+        conn.close
 
     def load_dictionary(self):
         self.sym_spell = SymSpell()
