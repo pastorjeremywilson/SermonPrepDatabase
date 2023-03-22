@@ -22,14 +22,12 @@ The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
 '''
-import itertools
 import logging
 import re
 import shutil
 import sys
 from os.path import exists
 
-import chardet
 from PyQt5.QtCore import Qt, QSize, QDate, QDateTime
 from PyQt5.QtGui import QIcon, QFont, QKeyEvent, QTextCursor, QStandardItemModel, QStandardItem, QPixmap
 from PyQt5.QtWidgets import *
@@ -52,29 +50,6 @@ class GUI:
         self.spd = spd
         self.check_for_db()
         self.init_components()
-
-    # check if the database file exists, and that the user_settings table exists. Prompt to create new if not.
-    def check_for_db(self):
-        if not exists(self.spd.db_loc):
-            response = yes_no_cancel_box(
-                'Database Not Found',
-                'It looks like this is the first time you\'ve run Sermon Prep Database v3.3.4.\n'
-                'Would you like to import an old database?',
-                '#ffffff',
-                'Import',
-                'Create New'
-            )
-
-            if response == 0:
-                from ConvertDatabase import ConvertDatabase
-                ConvertDatabase(self.spd)
-            elif response == 1:
-                shutil.copy(self.spd.cwd + 'resources/database_template.db', self.spd.db_loc)
-                message_box('Database Created', 'A new database has been created.', '#ffffff')
-            else:
-                quit(0)
-
-        self.spd.write_to_log('checkForDB completed')
 
     def init_components(self):
         self.spd.get_ids()
@@ -114,6 +89,29 @@ class GUI:
         self.set_style_sheets()
 
         self.win.showMaximized()
+
+    # check if the database file exists, and that the user_settings table exists. Prompt to create new if not.
+    def check_for_db(self):
+        if not exists(self.spd.db_loc):
+            response = QMessageBox.question(
+                None,
+                'Database Not Found',
+                'It looks like this is the first time you\'ve run Sermon Prep Database v3.3.4.\n'
+                'Would you like to import an old database?',
+                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
+            )
+
+            if response == QMessageBox.Yes:
+                from ConvertDatabase import ConvertDatabase
+                ConvertDatabase(self.spd)
+            elif response == QMessageBox.No:
+                shutil.copy(self.spd.cwd + 'resources/database_template.db', self.spd.db_loc)
+                QMessageBox.information(None, 'Database Created', 'A new database has been created.', QMessageBox.Ok)
+                self.spd.app.processEvents()
+            else:
+                quit(0)
+
+        self.spd.write_to_log('checkForDB completed')
     
     def build_tabbed_frame(self):
         self.tabbed_frame = QTabWidget()
@@ -562,10 +560,13 @@ class CustomTextEdit(QTextEdit):
             cursor.select(cursor.WordUnderCursor)
             word = cursor.selection().toPlainText()
             cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
-            if cursor.selection().toPlainText().endswith('\''):
+            if cursor.selection().toPlainText().endswith('\''): # if there's an apostrophe, check the next two characters for contraction letters
                 cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
                 if re.search('[a-z]$', cursor.selection().toPlainText()):
                     word = cursor.selection().toPlainText()
+                    cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+                    if re.search('[a-z]$', cursor.selection().toPlainText()):
+                        word = cursor.selection().toPlainText()
 
             cleaned_word = self.clean_word(word)
 
@@ -604,10 +605,13 @@ class CustomTextEdit(QTextEdit):
             cursor.select(QTextCursor.WordUnderCursor)
             word = cursor.selection().toPlainText()
             cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
-            if cursor.selection().toPlainText().endswith('\''):
+            if cursor.selection().toPlainText().endswith('\''): # if there's an apostrophe, check the next two characters for contraction letters
                 cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
                 if re.search('[a-z]$', cursor.selection().toPlainText()):
                     word = cursor.selection().toPlainText()
+                    cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+                    if re.search('[a-z]$', cursor.selection().toPlainText()):
+                        word = cursor.selection().toPlainText()
 
             upper = False
             if word[0].isupper():
@@ -646,15 +650,21 @@ class CustomTextEdit(QTextEdit):
         chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_',
                  '\n', '\u2026', '\u201c', '\u201d']
         single_quotes = ['\u2018', '\u2019']
+        contractions = ['\'nt', '\'ve', '\'ll', '\'d', '\'re']
 
         cleaned_word = word.lower()
+
         for char in chars:
             cleaned_word = cleaned_word.replace(char, '')
         for single_quote in single_quotes:
             cleaned_word = cleaned_word.replace(single_quote, '\'')
+        for contraction in contractions:
+            cleaned_word = cleaned_word.replace(contraction, '')
+
         cleaned_word = cleaned_word.replace('\'s', '')
         cleaned_word = cleaned_word.replace('s\'', 's')
         cleaned_word = cleaned_word.replace("<[.?*]>", '')
+
         if cleaned_word.startswith('\''):
             cleaned_word = cleaned_word[1:len(cleaned_word)]
         if cleaned_word.endswith('\''):

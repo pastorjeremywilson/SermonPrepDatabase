@@ -31,7 +31,8 @@ from Dialogs import message_box
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap
 from PyQt5.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableView, QPushButton, QColorDialog, \
-    QTabWidget, QHBoxLayout, QComboBox, QScrollArea, QTextBrowser, QDialog, QLineEdit, QTextEdit, QDateEdit, QMenuBar
+    QTabWidget, QHBoxLayout, QComboBox, QScrollArea, QTextBrowser, QDialog, QLineEdit, QTextEdit, QDateEdit, QMenuBar, \
+    QMessageBox
 from pynput.keyboard import Key, Controller
 from TopFrame import TopFrame
 
@@ -66,6 +67,10 @@ class MenuBar:
         restore_action = file_menu.addAction('Restore from Backup')
         restore_action.setStatusTip('Restore a previous backup of your database')
         restore_action.triggered.connect(self.restore_backup)
+
+        import_action = file_menu.addAction('Import Sermons from Files')
+        import_action.setStatusTip('Import sermons that have been saved as .docx, .odt, or .txt')
+        import_action.triggered.connect(self.import_from_files)
 
         file_menu.addSeparator()
 
@@ -464,6 +469,18 @@ class MenuBar:
                     + '/active-database-backup.db',
                     self.gui.background_color
                 )
+
+    def import_from_files(self):
+        QMessageBox.information(
+            self.gui.win,
+            'Import from Files',
+            'For best results, the files you are importing should be named according to this syntax:\n\n'
+            'YYYY-MM-DD.book.chapter.verse-verse\n\n'
+            'For example, a sermon preached on May 20th, 2011 on Mark 3:1-12, saved as a Microsoft Word document,'
+            'would be named:\n\n'
+            '2011-05-11.mark.3.1-12.docx', QMessageBox.Ok)
+        from GetFromDocx import GetFromDocx
+        GetFromDocx(self.gui)
 
     def rename_labels(self):
         self.rename_widget = QWidget()

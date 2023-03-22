@@ -29,16 +29,17 @@ import re
 import sqlite3
 import sys
 import time
+
 from datetime import datetime
 from os.path import exists
 from sqlite3 import OperationalError
-
 from PyQt5.QtCore import QThread, Qt, pyqtSignal
 from PyQt5.QtGui import QFont, QMovie
-from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDateEdit, QLabel, QGridLayout, QDialog
+from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDateEdit, QLabel, QGridLayout, QDialog, QVBoxLayout, \
+    QMessageBox, QWidget
 from symspellpy import SymSpell
 
-from Dialogs import yes_no_cancel_box
+from Dialogs import yes_no_cancel_box, message_box
 from gui import GUI
 
 
@@ -67,36 +68,42 @@ class SermonPrepDatabase(QThread):
         self.change_text.emit('Getting Platform')
         time.sleep(0.5)
         self.platform = sys.platform
-
-        self.change_text.emit('Getting Directories')
-        time.sleep(0.5)
-        user_dir = os.path.expanduser('~')
-        if self.platform == 'win32':
-            self.app_dir = user_dir + '/AppData/Roaming/Sermon Prep Database'
-        elif self.platform == 'linux':
-            self.app_dir = user_dir + '/.sermonPrepDatabase'
-            os.environ['QT_QPA_PLATFORM'] = 'offscreen'
-        self.db_loc = self.app_dir + '/sermon_prep_database.db'
-
-        if not exists(self.app_dir):
-            os.mkdir(self.app_dir)
-
-        self.write_to_log('platform is ' + self.platform)
-        self.write_to_log('current working directory is ' + self.cwd)
-        self.write_to_log('application directory is ' + self.app_dir)
-        self.write_to_log('database location is ' + self.db_loc)
-
-        self.disable_spell_check = self.check_spell_check()
-
-        if not self.disable_spell_check:
-            self.change_text.emit('Loading Dictionaries')
+        try:
+            self.change_text.emit('Getting Directories')
             time.sleep(0.5)
-            self.load_dictionary()
+            user_dir = os.path.expanduser('~')
+            if self.platform == 'win32':
+                self.app_dir = user_dir + '/AppData/Roaming/Sermon Prep Database'
+            elif self.platform == 'linux':
+                self.app_dir = user_dir + '/.sermonPrepDatabase'
+                os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+            self.db_loc = self.app_dir + '/sermon_prep_database.db'
 
-        self.change_text.emit('Creating GUI')
-        time.sleep(0.5)
+            if not exists(self.app_dir):
+                os.mkdir(self.app_dir)
 
-        self.finished.emit()
+            self.write_to_log('platform is ' + self.platform)
+            self.write_to_log('current working directory is ' + self.cwd)
+            self.write_to_log('application directory is ' + self.app_dir)
+            self.write_to_log('database location is ' + self.db_loc)
+
+            if exists(self.db_loc):
+                self.disable_spell_check = self.check_spell_check()
+
+                if not self.disable_spell_check:
+                    self.change_text.emit('Loading Dictionaries')
+                    time.sleep(0.5)
+                    self.load_dictionary()
+            else:
+                self.disable_spell_check = 1
+
+            self.change_text.emit('Creating GUI')
+            time.sleep(0.5)
+
+            self.finished.emit()
+
+        except Exception:
+            logging.exception('')
 
     def check_spell_check(self):
         try:
@@ -613,6 +620,87 @@ class SermonPrepDatabase(QThread):
         logfile = open(log_file_loc, 'a')
         logfile.writelines(string)
         logfile.close()
+
+    #function to add imported sermons to the database
+    def insert_imports(self, errors, sermons):
+        try:
+            conn = sqlite3.connect(self.db_loc)
+            cursor = conn.cursor()
+
+            highest_num = 0
+            for num in self.ids:
+                if num > highest_num:
+                    highest_num = num
+
+            for sermon in sermons:
+                highest_num += 1
+                date = sermon[0]
+                reference = sermon[1]
+                text = sermon[2]
+
+                sql = 'INSERT INTO sermon_prep_database (ID, date, sermon_reference, manuscript) VALUES("'\
+                    + str(highest_num) + '", "' + date + '", "' + reference + '", "' + text + '");'
+                cursor.execute(sql)
+                conn.commit()
+
+            conn.close()
+
+            import time
+            time.sleep(0.5)  # prevent a database lock, just in case SQLite takes a bit to update
+            self.get_ids()
+            self.get_date_list()
+            self.get_scripture_list()
+
+            self.gui.top_frame.dates_cb.blockSignals(True)
+            self.gui.top_frame.references_cb.blockSignals(True)
+            self.gui.top_frame.references_cb.clear()
+            for item in self.references:
+                self.gui.top_frame.references_cb.addItem(item[0])
+            self.gui.top_frame.dates_cb.clear()
+            self.gui.top_frame.dates_cb.addItems(self.dates)
+            self.gui.top_frame.dates_cb.blockSignals(False)
+            self.gui.top_frame.references_cb.blockSignals(False)
+
+            self.last_rec()
+
+            message = str(len(sermons)) + ' sermons have been imported.'
+            if len(errors) > 0:
+                message += ' Error(s) occurred while importing. Would you like to view them now?'
+                result = QMessageBox.question(self.gui.win, 'Import Complete', message, QMessageBox.Yes | QMessageBox.No)
+                print(result)
+                if result == QMessageBox.Yes:
+                    print('showing errors')
+                    error_text = ''
+                    for error in errors:
+                        error_text += error[0] + ': ' + error[1] + '\n'
+
+                    dialog = QDialog()
+                    dialog.setWindowTitle('Import Errors')
+                    layout = QVBoxLayout()
+                    dialog.setLayout(layout)
+
+                    label = QLabel('Errors:')
+                    label.setFont(QFont(self.user_settings[3], int(self.user_settings[4]), QFont.Bold))
+                    layout.addWidget(label)
+
+                    text_edit = QTextEdit()
+                    text_edit.setReadOnly(True)
+                    text_edit.setMinimumWidth(1000)
+                    text_edit.setLineWrapMode(QTextEdit.NoWrap)
+                    text_edit.setFont(QFont(self.user_settings[3], int(self.user_settings[4])))
+                    text_edit.setText(error_text)
+                    layout.addWidget(text_edit)
+                    dialog.exec()
+            else:
+                QMessageBox.information('Import Complete', message, QMessageBox.Ok)
+        except Exception as ex:
+            QMessageBox.critical(
+                self.gui.win,
+                'Error Occurred', 'An error occurred while importing:\n\n' + str(ex),
+                QMessageBox.Ok
+            )
+            self.write_to_log('From SermonPrepDatabase.insert_imports: ' + str(ex))
+
 
 class LoadingBox(QDialog):
     def __init__(self, app):

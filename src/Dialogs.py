@@ -22,6 +22,7 @@ The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
 '''
+import logging
 
 from PyQt5.QtCore import QSize, Qt, QTimer
 from PyQt5.QtWidgets import QDialog, QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QListWidget
@@ -49,47 +50,51 @@ def message_box(title, message, bg):
 
 # function to show a simple Yes/No/Cancel dialog box+
 def yes_no_cancel_box(*args):
-    #args = title, message, bg, (yes, no)
-    result = -1
+    try:
+        #args = title, message, bg, (yes, no)
+        result = -1
 
-    dialog = QDialog()
-    dialog.setStyleSheet('background: ' + args[2])
+        dialog = QDialog()
+        dialog.setStyleSheet('background: ' + args[2])
 
-    dialog.setWindowTitle(args[0])
+        dialog.setWindowTitle(args[0])
 
-    layout = QVBoxLayout()
-    dialog.setLayout(layout)
+        layout = QVBoxLayout()
+        dialog.setLayout(layout)
 
-    label = QLabel(args[1])
-    layout.addWidget(label)
+        label = QLabel(args[1])
+        layout.addWidget(label)
 
-    button_container = QWidget()
-    container_layout = QHBoxLayout()
-    button_container.setLayout(container_layout)
+        button_container = QWidget()
+        container_layout = QHBoxLayout()
+        button_container.setLayout(container_layout)
 
-    yes_button = QPushButton('Yes')
-    yes_button.pressed.connect(lambda: dialog.done(0))
-    container_layout.addWidget(yes_button)
+        yes_button = QPushButton('Yes')
+        yes_button.pressed.connect(lambda: dialog.done(0))
+        container_layout.addWidget(yes_button)
 
-    container_layout.addSpacing(10)
+        container_layout.addSpacing(10)
 
-    no_button = QPushButton('No')
-    no_button.pressed.connect(lambda: dialog.done(1))
-    container_layout.addWidget(no_button)
+        no_button = QPushButton('No')
+        no_button.pressed.connect(lambda: dialog.done(1))
+        container_layout.addWidget(no_button)
 
-    if len(args) == 5:
-        yes_button.setText(args[3])
-        no_button.setText(args[4])
+        container_layout.addSpacing(10)
 
-    container_layout.addSpacing(10)
+        cancel_button = QPushButton('Cancel')
+        cancel_button.pressed.connect(lambda: dialog.done(2))
+        container_layout.addWidget(cancel_button)
 
-    cancel_button = QPushButton('Cancel')
-    cancel_button.pressed.connect(lambda: dialog.done(2))
-    container_layout.addWidget(cancel_button)
+        if len(args) == 5:
+            yes_button.setText(args[3])
+            no_button.setText(args[4])
 
-    layout.addWidget(button_container)
-    result = dialog.exec()
-    return result
+        layout.addWidget(button_container)
+
+        response = dialog.exec()
+    except Exception:
+        logging.exception('')
+    return response
 
 # function to show a timed popup message, takes a message string and milliseconds to display as arguments
 def timed_popup(message, millis, bg):
