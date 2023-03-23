@@ -560,13 +560,14 @@ class SermonPrepDatabase(QThread):
     # double-check that the user really wants to delete this record, then remove it from the database
     # finish by loading the last record into the GUI
     def del_rec(self):
-        response = yes_no_cancel_box(
+        response = QMessageBox.question(
+            self.gui.win,
             'Really Delete?',
             'Really delete the current record?\nThis action cannot be undone',
-            self.gui.background_color
+            QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
         )
 
-        if response == 0:
+        if response == QMessageBox.Yes:
             self.gui.changes = False
             sql = 'DELETE FROM sermon_prep_database WHERE ID = "' + str(self.ids[self.current_rec_index]) + '";'
             conn = sqlite3.connect(self.db_loc)
@@ -592,17 +593,18 @@ class SermonPrepDatabase(QThread):
 
     # function to ask the user if they would like to save their work
     def ask_save(self):
-        response = yes_no_cancel_box(
+        response = QMessageBox.question(
+            self.gui.win,
             'Save Changes?',
             'Changes have been made. Save changes?',
-            self.gui.background_color
+            QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
         )
 
         self.write_to_log('askSave response: ' + str(response))
-        if response == 0:
+        if response == QMessageBox.Yes:
             self.save_rec()
             return True
-        elif response == 1:
+        elif response == QMessageBox.No:
             return True
         else:
             return False

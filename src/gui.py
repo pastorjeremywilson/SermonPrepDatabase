@@ -96,7 +96,8 @@ class GUI:
                 None,
                 'Database Not Found',
                 'It looks like this is the first time you\'ve run Sermon Prep Database v3.3.4.\n'
-                'Would you like to import an old database?',
+                'Would you like to import an old database?\n'
+                '(Choose "No" to create a new database)',
                 QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
             )
 
