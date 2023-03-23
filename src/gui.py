@@ -33,7 +33,6 @@ from PyQt5.QtGui import QIcon, QFont, QKeyEvent, QTextCursor, QStandardItemModel
 from PyQt5.QtWidgets import *
 from symspellpy import Verbosity
 
-from Dialogs import yes_no_cancel_box, message_box
 from MenuBar import MenuBar
 from TopFrame import TopFrame
 

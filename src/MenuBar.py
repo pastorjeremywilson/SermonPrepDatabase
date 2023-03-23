@@ -27,7 +27,6 @@ import os
 import re
 import sys
 
-from Dialogs import message_box
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap
 from PyQt5.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableView, QPushButton, QColorDialog, \
@@ -406,10 +405,11 @@ class MenuBar:
         shutil.copy(self.spd.db_loc, fileName[0])
         self.spd.write_to_log('Created Backup as ' + fileName[0])
 
-        message_box(
+        QMessageBox.information(
+            None,
             'Backup Created',
             'Backup successfully created as ' + fileName[0],
-            self.gui.background_color
+            QMessageBox.Ok
         )
 
     def restore_backup(self):
@@ -428,10 +428,11 @@ class MenuBar:
             os.remove(self.spd.db_loc)
             shutil.copy(db_file, self.spd.db_loc)
 
-            message_box(
+            QMessageBox.information(
+                None,
                 'Attempting Restore',
                 'The program will now attempt to restore the data from your backup.',
-                self.gui.background_color
+                QMessageBox.Ok
             )
 
             try:
@@ -447,11 +448,12 @@ class MenuBar:
                 shutil.copy(self.spd.app_dir + '/active-database-backup.db', self.spd.db_loc)
                 self.spd.write_to_log('MenuBar.restore_backup: ' + str(err))
 
-                message_box(
+                QMessageBox.critical(
+                    None,
                     'Error Loading Database Data',
                     'There was a problem loading the data from your backup. Your prior database has not been changed.  '
                     'The error is as follows:\r\n' + str(err),
-                    self.gui.background_color
+                    QMessageBox.Ok
                 )
 
                 self.spd.get_ids()
@@ -463,11 +465,12 @@ class MenuBar:
                     self.gui.references_cb.addItem(item[0])
                 self.spd.last_rec()
             else:
-                message_box(
+                QMessageBox.information(
+                    None,
                     'Backup Restored',
                     'Backup successfully restored.\n\nA copy of your prior database has been saved as ' + self.spd.app_dir
                     + '/active-database-backup.db',
-                    self.gui.background_color
+                    QMessageBox.Ok
                 )
 
     def import_from_files(self):

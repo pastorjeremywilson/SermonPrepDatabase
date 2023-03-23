@@ -30,9 +30,8 @@ import shutil
 import sqlite3
 from os.path import exists
 
-from PyQt5.QtWidgets import QFileDialog, QDialog, QGridLayout, QLabel, QProgressBar, QPushButton
+from PyQt5.QtWidgets import QFileDialog, QDialog, QGridLayout, QLabel, QProgressBar, QPushButton, QMessageBox
 
-from Dialogs import message_box
 
 class ConvertDatabase(QDialog):
     def __init__(self, spd):
@@ -75,7 +74,12 @@ class ConvertDatabase(QDialog):
 
             shutil.copy(self.spd.cwd + 'resources/database_template.db', self.spd.db_loc)
 
-            message_box('Database Created', 'A new database has been created.', '#ffffff')
+            QMessageBox.information(
+                None,
+                'Database Created',
+                'A new database has been created.',
+                QMessageBox.Ok
+            )
             return 0
         else:
             file_location = dialog.selectedFiles()[0]
@@ -187,8 +191,12 @@ class ConvertDatabase(QDialog):
                 conn.commit()
         except sqlite3.OperationalError as err:  # catch problems with the opening of the old database
             self.spd.write_to_log('ConvertDatabase.convertDatabase: ' + str(err))
-            message_box('Invalid Database',
-                        'Import failed. Please restart the program and try again.\n\nError:\n' + str(err), '#ffffff')
+            QMessageBox.critical(
+                None,
+                'Invalid Database',
+                'Import failed. Please restart the program and try again.\n\nError:\n' + str(err),
+                QMessageBox.Ok
+            )
 
             os.remove(self.spd.db_loc)
 

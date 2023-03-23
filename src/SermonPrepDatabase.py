@@ -36,10 +36,10 @@ from sqlite3 import OperationalError
 from PyQt5.QtCore import QThread, Qt, pyqtSignal
 from PyQt5.QtGui import QFont, QMovie
 from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDateEdit, QLabel, QGridLayout, QDialog, QVBoxLayout, \
-    QMessageBox, QWidget
+    QMessageBox
 from symspellpy import SymSpell
 
-from Dialogs import yes_no_cancel_box, message_box
+from Dialogs import yes_no_cancel_box
 from gui import GUI
 
 
