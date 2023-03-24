@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Sermon Prep Database"
-#define MyAppVersion "3.3.7"
+#define MyAppVersion "3.3.8"
 #define MyAppURL "https://sourceforge.net/projects/sermon-prep-database"
 #define MyAppExeName "SermonPrepDatabase.exe"
 

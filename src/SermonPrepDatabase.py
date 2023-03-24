@@ -1,4 +1,4 @@
-'''
+"""
 @author Jeremy G. Wilson
 
 Copyright 2023 Jeremy G. Wilson
@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
-'''
+"""
 
 import logging
 import os
@@ -39,7 +39,6 @@ from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDateEdit, QLabe
     QMessageBox
 from symspellpy import SymSpell
 
-from Dialogs import yes_no_cancel_box
 from gui import GUI
 
 
