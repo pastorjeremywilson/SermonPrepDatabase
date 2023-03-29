@@ -145,8 +145,7 @@ class SermonPrepDatabase(QThread):
             self.sym_spell.create_dictionary_entry(word, 1)
             with open(self.cwd + 'resources/custom_words.txt', 'a') as file:
                 file.write(word + '\n')
-            text = widget.toMarkdown()
-            widget.setMarkdown(text)
+            widget.check_whole_text()
 
         except Exception as ex:
             self.write_to_log(str(ex))

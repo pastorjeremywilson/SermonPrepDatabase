@@ -22,6 +22,7 @@ The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
 """
+import logging
 import re
 import shutil
 import sys
@@ -420,6 +421,7 @@ class GUI:
             elif isinstance(component, QTextEdit):
                 if record[0][index]:
                     component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    component.check_whole_text()
                 else:
                     component.clear()
                 index += 1
@@ -428,6 +430,7 @@ class GUI:
             if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
                 if record[0][index]:
                     component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    component.check_whole_text()
                 else:
                     component.clear()
                 index += 1
@@ -436,6 +439,7 @@ class GUI:
             if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
                 if record[0][index]:
                     component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    component.check_whole_text()
                 else:
                     component.clear()
                 index += 1
@@ -445,6 +449,7 @@ class GUI:
                 if record[0][index]:
                     text = self.spd.reformat_string_for_load(record[0][index])
                     component.setMarkdown(text.strip())
+                    component.check_whole_text()
                 else:
                     component.clear()
                 index += 1
@@ -481,6 +486,7 @@ class GUI:
             if isinstance(component, CustomTextEdit):
                 if record[0][index]:
                     component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    component.check_whole_text()
                 else:
                     component.clear()
                 index += 1
@@ -546,10 +552,53 @@ class CustomTextEdit(QTextEdit):
         super().__init__()
         self.win = win
         self.gui = gui
-        self.textChanged.connect(self.changes)
+
+    def keyReleaseEvent(self, evt):
+        if evt.key() == 32:
+            try:
+                self.gui.changes = True
+                self.blockSignals(True)
+
+                cursor = self.textCursor()
+                cursor.movePosition(QTextCursor.PreviousCharacter)
+                cursor.movePosition(QTextCursor.PreviousCharacter)
+                cursor.select(cursor.WordUnderCursor)
+                word = cursor.selection().toPlainText()
+
+                cursor.movePosition(QTextCursor.PreviousWord, cursor.KeepAnchor) #if apostrophed word, first move will be ""
+                cursor.movePosition(QTextCursor.PreviousWord, cursor.KeepAnchor) #then second move will be "'"
+                cursor.movePosition(QTextCursor.PreviousWord, cursor.KeepAnchor) #then this move will be the first part of the word plus the apostrophe
+                prev_word = cursor.selection().toPlainText()
+
+                if prev_word.endswith('\'') and not len(word.split(' ')) > 1:
+                    word = prev_word + word
+
+                cleaned_word = self.clean_word(word.strip())
+
+                if any(c.isalpha() for c in cleaned_word):
+                    suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+                                                                include_unknown=True)
+
+                    char_format = cursor.charFormat()
+                    if not suggestions[0].term == cleaned_word:
+                        char_format.setForeground(Qt.red)
+                        cursor.mergeCharFormat(char_format)
+
+                    else:
+                        if char_format.foreground() == Qt.red:
+                            char_format.setForeground(Qt.black)
+                            cursor.mergeCharFormat(char_format)
+
+                cursor.clearSelection()
+
+                self.blockSignals(False)
+            except Exception:
+                logging.exception('')
 
     def changes(self):
         self.gui.changes = True
+
+    def check_whole_text(self):
         self.blockSignals(True)
 
         cursor = self.textCursor()
@@ -700,6 +749,7 @@ class CustomTextEdit(QTextEdit):
             self.textCursor().insertText(term + ' ')
         else:
             self.textCursor().insertText(term)
+        self.changes()
 
     def clean_whitespace(self):
         component = self.win.focusWidget()
@@ -709,6 +759,7 @@ class CustomTextEdit(QTextEdit):
             string = re.sub('\t+', '\t', string)
 
             component.setMarkdown(string)
+        self.changes()
 
 class Win(QMainWindow):
     from PyQt5.QtGui import QCloseEvent
