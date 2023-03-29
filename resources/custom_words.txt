@@ -8,3 +8,4 @@ healings
 galatian
 levite
 levites
+ungrounded

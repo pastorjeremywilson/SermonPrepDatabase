@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.8)
+This file is a part of the Sermon Prep Database program (v.3.3.9)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -554,8 +554,11 @@ class CustomTextEdit(QTextEdit):
         self.gui = gui
 
     def keyReleaseEvent(self, evt):
-        if evt.key() == 32:
-            try:
+        if evt.key() == 32 or evt.key() == Qt.Key_Enter:
+            print(evt.key())
+            self.check_whole_text()
+
+            '''try:
                 self.gui.changes = True
                 self.blockSignals(True)
 
@@ -593,7 +596,7 @@ class CustomTextEdit(QTextEdit):
 
                 self.blockSignals(False)
             except Exception:
-                logging.exception('')
+                logging.exception('')'''
 
     def changes(self):
         self.gui.changes = True
@@ -605,9 +608,17 @@ class CustomTextEdit(QTextEdit):
         cursor.movePosition(QTextCursor.Start)
 
         while not self.gui.spd.disable_spell_check:
+            last_word = False
             cursor.select(cursor.WordUnderCursor)
             word = cursor.selection().toPlainText()
+
+            #if the position doesn't change after moving to the next character, this is the last word
+            pos_before_move = cursor.position()
             cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+            pos_after_move = cursor.position()
+            if pos_before_move == pos_after_move:
+                last_word = True
+
             if cursor.selection().toPlainText().endswith('\''): # if there's an apostrophe, check the next two characters for contraction letters
                 cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
                 if re.search('[a-z]$', cursor.selection().toPlainText()):
@@ -616,27 +627,32 @@ class CustomTextEdit(QTextEdit):
                     if re.search('[a-z]$', cursor.selection().toPlainText()):
                         word = cursor.selection().toPlainText()
 
+            cursor.movePosition(QTextCursor.PreviousCharacter, cursor.KeepAnchor)
+
             cleaned_word = self.clean_word(word)
 
-            if any(c.isalpha() for c in cleaned_word):
-                suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+            suggestions = None
+            if len(cleaned_word) > 0 and not any(c.isnumeric() for c in cleaned_word):
+                if any(h.isalpha() for h in cleaned_word):
+                    suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
                                                             include_unknown=True)
 
-                char_format = cursor.charFormat()
-                if not suggestions[0].term == cleaned_word:
-                    char_format.setForeground(Qt.red)
-                    cursor.mergeCharFormat(char_format)
-
-                else:
-                    if char_format.foreground() == Qt.red:
-                        char_format.setForeground(Qt.black)
+                if suggestions:
+                    char_format = cursor.charFormat()
+                    if not suggestions[0].term == cleaned_word:
+                        char_format.setForeground(Qt.red)
                         cursor.mergeCharFormat(char_format)
 
+                    else:
+                        if char_format.foreground() == Qt.red:
+                            char_format.setForeground(Qt.black)
+                            cursor.mergeCharFormat(char_format)
+
             cursor.clearSelection()
-            last_position = cursor.position()
             cursor.movePosition(QTextCursor.NextWord)
 
-            if cursor.position() == last_position: break
+            if last_word:
+                break
 
         self.blockSignals(False)
 
@@ -698,16 +714,13 @@ class CustomTextEdit(QTextEdit):
         chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_',
                  '\n', '\u2026', '\u201c', '\u201d']
         single_quotes = ['\u2018', '\u2019']
-        contractions = ['\'nt', '\'ve', '\'ll', '\'d', '\'re']
 
-        cleaned_word = word.lower()
+        cleaned_word = word.lower().strip()
 
         for char in chars:
             cleaned_word = cleaned_word.replace(char, '')
         for single_quote in single_quotes:
             cleaned_word = cleaned_word.replace(single_quote, '\'')
-        for contraction in contractions:
-            cleaned_word = cleaned_word.replace(contraction, '')
 
         cleaned_word = cleaned_word.replace('\'s', '')
         cleaned_word = cleaned_word.replace('s\'', 's')
