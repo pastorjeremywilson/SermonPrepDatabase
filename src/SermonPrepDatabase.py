@@ -1,9 +1,9 @@
-'''
+"""
 @author Jeremy G. Wilson
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.6)
+This file is a part of the Sermon Prep Database program (v.3.3.9)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
-'''
+"""
 
 import logging
 import os
@@ -29,16 +29,16 @@ import re
 import sqlite3
 import sys
 import time
+
 from datetime import datetime
 from os.path import exists
-
-from PyQt5.QtCore import QThread, Qt, QObject, pyqtSignal
-from PyQt5.QtGui import QFont, QMovie, QColor
-from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDateEdit, QWidget, QLabel, QGridLayout, QProgressBar, \
-    QDialog
+from sqlite3 import OperationalError
+from PyQt5.QtCore import QThread, Qt, pyqtSignal
+from PyQt5.QtGui import QFont, QMovie
+from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDateEdit, QLabel, QGridLayout, QDialog, QVBoxLayout, \
+    QMessageBox
 from symspellpy import SymSpell
 
-from Dialogs import yes_no_cancel_box
 from gui import GUI
 
 
@@ -53,6 +53,7 @@ class SermonPrepDatabase(QThread):
     dates = []
     references = []
     db_loc = None
+    disable_spell_check = None
     current_rec_index = 0
     user_settings = None
     app = None
@@ -66,37 +67,74 @@ class SermonPrepDatabase(QThread):
         self.change_text.emit('Getting Platform')
         time.sleep(0.5)
         self.platform = sys.platform
+        try:
+            self.change_text.emit('Getting Directories')
+            time.sleep(0.5)
+            user_dir = os.path.expanduser('~')
+            if self.platform == 'win32':
+                self.app_dir = user_dir + '/AppData/Roaming/Sermon Prep Database'
+            elif self.platform == 'linux':
+                self.app_dir = user_dir + '/.sermonPrepDatabase'
+                os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+            self.db_loc = self.app_dir + '/sermon_prep_database.db'
 
-        self.change_text.emit('Getting Directories')
-        time.sleep(0.5)
-        user_dir = os.path.expanduser('~')
-        if self.platform == 'win32':
-            self.app_dir = user_dir + '/AppData/Roaming/Sermon Prep Database'
-        elif self.platform == 'linux':
-            self.app_dir = user_dir + '/.sermonPrepDatabase'
-            os.environ['QT_QPA_PLATFORM'] = 'offscreen'
-        self.db_loc = self.app_dir + '/sermon_prep_database.db'
+            if not exists(self.app_dir):
+                os.mkdir(self.app_dir)
 
-        if not exists(self.app_dir):
-            os.mkdir(self.app_dir)
+            self.write_to_log('platform is ' + self.platform)
+            self.write_to_log('current working directory is ' + self.cwd)
+            self.write_to_log('application directory is ' + self.app_dir)
+            self.write_to_log('database location is ' + self.db_loc)
 
-        self.write_to_log('platform is ' + self.platform)
-        self.write_to_log('current working directory is ' + self.cwd)
-        self.write_to_log('application directory is ' + self.app_dir)
-        self.write_to_log('database location is ' + self.db_loc)
+            if exists(self.db_loc):
+                self.disable_spell_check = self.check_spell_check()
 
-        self.change_text.emit('Loading Dictionaries')
-        time.sleep(0.5)
-        self.load_dictionary()
+                if not self.disable_spell_check:
+                    self.change_text.emit('Loading Dictionaries')
+                    time.sleep(0.5)
+                    self.load_dictionary()
+            else:
+                self.disable_spell_check = 1
 
-        self.change_text.emit('Creating GUI')
-        time.sleep(0.5)
+            self.change_text.emit('Creating GUI')
+            time.sleep(0.5)
 
-        self.finished.emit()
+            self.finished.emit()
+
+        except Exception:
+            logging.exception('')
+
+    def check_spell_check(self):
+        try:
+            conn = sqlite3.connect(self.db_loc)
+            cursor = conn.cursor()
+            result = cursor.execute('SELECT disable_spell_check FROM user_settings').fetchone()
+            conn.close()
+
+            if int(result[0]) == 0:
+                return False
+            else:
+                return True
+        except OperationalError:
+            cursor.execute('ALTER TABLE user_settings ADD disable_spell_check TEXT;')
+            conn.commit()
+            cursor.execute('UPDATE user_settings SET disable_spell_check=0 WHERE ID="1";')
+            conn.commit()
+            return False
+
+    def write_spell_check_changes(self):
+        conn = sqlite3.connect(self.db_loc)
+        cursor = conn.cursor()
+        if self.disable_spell_check:
+            cursor.execute('UPDATE user_settings SET disable_spell_check=1 WHERE ID="1";')
+        else:
+            cursor.execute('UPDATE user_settings SET disable_spell_check=0 WHERE ID="1";')
+        conn.commit()
+        conn.close
 
     def load_dictionary(self):
         self.sym_spell = SymSpell()
-        self.sym_spell.create_dictionary(self.cwd + 'resources/dictionary_en_us_custom.txt')
+        self.sym_spell.create_dictionary(self.cwd + 'resources/default_dictionary.txt')
         with open(self.cwd + 'resources/custom_words.txt', 'r') as file:
             custom_words = file.readlines()
         for entry in custom_words:
@@ -107,12 +145,10 @@ class SermonPrepDatabase(QThread):
             self.sym_spell.create_dictionary_entry(word, 1)
             with open(self.cwd + 'resources/custom_words.txt', 'a') as file:
                 file.write(word + '\n')
-            text = widget.toMarkdown()
-            widget.setMarkdown(text)
+            widget.check_whole_text()
 
         except Exception as ex:
             self.write_to_log(str(ex))
-
 
     # retrieve the list of ID numbers from the database
     def get_ids(self):
@@ -522,13 +558,15 @@ class SermonPrepDatabase(QThread):
     # double-check that the user really wants to delete this record, then remove it from the database
     # finish by loading the last record into the GUI
     def del_rec(self):
-        response = yes_no_cancel_box(
+        response = QMessageBox.question(
+            self.gui.win,
             'Really Delete?',
             'Really delete the current record?\nThis action cannot be undone',
-            self.gui.background_color
+            QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
         )
 
-        if response == 0:
+        if response == QMessageBox.Yes:
+            self.gui.changes = False
             sql = 'DELETE FROM sermon_prep_database WHERE ID = "' + str(self.ids[self.current_rec_index]) + '";'
             conn = sqlite3.connect(self.db_loc)
             cur = conn.cursor()
@@ -553,17 +591,18 @@ class SermonPrepDatabase(QThread):
 
     # function to ask the user if they would like to save their work
     def ask_save(self):
-        response = yes_no_cancel_box(
+        response = QMessageBox.question(
+            self.gui.win,
             'Save Changes?',
             'Changes have been made. Save changes?',
-            self.gui.background_color
+            QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
         )
 
         self.write_to_log('askSave response: ' + str(response))
-        if response == 0:
+        if response == QMessageBox.Yes:
             self.save_rec()
             return True
-        elif response == 1:
+        elif response == QMessageBox.No:
             return True
         else:
             return False
@@ -582,10 +621,92 @@ class SermonPrepDatabase(QThread):
         logfile.writelines(string)
         logfile.close()
 
+    #function to add imported sermons to the database
+    def insert_imports(self, errors, sermons):
+        try:
+            conn = sqlite3.connect(self.db_loc)
+            cursor = conn.cursor()
+
+            highest_num = 0
+            for num in self.ids:
+                if num > highest_num:
+                    highest_num = num
+
+            for sermon in sermons:
+                highest_num += 1
+                date = sermon[0]
+                reference = sermon[1]
+                text = sermon[2]
+
+                sql = 'INSERT INTO sermon_prep_database (ID, date, sermon_reference, manuscript) VALUES("'\
+                    + str(highest_num) + '", "' + date + '", "' + reference + '", "' + text + '");'
+                cursor.execute(sql)
+                conn.commit()
+
+            conn.close()
+
+            import time
+            time.sleep(0.5)  # prevent a database lock, just in case SQLite takes a bit to update
+            self.get_ids()
+            self.get_date_list()
+            self.get_scripture_list()
+
+            self.gui.top_frame.dates_cb.blockSignals(True)
+            self.gui.top_frame.references_cb.blockSignals(True)
+            self.gui.top_frame.references_cb.clear()
+            for item in self.references:
+                self.gui.top_frame.references_cb.addItem(item[0])
+            self.gui.top_frame.dates_cb.clear()
+            self.gui.top_frame.dates_cb.addItems(self.dates)
+            self.gui.top_frame.dates_cb.blockSignals(False)
+            self.gui.top_frame.references_cb.blockSignals(False)
+
+            self.last_rec()
+
+            message = str(len(sermons)) + ' sermons have been imported.'
+            if len(errors) > 0:
+                message += ' Error(s) occurred while importing. Would you like to view them now?'
+                result = QMessageBox.question(self.gui.win, 'Import Complete', message, QMessageBox.Yes | QMessageBox.No)
+                print(result)
+                if result == QMessageBox.Yes:
+                    print('showing errors')
+                    error_text = ''
+                    for error in errors:
+                        error_text += error[0] + ': ' + error[1] + '\n'
+
+                    dialog = QDialog()
+                    dialog.setWindowTitle('Import Errors')
+                    layout = QVBoxLayout()
+                    dialog.setLayout(layout)
+
+                    label = QLabel('Errors:')
+                    label.setFont(QFont(self.user_settings[3], int(self.user_settings[4]), QFont.Bold))
+                    layout.addWidget(label)
+
+                    text_edit = QTextEdit()
+                    text_edit.setReadOnly(True)
+                    text_edit.setMinimumWidth(1000)
+                    text_edit.setLineWrapMode(QTextEdit.NoWrap)
+                    text_edit.setFont(QFont(self.user_settings[3], int(self.user_settings[4])))
+                    text_edit.setText(error_text)
+                    layout.addWidget(text_edit)
+                    dialog.exec()
+            else:
+                QMessageBox.information('Import Complete', message, QMessageBox.Ok)
+        except Exception as ex:
+            QMessageBox.critical(
+                self.gui.win,
+                'Error Occurred', 'An error occurred while importing:\n\n' + str(ex),
+                QMessageBox.Ok
+            )
+            self.write_to_log('From SermonPrepDatabase.insert_imports: ' + str(ex))
+
+
 class LoadingBox(QDialog):
-    def __init__(self):
+    def __init__(self, app):
         super().__init__()
         self.spd = SermonPrepDatabase()
+        self.spd.app = app
 
         self.spd.cwd = os.getcwd().replace('\\', '/')
         if str(self.spd.cwd).endswith('src'):
@@ -632,5 +753,5 @@ class LoadingBox(QDialog):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    loading_box = LoadingBox()
+    loading_box = LoadingBox(app)
     app.exec()

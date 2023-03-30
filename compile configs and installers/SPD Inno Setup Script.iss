@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Sermon Prep Database"
-#define MyAppVersion "3.3.5"
+#define MyAppVersion "3.3.9"
 #define MyAppURL "https://sourceforge.net/projects/sermon-prep-database"
 #define MyAppExeName "SermonPrepDatabase.exe"
 
@@ -23,8 +23,8 @@ LicenseFile=C:\Users\pasto\Nextcloud\Documents\Python Workspace\Sermon Prep Data
 ;PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=C:\Users\pasto\Nextcloud\Documents\Python Workspace\Sermon Prep Database\compile configs and installers\output
-OutputBaseFilename=Setup SPD {#MyAppVersion}
-SetupIconFile=C:\Users\pasto\Nextcloud\Documents\Python Workspace\Sermon Prep Database\compile configs and installers\output\SermonPrepDatabase\resources\icon.ico
+OutputBaseFilename=Setup SPD v.{#MyAppVersion}
+SetupIconFile=C:\Users\pasto\Nextcloud\Documents\Python Workspace\Sermon Prep Database\compile configs and installers\output\SermonPrepDatabase\resources\icons.ico
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -41,8 +41,8 @@ Source: "C:\Users\pasto\Nextcloud\Documents\Python Workspace\Sermon Prep Databas
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
-Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{autoprograms}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"
+Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon; WorkingDir: "{app}"
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent

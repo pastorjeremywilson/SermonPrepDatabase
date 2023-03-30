@@ -1,9 +1,9 @@
-'''
+"""
 @author Jeremy G. Wilson
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.6)
+This file is a part of the Sermon Prep Database program (v.3.3.9)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -21,11 +21,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
-'''
-
+"""
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QTextCharFormat, QFont, QTextListFormat, QTextCursor, QIcon
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel, QComboBox, QLineEdit, QTextEdit
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel, QComboBox, QLineEdit, QTextEdit, QMessageBox
 
 
 class TopFrame(QWidget):
@@ -228,11 +227,11 @@ class TopFrame(QWidget):
     def do_search(self, text):
         result_list = self.spd.get_search_results(text)
         if len(result_list) == 0:
-            from Dialogs import message_box
-            message_box(
+            QMessageBox.information(
+                None,
                 'No Results',
                 'No results were found. Please try your search again.',
-                self.gui.background_color
+                QMessageBox.Ok
             )
         else:
             from gui import SearchBox

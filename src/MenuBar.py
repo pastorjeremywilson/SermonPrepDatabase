@@ -1,9 +1,9 @@
-'''
+"""
 @author Jeremy G. Wilson
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.6)
+This file is a part of the Sermon Prep Database program (v.3.3.9)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -21,17 +21,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
-'''
+"""
 import logging
 import os
 import re
 import sys
 
-from Dialogs import message_box
 from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap
 from PyQt5.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableView, QPushButton, QColorDialog, \
-    QTabWidget, QHBoxLayout, QComboBox, QScrollArea, QTextBrowser, QDialog, QLineEdit, QTextEdit, QDateEdit
+    QTabWidget, QHBoxLayout, QComboBox, QScrollArea, QTextBrowser, QDialog, QLineEdit, QTextEdit, QDateEdit, QMenuBar, \
+    QMessageBox
 from pynput.keyboard import Key, Controller
 from TopFrame import TopFrame
 
@@ -66,6 +66,10 @@ class MenuBar:
         restore_action = file_menu.addAction('Restore from Backup')
         restore_action.setStatusTip('Restore a previous backup of your database')
         restore_action.triggered.connect(self.restore_backup)
+
+        import_action = file_menu.addAction('Import Sermons from Files')
+        import_action.setStatusTip('Import sermons that have been saved as .docx, .odt, or .txt')
+        import_action.triggered.connect(self.import_from_files)
 
         file_menu.addSeparator()
 
@@ -106,6 +110,15 @@ class MenuBar:
         remove_words_item = config_menu.addAction('Remove custom words from dictionary')
         remove_words_item.setStatusTip('Choose words to remove from the dictionary that have been added by you')
         remove_words_item.triggered.connect(self.remove_words)
+
+        self.disable_spell_check_action = config_menu.addAction('Disable Spell Check')
+        self.disable_spell_check_action.setStatusTip('Disabling spell check improves performance and memory usage')
+        self.disable_spell_check_action.setCheckable(True)
+        if self.spd.disable_spell_check:
+            self.disable_spell_check_action.setChecked(True)
+        else:
+            self.disable_spell_check_action.setChecked(False)
+        self.disable_spell_check_action.triggered.connect(self.disable_spell_check)
 
         record_menu = menu_bar.addMenu('Record')
         record_menu.setStyleSheet(menu_style)
@@ -392,10 +405,11 @@ class MenuBar:
         shutil.copy(self.spd.db_loc, fileName[0])
         self.spd.write_to_log('Created Backup as ' + fileName[0])
 
-        message_box(
+        QMessageBox.information(
+            None,
             'Backup Created',
             'Backup successfully created as ' + fileName[0],
-            self.gui.background_color
+            QMessageBox.Ok
         )
 
     def restore_backup(self):
@@ -414,10 +428,11 @@ class MenuBar:
             os.remove(self.spd.db_loc)
             shutil.copy(db_file, self.spd.db_loc)
 
-            message_box(
+            QMessageBox.information(
+                None,
                 'Attempting Restore',
                 'The program will now attempt to restore the data from your backup.',
-                self.gui.background_color
+                QMessageBox.Ok
             )
 
             try:
@@ -433,11 +448,12 @@ class MenuBar:
                 shutil.copy(self.spd.app_dir + '/active-database-backup.db', self.spd.db_loc)
                 self.spd.write_to_log('MenuBar.restore_backup: ' + str(err))
 
-                message_box(
+                QMessageBox.critical(
+                    None,
                     'Error Loading Database Data',
                     'There was a problem loading the data from your backup. Your prior database has not been changed.  '
                     'The error is as follows:\r\n' + str(err),
-                    self.gui.background_color
+                    QMessageBox.Ok
                 )
 
                 self.spd.get_ids()
@@ -449,12 +465,25 @@ class MenuBar:
                     self.gui.references_cb.addItem(item[0])
                 self.spd.last_rec()
             else:
-                message_box(
+                QMessageBox.information(
+                    None,
                     'Backup Restored',
                     'Backup successfully restored.\n\nA copy of your prior database has been saved as ' + self.spd.app_dir
                     + '/active-database-backup.db',
-                    self.gui.background_color
+                    QMessageBox.Ok
                 )
+
+    def import_from_files(self):
+        QMessageBox.information(
+            self.gui.win,
+            'Import from Files',
+            'For best results, the files you are importing should be named according to this syntax:\n\n'
+            'YYYY-MM-DD.book.chapter.verse-verse\n\n'
+            'For example, a sermon preached on May 20th, 2011 on Mark 3:1-12, saved as a Microsoft Word document,'
+            'would be named:\n\n'
+            '2011-05-11.mark.3.1-12.docx', QMessageBox.Ok)
+        from GetFromDocx import GetFromDocx
+        GetFromDocx(self.gui)
 
     def rename_labels(self):
         self.rename_widget = QWidget()
@@ -541,6 +570,19 @@ class MenuBar:
         self.gui.set_style_sheets()
         self.spd.write_color_changes()
 
+    def disable_spell_check(self):
+        if self.disable_spell_check_action.isChecked():
+            self.spd.disable_spell_check = True
+            self.spd.write_spell_check_changes()
+        else:
+            self.spd.disable_spell_check = False
+            if not self.spd.sym_spell:
+                from Dialogs import timed_popup
+                timed_popup('Please wait while the dictionary is loaded...', 5000, self.gui.accent_color)
+                self.spd.app.processEvents()
+                self.spd.load_dictionary()
+            self.spd.write_spell_check_changes()
+
     def show_help(self):
         global sh
         sh = ShowHelp(self.gui.background_color, self.gui.accent_color, self.gui.font_family, self.gui.font_size, self.spd)
@@ -554,7 +596,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.3.3.6')
+        about_label = QLabel('Sermon Prep Database v.3.3.9')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 
@@ -703,20 +745,20 @@ class ShowHelp(QTabWidget):
                         color: white;
                         font-family: "''' + self.font_family + '''";
                         font-size: ''' + self.font_size + '''pt;
-                        width: 120px;
+                        width: 140px;
                         height: 30px;
                         padding: 10px;}
                     QTabBar::tab:selected {
                         background-color: ''' + self.background_color + ''';
                         color: black;
                         font-family: "''' + self.font_family + '''";
-                        font-size: ''' + str(int(self.font_size) + 2) + '''pt;
-                        width: 120px;
+                        font-size: ''' + str(self.font_size) + '''pt;
+                        width: 140px;
                         height: 30px;
                         font-weight: bold;}
                     ''')
 
-        self.resize(800, 400)
+        self.resize(1200, 800)
         self.make_intro()
         self.make_menu()
         self.make_tool()
@@ -728,6 +770,7 @@ class ShowHelp(QTabWidget):
 
     def make_intro(self):
         intro_widget = QWidget()
+        intro_widget.setStyleSheet('background-color: ' + self.background_color)
         intro_layout = QVBoxLayout()
         intro_widget.setLayout(intro_layout)
 
@@ -735,19 +778,32 @@ class ShowHelp(QTabWidget):
         intro_label.setStyleSheet(self.bold_font)
         intro_layout.addWidget(intro_label)
 
-        intro_text = QLabel('Thank-you for trying out this Sermon Prep Database. Its purpose is to provide an easy-to-use program to organize and store the many different facets of the sermon preparation process. Whatever information you save in this program is stored on your hard drive in the widely-used SQLite Database format. This allows for secure storage and quick retrieval of your important information.<br><br>Should you ever need to find the database file that stores all your sermons, it is located at<br>C:\\Users\\YourUserName\\AppData\\Roaming\\Sermon Prep Database\\sermon_prep_database.db<br><br>The program is laid out primarily in a tab-style window. To the left of the window are tabs that you can use to navigate the different categories of information you may want to store. As each tab is selected, the contents of the window will change to reflect that category. At the top of the screen, you will find a tool bar that contains useful buttons and other tools you may want to make use of as you use the program.<br><br> It is my hope and prayer that you will find this program both a useful and valuable tool.<br><br>This program is a work-in-progress by a guy who is not, in no way, a professional programmer. If you run into any problems, unexpected behavior, missing features, or attempts to assimilate your unique biological and technological distinctiveness, email pastorjeremywilson@gmail.com')
-        intro_text.setStyleSheet(self.plain_font)
+        intro_text = QTextEdit(
+            'Thank-you for trying out this Sermon Prep Database. Its purpose is to provide an easy-to-use program to '
+            'organize and store the many different facets of the sermon preparation process. Whatever information you '
+            'save in this program is stored on your hard drive in the widely-used SQLite Database format. This allows '
+            'for secure storage and quick retrieval of your important information.<br><br>Should you ever need to find '
+            'the database file that stores all your sermons, it is located at'
+            '<br>C:\\Users\\YourUserName\\AppData\\Roaming\\Sermon Prep Database\\sermon_prep_database.db<br><br>'
+            'The program is laid out primarily in a tab-style window. To the left of the window are tabs that you can '
+            'use to navigate the different categories of information you may want to store. As each tab is selected, '
+            'the contents of the window will change to reflect that category. At the top of the screen, you will find '
+            'a tool bar that contains useful buttons and other tools you may want to make use of as you use the '
+            'program.<br><br> It is my hope and prayer that you will find this program both a useful and valuable '
+            'tool.<br><br>This program is a work-in-progress by a guy who is not, in no way, a professional '
+            'programmer. If you run into any problems, unexpected behavior, missing features, or attempts to '
+            'assimilate your unique biological and technological distinctiveness, email pastorjeremywilson@gmail.com'
+        )
+        intro_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
         intro_text.setMinimumWidth(750)
-        intro_text.setWordWrap(True)
+        intro_text.setReadOnly(True)
         intro_layout.addWidget(intro_text)
 
-        intro_scroll = QScrollArea()
-        intro_scroll.setWidget(intro_widget)
-        intro_scroll.setStyleSheet('background-color: ' + self.background_color)
-        self.addTab(intro_scroll, 'Introduction')
+        self.addTab(intro_widget, 'Introduction')
 
     def make_menu(self):
         menu_widget = QWidget()
+        menu_widget.setStyleSheet('background-color: ' + self.background_color)
         menu_layout = QVBoxLayout()
         menu_widget.setLayout(menu_layout)
 
@@ -759,16 +815,57 @@ class ShowHelp(QTabWidget):
         menu_pic_label.setPixmap(menu_pic)
         menu_layout.addWidget(menu_pic_label)
 
-        menu_text = QLabel('At the very top of the screen is a menu bar containing the File, Edit, Record, and Help menus<br><br><strong>File</strong><br>In the "File" menu, you will find "Save" and "Print" commands that perform the same functions as the corresponding buttons, as well as an "Exit" command. Here, you will also find a "Create Backup" command. While the program automatically saves a backup of your database every time it is opened, there may be instances where you would like to manually create a backup. Choose this option and navigate to the folder where you want to save your backup.<br><br> Should you accidentally delete a record, or if you need to restore from a backup for any reason, choose the option to "Restore from Backup". This will open a file dialog where you can choose the backup file you would like to restore.<br><br> <strong>Edit</strong><br>In the "Edit" menu, you will find the customary Cut, Copy, and Paste commands. Again, Ctrl-X, Ctrl-C, and Ctrl-V will also perform these same functions.<br><br>In this menu you will also find a "Configure" menu. This contains commands to change the colors used in the program as well as what the labels say and the font that is used.<br><br>First, you\'ll see commands that change the accent and background colors of the program. Changing the accent color will affect the background color of the left-side tabs, while changing the background colors will change the color surrounding the different boxes where you enter information.<br><br>Next, the Edit menu contains a command to "Rename Labels." Choosing this will open up a new window where you can customize the labels that appear above each data entry box. This new window will have two columns, the first showing the current label, and the second being where you can customize that label\'s text. For example, if you like to use, "Big Idea of the Text," instead of, "Central Proposition of the Text," you would click inside the right-hand "Central Proposition of the Text" box and change it to read, "Big Idea of the Text."<br><br>Finally, there is a command to "Change Font" This allows you to choose a custom font and font size for the labels and entry boxes throughout the program. You may have a particular font or size that you find easier to read, and you can change to that here.<br><br><strong>Record</strong><br>In the Record menu are the same navigation controls that appear in the upper bar of the window. In addition is a "Delete Record" option. Use this if you are currently viewing a record you would like to delete; if it\'s a duplicate or unneeded, for example. Deleting a record cannot be undone, so you will be prompted to make sure you really want to delete the current record.')
-        menu_text.setStyleSheet(self.plain_font)
-        menu_text.setMinimumWidth(750)
-        menu_text.setWordWrap(True)
+        menu_text = QTextEdit()
+        menu_text.setHtml(
+            'At the very top of the screen is a menu bar containing the File, Edit, Record, and Help menus<br><br>'
+            '<strong>File</strong><br>In the File menu, you will find <strong>Save</strong> and <strong>Print'
+            '</strong> commands that perform the same functions as the corresponding buttons, as well as an <strong>'
+            'Exit</strong> command. Here, you will also find a <strong>Create Backup</strong> command. While the '
+            'program automatically saves a backup of your database every time it is opened, there may be times where '
+            'you would like to manually create a backup. Choose this option and navigate to the folder where you want '
+            'to save your backup.<br><br>Should you accidentally delete a record, or if you need to restore from a '
+            'backup for any reason, choose the option to <strong>Restore from Backup</strong>. This will open a file '
+            'dialog where you can choose the backup file you would like to restore.<br><br>You also have an option to '
+            '<strong>import</strong> sermons from Microsoft Word .docx files, LibreOffice/OpenOffice .odt '
+            'files, or plain text .txt files.<br><br>This function has the ability to import the sermon\'s date, '
+            'scripture reference, and sermon manuscript into the Sermon Prep Database. In order to do so, a little '
+            'legwork is needed. It is best to copy all of your sermon files into one folder, as this will go through '
+            'all the files in the folder you choose, pulling the manuscript from each file. In order to also import '
+            'the date and reference for each sermon, the files should be named in a particular way. The file name '
+            'should start with the date in <strong>YYYY-MM-DD</strong> format folowed by a period. After the period, '
+            'the scripture reference follows in the format book.chapter.verse-verse. Finally is the proper suffix '
+            'for your file type (.docx, .odt, or .txt).<br><br>For example, a sermon preached on Sunday, March 19th, '
+            '2023 on Mark 9:1-12, saved as a Microsoft Word document would have the file name <strong>2023-03-19.mark.'
+            '9.1-12.docx</strong>. If the file names aren\'t renamed in this way, the program can still import your '
+            'sermons, it just won\'t be able to automatically save the corresponding date and reference information '
+            'as well<br><br>'
+            '<strong>Edit</strong><br>In the Edit menu, you will find the customary <strong>Cut</strong>, <strong>Copy'
+            '</strong>, and <strong>Paste</strong> commands. Again, <strong>Ctrl-X</strong>, <strong>Ctrl-C</strong>, '
+            'and <strong>Ctrl-V</strong> will also perform these same functions.<br><br>In this menu you will '
+            'also find a <strong>Configure</strong> menu. This contains commands to change the colors used in the '
+            'program as well as what the labels say and the font that is used.<br><br>First, you\'ll see commands that '
+            'change the accent and background colors of the program. Changing the accent color will affect the '
+            'background color of the left-side tabs, while changing the background colors will change the color '
+            'surrounding the different boxes where you enter information.<br><br>Next, the Edit menu contains a '
+            'command to <strong>Rename Labels</strong>. Choosing this will open up a new window where you can '
+            'customize the labels that appear above each data entry box. This new window will have two columns, the '
+            'first showing the current label, and the second being where you can type in what you would rather have '
+            'that label say. For example, if you like to use, "Big Idea of the Text," instead of, "Central Proposition '
+            'of the Text," you would click inside the right-hand "Central Proposition of the Text" box and change it '
+            'to read, "Big Idea of the Text."<br><br>Finally, there is a command to <strong>Change Font</strong>. '
+            'This allows you to choose a custom font and font size for the labels and entry boxes throughout the '
+            'program. You may have a particular font or size that you find easier to read, and you can change to that '
+            'here.<br><br><strong>Record</strong><br>In the Record menu are the same navigation controls that appear '
+            'in the upper bar of the window. In addition is a <strong>Delete Record</strong> option. Use this if you '
+            'are currently viewing a record you would like to delete; if it\'s a duplicate or unneeded, for example. '
+            'Deleting a record cannot be undone, so you will be prompted to make sure you really want to delete the '
+            'current record.'
+        )
+        menu_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
+        menu_text.setReadOnly(True)
         menu_layout.addWidget(menu_text)
 
-        menu_scroll = QScrollArea()
-        menu_scroll.setStyleSheet('background-color: ' + self.background_color)
-        menu_scroll.setWidget(menu_widget)
-        self.addTab(menu_scroll, 'Menu Bar')
+        self.addTab(menu_widget, 'Menu Bar')
 
     def make_tool(self):
         tool_widget = QWidget()
@@ -779,71 +876,39 @@ class ShowHelp(QTabWidget):
         tool_label.setStyleSheet(self.bold_font)
         tool_layout.addWidget(tool_label)
 
-        tool_text_intro = QLabel('Along the top of the window, you\'ll see a toolbar containing different formatting and navigation tools.')
-        tool_text_intro.setStyleSheet(self.plain_font)
-        tool_text_intro.setMinimumWidth(750)
-        tool_text_intro.setWordWrap(True)
-        tool_layout.addWidget(tool_text_intro)
-        undo_pic = QPixmap(self.spd.cwd + 'resources/undoPic.png')
-        undo_pic_label = QLabel()
-        undo_pic_label.setPixmap(undo_pic)
-        tool_layout.addWidget(undo_pic_label)
+        tool_text = QTextEdit()
+        tool_text.setHtml(
+            'Along the top of the window, you\'ll see a toolbar containing different formatting and navigation tools.'
+            '<br><br><img src="' + self.spd.cwd + 'resources/undoPic.png"><br>'
+            'First, you\'ll see Undo and Redo buttons that you can use to undo or redo any editing you perform. Of '
+            'course, Ctrl-Z and Ctrl-Y will also perform these functions.<br><br><img src="' + self.spd.cwd +
+            'resources/formatPic.png"><br>Beside those are the buttons you can use to format your text with bold, '
+            'italic, underline, and bullet-point options.<br><br><img src="' + self.spd.cwd +
+            'resources/showScripturePic.png"><br>Right beside these is an option to show the sermon text on all tabs. '
+            'If you would like to keep your sermon text handy while you are entering, for example, your exegesis notes '
+            'or research notes, click this icon. The sermon text will be shown to the right of the Exegesis, Outline, '
+            'Research, and Sermon tabs.<br><br><img src="' + self.spd.cwd + 'resources/searchPic.png"><br>In the '
+            'middle of this bar are two pull-down menus where you can bring up past sermons by the sermon date '
+            'or the sermon\'s scripture. This becomes increasingly useful as you add more and more sermons to the '
+            'database, allowing you to see what you\'ve preached on in the past or how you\'ve dealt with particular '
+            'texts.<br><br>Next to these is a search box. By entering a passage or keyword into this box and pressing '
+            'Enter, you can search for scripture passages or words you\'ve used in past sermons. Doing so will create '
+            'a new tab showing any records where your search term(s) appear, and double-clicking any of the results '
+            'will bring up that particular sermon\'s record. This new tab can be closed by pressing the "X" icon.<br>'
+            '<br><img src="' + self.spd.cwd + 'resources/navPic.png"><br>To the right of this upper bar are the navigation '
+            'buttons, as well as the save and print buttons. These '
+            'buttons will allow you to navigate to the first or last sermons in your database or switch to the '
+            'previous or next sermons. Just to the right of these navigation buttons is the "New Record" button. '
+            'This will create a new, blank record to start recording information for your next sermon.<br><br>After '
+            'this is the save and print buttons. The save button will save all your current info to the database, '
+            'while the print button will print a basic hard-copy of the information you have for the currently '
+            'showing sermon.'
+        )
+        tool_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
+        tool_text.setReadOnly(True)
+        tool_layout.addWidget(tool_text)
 
-        undo_text = QLabel('First, you\'ll see Undo and Redo buttons that you can use to undo or redo any editing you perform. Of course, Ctrl-Z and Ctrl-Y will also perform these functions.')
-        undo_text.setStyleSheet(self.plain_font)
-        undo_text.setMinimumWidth(750)
-        undo_text.setWordWrap(True)
-        tool_layout.addWidget(undo_text)
-
-        format_pic = QPixmap(self.spd.cwd + 'resources/formatPic.png')
-        format_pic_label = QLabel()
-        format_pic_label.setPixmap(format_pic)
-        tool_layout.addWidget(format_pic_label)
-
-        format_text = QLabel('Beside those are the buttons you can use to format your text with bold, italic, underline, and bullet-point options.')
-        format_text.setStyleSheet(self.plain_font)
-        format_text.setMinimumWidth(750)
-        format_text.setWordWrap(True)
-        tool_layout.addWidget(format_text)
-
-        show_pic = QPixmap(self.spd.cwd + 'resources/showScripturePic.png')
-        show_label = QLabel()
-        show_label.setPixmap(show_pic)
-        tool_layout.addWidget(show_label)
-
-        show_text_text = QLabel('Right beside these is an option to show the sermon text on all tabs. If you would like to keep your sermon text handy while you are entering, for example, your exegesis notes or research notes, click this icon. The sermon text will be shown to the right of the Exegesis, Outline, Research, and Sermon tabs.')
-        show_text_text.setStyleSheet(self.plain_font)
-        show_text_text.setMinimumWidth(750)
-        show_text_text.setWordWrap(True)
-        tool_layout.addWidget(show_text_text)
-
-        search_pic = QPixmap(self.spd.cwd + 'resources/searchPic.png')
-        search_pic = search_pic.scaled(QSize(750, 40), Qt.KeepAspectRatio, Qt.SmoothTransformation)
-        search_label = QLabel()
-        search_label.setPixmap(search_pic)
-        tool_layout.addWidget(search_label)
-
-        search_text = QLabel('In the middle of this bar are two pull-down menus where you can bring up past sermons by the sermon date or the sermon\'s scripture. This becomes increasingly useful as you add more and more sermons to the database, allowing you to see what you\'ve preached on in the past or how you\'ve dealt with particular texts.<br><br>Next to these is a search box. By entering a passage or keyword into this box and pressing Enter, you can search for scripture passages or words you\'ve used in past sermons. Doing so will bring up a list of any records where your search term(s) appear, and double-clicking any of the results will bring up that particular sermon.')
-        search_text.setStyleSheet(self.plain_font)
-        search_text.setMinimumWidth(750)
-        search_text.setWordWrap(True)
-        tool_layout.addWidget(search_text)
-
-        nav_pic = QPixmap(self.spd.cwd + 'resources/navPic.png')
-        nav_pic_label = QLabel()
-        nav_pic_label.setPixmap(nav_pic)
-        tool_layout.addWidget(nav_pic_label)
-
-        nav_text = QLabel('To the right of this upper bar are the navigation buttons, as well as the save and print buttons. These buttons will allow you to navigate to the first or last sermons in your database or switch to the previous or next sermons. Just to the right of these navigation buttons is the "New Record" button. This will create a new, blank record to start recording information for your next sermon.<br><br>After this is the save and print buttons. The save button will save all your current info to the database, while the print button will print a basic hard-copy of the information you have for the currently showing sermon.')
-        nav_text.setStyleSheet(self.plain_font)
-        nav_text.setMinimumWidth(750)
-        nav_text.setWordWrap(True)
-        tool_layout.addWidget(nav_text)
-
-        tool_scroll = QScrollArea()
-        tool_scroll.setStyleSheet('background-color: ' + self.background_color)
-        tool_scroll.setWidget(tool_widget)
-        self.addTab(tool_scroll, 'Toolbar')
+        self.addTab(tool_widget, 'Toolbar')
 
     def make_scripture(self):
         scripture_widget = QWidget()
@@ -853,16 +918,21 @@ class ShowHelp(QTabWidget):
         scripture_label.setStyleSheet(self.bold_font)
         scripture_layout.addWidget(scripture_label)
 
-        scripture_text = QLabel('The scripture tab contains information about the week\'s pericope and the text you\'ll use for the sermon. If you don\'t follow the pericopes, you can store any texts you\'ll be using for the week. You can always change the headings of any of the entries on the scripture tab by selecting "Rename Labels" under the "Edit" menu.<br><br>The first box you can enter text into is the "Pericope" box. An example of what goes here would be, "Second Sunday of Easter". Below that is where you can enter the recommended texts for that Pericope.<br><br>Next, you can enter the passage of the text you\'ll be using for your sermon, entering the text of that passage underneath.')
-        scripture_text.setStyleSheet(self.plain_font)
-        scripture_text.setMinimumWidth(750)
-        scripture_text.setWordWrap(True)
+        scripture_text = QTextEdit()
+        scripture_text.setHtml(
+            'The scripture tab contains information about the week\'s pericope and the text you\'ll use for the '
+            'sermon. If you don\'t follow the pericopes, you can store any texts you\'ll be using for the week. You '
+            'can always change the headings of any of the entries on the scripture tab by selecting "Rename Labels" '
+            'under the "Edit" menu.<br><br>The first box you can enter text into is the "Pericope" box. An example of '
+            'what goes here would be, "Second Sunday of Easter". Below that is where you can enter the recommended '
+            'texts for that Pericope.<br><br>Next, you can enter the passage of the text you\'ll be using for your '
+            'sermon, entering the text of that passage underneath.'
+        )
+        scripture_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
+        scripture_text.setReadOnly(True)
         scripture_layout.addWidget(scripture_text)
 
-        scripture_scroll = QScrollArea()
-        scripture_scroll.setStyleSheet('background-color: ' + self.background_color)
-        scripture_scroll.setWidget(scripture_widget)
-        self.addTab(scripture_scroll, 'Scripture Tab')
+        self.addTab(scripture_widget, 'Scripture Tab')
 
     def make_exeg(self):
         exeg_widget = QWidget()
@@ -872,16 +942,25 @@ class ShowHelp(QTabWidget):
         exeg_label.setStyleSheet(self.bold_font)
         exeg_layout.addWidget(exeg_label)
 
-        exeg_text = QLabel('It is in the Exegesis where you will record the work of exegeting your text.<br><br>On the left is where you will consider the text itself. What is the Fallen Condition Focus of the text? That is, is there a particular sin problem being addressed in the text? Is it a specific sin, or a result of the world being broken by sin? Then, what is the gospel answer of the text? That is, how has the person and work of Christ remedied that sin condition? Finally, what is the central proposition of the text? That is, what is the "big idea" that the text is communicating?<br><br>Next comes the Purpose Bridge. This is a statement that usually starts with, "I want my congregation to..." This is about exegeting your congregation. What does this text have to say, in particular, to your congregation?<br><br>The, on the right, are the same ideas that you gleaned from the text, but with an eye to your sermon and your congregation. What is the sin problem that the sermon will address? What is the gospel answer to that sin problem? What is the big idea that your sermon is going to convey?')
-        exeg_text.setStyleSheet(self.plain_font)
-        exeg_text.setMinimumWidth(750)
-        exeg_text.setWordWrap(True)
+        exeg_text = QTextEdit()
+        exeg_text.setHtml(
+            'It is in the Exegesis where you will record the work of exegeting your text.<br><br>On the left is where '
+            'you will consider the text itself. What is the Fallen Condition Focus of the text? That is, is there a '
+            'particular sin problem being addressed in the text? Is it a specific sin, or a result of the world being '
+            'broken by sin? Then, what is the gospel answer of the text? That is, how has the person and work of '
+            'Christ remedied that sin condition? Finally, what is the central proposition of the text? That is, what '
+            'is the "big idea" that the text is communicating?<br><br>Next comes the Purpose Bridge. This is a '
+            'statement that usually starts with, "I want my congregation to..." This is about exegeting your '
+            'congregation. What does this text have to say, in particular, to your congregation?<br><br>The, on the '
+            'right, are the same ideas that you gleaned from the text, but with an eye to your sermon and your '
+            'congregation. What is the sin problem that the sermon will address? What is the gospel answer to that '
+            'sin problem? What is the big idea that your sermon is going to convey?'
+        )
+        exeg_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
+        exeg_text.setReadOnly(True)
         exeg_layout.addWidget(exeg_text)
 
-        exeg_scroll = QScrollArea()
-        exeg_scroll.setStyleSheet('background-color: ' + self.background_color)
-        exeg_scroll.setWidget(exeg_widget)
-        self.addTab(exeg_scroll, 'Exegesis Tab')
+        self.addTab(exeg_widget, 'Exegesis Tab')
 
     def make_outline(self):
         outline_widget = QWidget()
@@ -892,16 +971,16 @@ class ShowHelp(QTabWidget):
         outline_label.setStyleSheet(self.bold_font)
         outline_layout.addWidget(outline_label)
 
-        outline_text = QLabel('In the outline tab, you can record outlines for the sermon text as well as for your sermon. You can also save any illustration ideas that come up as you study')
-        outline_text.setStyleSheet(self.plain_font)
-        outline_text.setMinimumWidth(750)
-        outline_text.setWordWrap(True)
+        outline_text = QTextEdit()
+        outline_text.setHtml(
+            'In the outline tab, you can record outlines for the sermon text as well as for your sermon. You can also '
+            'save any illustration ideas that come up as you study'
+        )
+        outline_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
+        outline_text.setReadOnly(True)
         outline_layout.addWidget(outline_text)
 
-        outline_scroll = QScrollArea()
-        outline_scroll.setStyleSheet('background-color: ' + self.background_color)
-        outline_scroll.setWidget(outline_widget)
-        self.addTab(outline_scroll, 'Outline Tab')
+        self.addTab(outline_widget, 'Outline Tab')
 
     def make_research(self):
         research_widget = QWidget()
@@ -912,16 +991,15 @@ class ShowHelp(QTabWidget):
         research_label.setStyleSheet(self.bold_font)
         research_layout.addWidget(research_label)
 
-        research_text = QLabel('In the research tab, you can jot down notes as you do research on the text for your sermon.<br><br>You are able to use basic formatting as you record your notes: bold, underline, italic, and bullet points.')
-        research_text.setStyleSheet(self.plain_font)
-        research_text.setMinimumWidth(750)
-        research_text.setWordWrap(True)
+        research_text = QTextEdit()
+        research_text.setHtml('In the research tab, you can jot down notes as you do research on the text for your '
+                               'sermon.<br><br>You are able to use basic formatting as you record your notes: bold, '
+                               'underline, italic, and bullet points.')
+        research_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
+        research_text.setReadOnly(True)
         research_layout.addWidget(research_text)
 
-        research_scroll = QScrollArea()
-        research_scroll.setStyleSheet('background-color: ' + self.background_color)
-        research_scroll.setWidget(research_widget)
-        self.addTab(research_scroll, 'Research Tab')
+        self.addTab(research_widget, 'Research Tab')
 
     def make_sermon(self):
         sermon_widget = QWidget()
@@ -931,13 +1009,17 @@ class ShowHelp(QTabWidget):
         sermon_label.setStyleSheet(self.bold_font)
         sermon_layout.addWidget(sermon_label)
 
-        sermon_text = QLabel('The sermon tab is for recording important details about your sermon, as well as the manuscript of the sermon itself.<br><br>At the top, you can enter such information as the date of the sermon, the location where the sermon will be given, as well as the title of your sermon. You can also record what call to worship you\'ll be using that day as well as a hymn of response, if either of these apply.<br><br> Just like in the research tab, you are able to format the text of your sermon manuscript with bold, italic, and underline fonts as you need to.')
-        sermon_text.setStyleSheet(self.plain_font)
-        sermon_text.setMinimumWidth(750)
-        sermon_text.setWordWrap(True)
+        sermon_text = QTextEdit()
+        sermon_text.setHtml(
+            'The sermon tab is for recording important details about your sermon, as well as the manuscript of the '
+            'sermon itself.<br><br>At the top, you can enter such information as the date of the sermon, the location '
+            'where the sermon will be given, as well as the title of your sermon. You can also record what call to '
+            'worship you\'ll be using that day as well as a hymn of response, if either of these apply.<br><br> Just '
+            'like in the research tab, you are able to format the text of your sermon manuscript with bold, italic, '
+            'and underline fonts as you need to.'
+        )
+        sermon_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
+        sermon_text.setReadOnly(True)
         sermon_layout.addWidget(sermon_text)
 
-        sermon_scroll = QScrollArea()
-        sermon_scroll.setStyleSheet('background-color: ' + self.background_color)
-        sermon_scroll.setWidget(sermon_widget)
-        self.addTab(sermon_scroll, 'Sermon Tab')
+        self.addTab(sermon_widget, 'Sermon Tab')

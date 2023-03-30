@@ -1,9 +1,9 @@
-'''
+"""
 @author Jeremy G. Wilson
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.6)
+This file is a part of the Sermon Prep Database program (v.3.3.9)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
-'''
+"""
 import logging
 import re
 import shutil
@@ -33,7 +33,6 @@ from PyQt5.QtGui import QIcon, QFont, QKeyEvent, QTextCursor, QStandardItemModel
 from PyQt5.QtWidgets import *
 from symspellpy import Verbosity
 
-from Dialogs import yes_no_cancel_box, message_box
 from MenuBar import MenuBar
 from TopFrame import TopFrame
 
@@ -50,29 +49,6 @@ class GUI:
         self.spd = spd
         self.check_for_db()
         self.init_components()
-
-    # check if the database file exists, and that the user_settings table exists. Prompt to create new if not.
-    def check_for_db(self):
-        if not exists(self.spd.db_loc):
-            response = yes_no_cancel_box(
-                'Database Not Found',
-                'It looks like this is the first time you\'ve run Sermon Prep Database v3.3.4.\n'
-                'Would you like to import an old database?',
-                '#ffffff',
-                'Import',
-                'Create New'
-            )
-
-            if response == 0:
-                from ConvertDatabase import ConvertDatabase
-                ConvertDatabase(self.spd)
-            elif response == 1:
-                shutil.copy(self.spd.cwd + 'resources/database_template.db', self.spd.db_loc)
-                message_box('Database Created', 'A new database has been created.', '#ffffff')
-            else:
-                quit(0)
-
-        self.spd.write_to_log('checkForDB completed')
 
     def init_components(self):
         self.spd.get_ids()
@@ -112,6 +88,30 @@ class GUI:
         self.set_style_sheets()
 
         self.win.showMaximized()
+
+    # check if the database file exists, and that the user_settings table exists. Prompt to create new if not.
+    def check_for_db(self):
+        if not exists(self.spd.db_loc):
+            response = QMessageBox.question(
+                None,
+                'Database Not Found',
+                'It looks like this is the first time you\'ve run Sermon Prep Database v3.3.4.\n'
+                'Would you like to import an old database?\n'
+                '(Choose "No" to create a new database)',
+                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
+            )
+
+            if response == QMessageBox.Yes:
+                from ConvertDatabase import ConvertDatabase
+                ConvertDatabase(self.spd)
+            elif response == QMessageBox.No:
+                shutil.copy(self.spd.cwd + 'resources/database_template.db', self.spd.db_loc)
+                QMessageBox.information(None, 'Database Created', 'A new database has been created.', QMessageBox.Ok)
+                self.spd.app.processEvents()
+            else:
+                quit(0)
+
+        self.spd.write_to_log('checkForDB completed')
     
     def build_tabbed_frame(self):
         self.tabbed_frame = QTabWidget()
@@ -408,7 +408,7 @@ class GUI:
             self.top_frame.bullet_button.setChecked(False)
         
     def fill_values(self, record):
-        index = 1;
+        index = 1
         self.win.setWindowTitle('Sermon Prep Database - ' + str(record[0][17]) + ' - ' + str(record[0][3]))
         for i in range(self.scripture_frame_layout.count()):
             component = self.scripture_frame_layout.itemAt(i).widget()
@@ -421,6 +421,7 @@ class GUI:
             elif isinstance(component, QTextEdit):
                 if record[0][index]:
                     component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    component.check_whole_text()
                 else:
                     component.clear()
                 index += 1
@@ -429,6 +430,7 @@ class GUI:
             if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
                 if record[0][index]:
                     component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    component.check_whole_text()
                 else:
                     component.clear()
                 index += 1
@@ -437,6 +439,7 @@ class GUI:
             if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
                 if record[0][index]:
                     component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    component.check_whole_text()
                 else:
                     component.clear()
                 index += 1
@@ -446,6 +449,7 @@ class GUI:
                 if record[0][index]:
                     text = self.spd.reformat_string_for_load(record[0][index])
                     component.setMarkdown(text.strip())
+                    component.check_whole_text()
                 else:
                     component.clear()
                 index += 1
@@ -482,6 +486,7 @@ class GUI:
             if isinstance(component, CustomTextEdit):
                 if record[0][index]:
                     component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    component.check_whole_text()
                 else:
                     component.clear()
                 index += 1
@@ -547,42 +552,94 @@ class CustomTextEdit(QTextEdit):
         super().__init__()
         self.win = win
         self.gui = gui
-        self.textChanged.connect(self.changes)
+
+    def keyReleaseEvent(self, evt):
+        if evt.key() == 32 or evt.key() == Qt.Key_Enter:
+            print(evt.key())
+            self.check_whole_text()
+
+            '''try:
+                self.gui.changes = True
+                self.blockSignals(True)
+
+                cursor = self.textCursor()
+                cursor.movePosition(QTextCursor.PreviousCharacter)
+                cursor.movePosition(QTextCursor.PreviousCharacter)
+                cursor.select(cursor.WordUnderCursor)
+                word = cursor.selection().toPlainText()
+
+                cursor.movePosition(QTextCursor.PreviousWord, cursor.KeepAnchor) #if apostrophed word, first move will be ""
+                cursor.movePosition(QTextCursor.PreviousWord, cursor.KeepAnchor) #then second move will be "'"
+                cursor.movePosition(QTextCursor.PreviousWord, cursor.KeepAnchor) #then this move will be the first part of the word plus the apostrophe
+                prev_word = cursor.selection().toPlainText()
+
+                if prev_word.endswith('\'') and not len(word.split(' ')) > 1:
+                    word = prev_word + word
+
+                cleaned_word = self.clean_word(word.strip())
+
+                if any(c.isalpha() for c in cleaned_word):
+                    suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+                                                                include_unknown=True)
+
+                    char_format = cursor.charFormat()
+                    if not suggestions[0].term == cleaned_word:
+                        char_format.setForeground(Qt.red)
+                        cursor.mergeCharFormat(char_format)
+
+                    else:
+                        if char_format.foreground() == Qt.red:
+                            char_format.setForeground(Qt.black)
+                            cursor.mergeCharFormat(char_format)
+
+                cursor.clearSelection()
+
+                self.blockSignals(False)
+            except Exception:
+                logging.exception('')'''
 
     def changes(self):
         self.gui.changes = True
+
+    def check_whole_text(self):
         self.blockSignals(True)
-        dictionary = self.gui.spd.sym_spell.words
-        chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\n', '\u2026', '\u201c', '\u201d']
-        single_quotes = ['\u2018', '\u2019']
-        contractions = ['\'s', '\'ve', '\'t', '\'ll', '\'d', '\'re']
 
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.Start)
 
-        while True:
+        while not self.gui.spd.disable_spell_check:
+            last_word = False
             cursor.select(cursor.WordUnderCursor)
             word = cursor.selection().toPlainText()
 
-            if len(word) > 0:
-                cleaned_word = word.lower()
-                for char in chars:
-                    cleaned_word = cleaned_word.replace(char, '')
-                for single_quote in single_quotes:
-                    cleaned_word = cleaned_word.replace(single_quote, '\'')
+            #if the position doesn't change after moving to the next character, this is the last word
+            pos_before_move = cursor.position()
+            cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+            pos_after_move = cursor.position()
+            if pos_before_move == pos_after_move:
+                last_word = True
 
-                if cleaned_word.startswith('\'') and cleaned_word.endswith('\''):
-                    cleaned_word = cleaned_word.replace('\'', '')
-                elif cleaned_word.startswith('\''):
-                    cleaned_word = cleaned_word.replace('\'', '')
+            if cursor.selection().toPlainText().endswith('\''): # if there's an apostrophe, check the next two characters for contraction letters
+                cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+                if re.search('[a-z]$', cursor.selection().toPlainText()):
+                    word = cursor.selection().toPlainText()
+                    cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+                    if re.search('[a-z]$', cursor.selection().toPlainText()):
+                        word = cursor.selection().toPlainText()
 
-                cleaned_word = cleaned_word.replace('s\'', '')
-                for cont in contractions:
-                    cleaned_word = cleaned_word.replace(cont, '')
+            cursor.movePosition(QTextCursor.PreviousCharacter, cursor.KeepAnchor)
 
-                if any(c.isalpha() for c in word):
+            cleaned_word = self.clean_word(word)
+
+            suggestions = None
+            if len(cleaned_word) > 0 and not any(c.isnumeric() for c in cleaned_word):
+                if any(h.isalpha() for h in cleaned_word):
+                    suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+                                                            include_unknown=True)
+
+                if suggestions:
                     char_format = cursor.charFormat()
-                    if cleaned_word not in dictionary:
+                    if not suggestions[0].term == cleaned_word:
                         char_format.setForeground(Qt.red)
                         cursor.mergeCharFormat(char_format)
 
@@ -592,10 +649,10 @@ class CustomTextEdit(QTextEdit):
                             cursor.mergeCharFormat(char_format)
 
             cursor.clearSelection()
-            last_position = cursor.position()
             cursor.movePosition(QTextCursor.NextWord)
 
-            if cursor.position() == last_position: break
+            if last_word:
+                break
 
         self.blockSignals(False)
 
@@ -607,52 +664,79 @@ class CustomTextEdit(QTextEdit):
         menu.insertAction(menu.actions()[0], clean_whitespace_action)
         menu.insertSeparator(menu.actions()[1])
 
-        cursor = self.cursorForPosition(e.pos())
-        cursor.select(QTextCursor.WordUnderCursor)
-        word = cursor.selection().toPlainText()
+        if not self.gui.spd.disable_spell_check:
+            cursor = self.cursorForPosition(e.pos())
+            cursor.select(QTextCursor.WordUnderCursor)
+            word = cursor.selection().toPlainText()
+            if len(word) > 0:
+                cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+                if cursor.selection().toPlainText().endswith('\''): # if there's an apostrophe, check the next two characters for contraction letters
+                    cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+                    if re.search('[a-z]$', cursor.selection().toPlainText()):
+                        word = cursor.selection().toPlainText()
+                        cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+                        if re.search('[a-z]$', cursor.selection().toPlainText()):
+                            word = cursor.selection().toPlainText()
 
-        chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_', '\u2026', '\u201c', '\u201d']
+                upper = False
+                if word[0].isupper():
+                    upper = True
+
+                cleaned_word = self.clean_word(word)
+
+                suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+                                                            include_unknown=True)
+
+                if not suggestions[0].term == cleaned_word:
+                    spell_actions = {}
+
+                    number_of_suggestions = len(suggestions)
+                    if number_of_suggestions > 10: number_of_suggestions = 11
+
+                    for i in range(number_of_suggestions):
+                        term = suggestions[i].term
+                        if upper:
+                            term = term[0].upper() + term[1:]
+                        spell_actions['action% s' % str(i)] = QAction(term)
+                        spell_actions['action% s' % str(i)].setData((cursor, term))
+                        spell_actions['action% s' % str(i)].triggered.connect(self.replace_word)
+                        menu.insertAction(menu.actions()[i], spell_actions['action% s' % str(i)])
+
+                    menu.insertSeparator(menu.actions()[i + 1])
+                    action = QAction('Add to dictionary')
+                    action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, cleaned_word))
+                    menu.insertAction(menu.actions()[i + 2], action)
+                    menu.insertSeparator(menu.actions()[i + 3])
+
+        menu.exec(e.globalPos())
+        menu.close()
+
+    def clean_word(self, word):
+        chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_',
+                 '\n', '\u2026', '\u201c', '\u201d']
         single_quotes = ['\u2018', '\u2019']
 
-        upper = False
-        if word[0].isupper():
-            upper = True
+        cleaned_word = word.lower().strip()
 
-        cleaned_word = word.lower()
         for char in chars:
             cleaned_word = cleaned_word.replace(char, '')
         for single_quote in single_quotes:
             cleaned_word = cleaned_word.replace(single_quote, '\'')
+
         cleaned_word = cleaned_word.replace('\'s', '')
         cleaned_word = cleaned_word.replace('s\'', 's')
         cleaned_word = cleaned_word.replace("<[.?*]>", '')
 
-        suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
-                                                    include_unknown=True)
+        if cleaned_word.startswith('\''):
+            cleaned_word = cleaned_word[1:len(cleaned_word)]
+        if cleaned_word.endswith('\''):
+            cleaned_word = cleaned_word[0:len(cleaned_word) - 1]
 
-        if not (len(suggestions) == 1 and suggestions[0].term == cleaned_word):
-            spell_actions = {}
+        # there's a chance that utf-8-sig artifacts will be attatched to the word
+        # encoding to utf-8 then decoding as ascii removes them
+        cleaned_word = cleaned_word.encode('utf-8').decode('ascii', errors='ignore')
 
-            number_of_suggestions = len(suggestions)
-            if number_of_suggestions > 10: number_of_suggestions = 11
-
-            for i in range(number_of_suggestions):
-                term = suggestions[i].term
-                if upper:
-                    term = term[0].upper() + term[1:]
-                spell_actions['action% s' % str(i)] = QAction(term)
-                spell_actions['action% s' % str(i)].setData((cursor, term))
-                spell_actions['action% s' % str(i)].triggered.connect(self.replace_word)
-                menu.insertAction(menu.actions()[i], spell_actions['action% s' % str(i)])
-
-            menu.insertSeparator(menu.actions()[i + 1])
-            action = QAction('Add to dictionary')
-            action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, cleaned_word))
-            menu.insertAction(menu.actions()[i + 2], action)
-            menu.insertSeparator(menu.actions()[i + 3])
-
-        menu.exec(e.globalPos())
-        menu.close()
+        return cleaned_word
 
     def replace_word(self):
         sender = self.sender()
@@ -679,6 +763,7 @@ class CustomTextEdit(QTextEdit):
             self.textCursor().insertText(term + ' ')
         else:
             self.textCursor().insertText(term)
+        self.changes()
 
     def clean_whitespace(self):
         component = self.win.focusWidget()
@@ -688,6 +773,7 @@ class CustomTextEdit(QTextEdit):
             string = re.sub('\t+', '\t', string)
 
             component.setMarkdown(string)
+        self.changes()
 
 class Win(QMainWindow):
     from PyQt5.QtGui import QCloseEvent
