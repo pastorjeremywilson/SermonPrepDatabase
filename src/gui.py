@@ -668,44 +668,45 @@ class CustomTextEdit(QTextEdit):
             cursor = self.cursorForPosition(e.pos())
             cursor.select(QTextCursor.WordUnderCursor)
             word = cursor.selection().toPlainText()
-            cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
-            if cursor.selection().toPlainText().endswith('\''): # if there's an apostrophe, check the next two characters for contraction letters
+            if len(word) > 0:
                 cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
-                if re.search('[a-z]$', cursor.selection().toPlainText()):
-                    word = cursor.selection().toPlainText()
+                if cursor.selection().toPlainText().endswith('\''): # if there's an apostrophe, check the next two characters for contraction letters
                     cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
                     if re.search('[a-z]$', cursor.selection().toPlainText()):
                         word = cursor.selection().toPlainText()
+                        cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+                        if re.search('[a-z]$', cursor.selection().toPlainText()):
+                            word = cursor.selection().toPlainText()
 
-            upper = False
-            if word[0].isupper():
-                upper = True
+                upper = False
+                if word[0].isupper():
+                    upper = True
 
-            cleaned_word = self.clean_word(word)
+                cleaned_word = self.clean_word(word)
 
-            suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
-                                                        include_unknown=True)
+                suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+                                                            include_unknown=True)
 
-            if not suggestions[0].term == cleaned_word:
-                spell_actions = {}
+                if not suggestions[0].term == cleaned_word:
+                    spell_actions = {}
 
-                number_of_suggestions = len(suggestions)
-                if number_of_suggestions > 10: number_of_suggestions = 11
+                    number_of_suggestions = len(suggestions)
+                    if number_of_suggestions > 10: number_of_suggestions = 11
 
-                for i in range(number_of_suggestions):
-                    term = suggestions[i].term
-                    if upper:
-                        term = term[0].upper() + term[1:]
-                    spell_actions['action% s' % str(i)] = QAction(term)
-                    spell_actions['action% s' % str(i)].setData((cursor, term))
-                    spell_actions['action% s' % str(i)].triggered.connect(self.replace_word)
-                    menu.insertAction(menu.actions()[i], spell_actions['action% s' % str(i)])
+                    for i in range(number_of_suggestions):
+                        term = suggestions[i].term
+                        if upper:
+                            term = term[0].upper() + term[1:]
+                        spell_actions['action% s' % str(i)] = QAction(term)
+                        spell_actions['action% s' % str(i)].setData((cursor, term))
+                        spell_actions['action% s' % str(i)].triggered.connect(self.replace_word)
+                        menu.insertAction(menu.actions()[i], spell_actions['action% s' % str(i)])
 
-                menu.insertSeparator(menu.actions()[i + 1])
-                action = QAction('Add to dictionary')
-                action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, cleaned_word))
-                menu.insertAction(menu.actions()[i + 2], action)
-                menu.insertSeparator(menu.actions()[i + 3])
+                    menu.insertSeparator(menu.actions()[i + 1])
+                    action = QAction('Add to dictionary')
+                    action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, cleaned_word))
+                    menu.insertAction(menu.actions()[i + 2], action)
+                    menu.insertSeparator(menu.actions()[i + 3])
 
         menu.exec(e.globalPos())
         menu.close()
