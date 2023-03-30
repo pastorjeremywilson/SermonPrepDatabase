@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<shortcuts>
-    <skipIfNotSupported/>
-    <defaultCurrentUser/>
-    <programGroup defaultName="Sermon Prep Database" location="applications"/>
-    <shortcut applications="yes" desktop="no" initialState="noShow"
-        name="Sermon Prep Database" programGroup="no" startMenu="no"
-        startup="no" target="$INSTALL_PATH/SermonPrepDatabase/SermonPrepDatabase.exe"/>
-</shortcuts>
