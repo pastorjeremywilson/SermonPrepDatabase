@@ -128,7 +128,7 @@ class RemoveCustomWords:
         layout = QVBoxLayout()
         self.widget.setLayout(layout)
 
-        with open(spd.cwd + 'resources/custom_words.txt') as file:
+        with open(spd.app_dir + '/custom_words.txt') as file:
             custom_words = file.readlines()
 
         self.word_list = QListWidget()
@@ -159,7 +159,7 @@ class RemoveCustomWords:
     def close(self):
         if self.changes:
             lines = []
-            file = open(self.spd.cwd + 'resources/custom_words.txt', 'w')
+            file = open(self.spd.app_dir + '/custom_words.txt', 'w')
             try:
                 for r in range(len(self.word_list)):
                     lines.append(self.word_list.item(r).text() + '\n')

@@ -53,6 +53,7 @@ class SermonPrepDatabase(QThread):
     dates = []
     references = []
     db_loc = None
+    app_dir = None
     disable_spell_check = None
     current_rec_index = 0
     user_settings = None
@@ -85,6 +86,10 @@ class SermonPrepDatabase(QThread):
             self.write_to_log('current working directory is ' + self.cwd)
             self.write_to_log('application directory is ' + self.app_dir)
             self.write_to_log('database location is ' + self.db_loc)
+
+            if not exists(self.app_dir + '/custom_words.txt'):
+                with open(self.app_dir + '/custom_words.txt', 'w'):
+                    pass
 
             if exists(self.db_loc):
                 self.disable_spell_check = self.check_spell_check()
@@ -135,7 +140,7 @@ class SermonPrepDatabase(QThread):
     def load_dictionary(self):
         self.sym_spell = SymSpell()
         self.sym_spell.create_dictionary(self.cwd + 'resources/default_dictionary.txt')
-        with open(self.cwd + 'resources/custom_words.txt', 'r') as file:
+        with open(self.app_dir + '/custom_words.txt', 'r') as file:
             custom_words = file.readlines()
         for entry in custom_words:
             self.sym_spell.create_dictionary_entry(entry.strip(), 1)
@@ -143,7 +148,7 @@ class SermonPrepDatabase(QThread):
     def add_to_dictionary(self, widget, word):
         try:
             self.sym_spell.create_dictionary_entry(word, 1)
-            with open(self.cwd + 'resources/custom_words.txt', 'a') as file:
+            with open(self.app_dir + '/custom_words.txt', 'a') as file:
                 file.write(word + '\n')
             widget.check_whole_text()
 
