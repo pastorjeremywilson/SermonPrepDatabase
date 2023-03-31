@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.9)
+This file is a part of the Sermon Prep Database program (v.3.4.0)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -33,6 +33,7 @@ from PyQt5.QtGui import QIcon, QFont, QKeyEvent, QTextCursor, QStandardItemModel
 from PyQt5.QtWidgets import *
 from symspellpy import Verbosity
 
+from getScripture import GetScripture
 from MenuBar import MenuBar
 from TopFrame import TopFrame
 
@@ -44,6 +45,7 @@ class GUI:
     changes = False
     font_family = None
     font_size = None
+    gs = None
     
     def __init__(self, spd):
         self.spd = spd
@@ -143,19 +145,21 @@ class GUI:
         self.scripture_frame_layout.addWidget(sermon_reference_label, 0, 2)
         
         self.sermon_reference_field = QLineEdit()
-        self.sermon_reference_field.textEdited.connect(self.reference_changes)
+        self.sermon_reference_field.textChanged.connect(self.reference_changes)
         self.scripture_frame_layout.addWidget(self.sermon_reference_field, 1, 2)
+
+        self.auto_fill_checkbox = QCheckBox('Auto-fill ' + self.spd.user_settings[8])
+        self.auto_fill_checkbox.stateChanged.connect(self.auto_fill)
+        self.auto_fill_checkbox.setChecked(True)
+        self.scripture_frame_layout.addWidget(self.auto_fill_checkbox, 1, 3)
+        self.auto_fill_on = True
         
         sermon_text_label = QLabel(self.spd.user_settings[8])
         self.scripture_frame_layout.addWidget(sermon_text_label, 2, 2)
         
         self.sermon_text_edit = CustomTextEdit(self.win, self)
         self.sermon_text_edit.cursorPositionChanged.connect(lambda: self.set_style_buttons(self.sermon_text_edit))
-        self.scripture_frame_layout.addWidget(self.sermon_text_edit, 3, 2)
-
-        self.search_box = SearchBox(self)
-        self.scripture_frame_layout.addWidget(self.search_box, 0, 3, 4, 1)
-        self.search_box.setVisible(False)
+        self.scripture_frame_layout.addWidget(self.sermon_text_edit, 3, 2, 1, 2)
         
         self.tabbed_frame.addTab(self.scripture_frame, QIcon(self.spd.cwd + 'resources/scriptureIcon.png'), 'Scripture')
         
@@ -512,18 +516,36 @@ class GUI:
         self.changes = True
 
     def reference_changes(self):
-        self.top_frame.references_cb.setItemText(self.top_frame.references_cb.currentIndex(), self.sermon_reference_field.text())
-        self.win.setWindowTitle('Sermon Prep Database - ' + self.sermon_date_edit.text() + ' - ' + self.sermon_reference_field.text())
+        try:
+            self.top_frame.references_cb.setItemText(self.top_frame.references_cb.currentIndex(), self.sermon_reference_field.text())
+            self.win.setWindowTitle('Sermon Prep Database - ' + self.sermon_date_edit.text() + ' - ' + self.sermon_reference_field.text())
 
-        num_tabs = self.tabbed_frame.count()
-        for i in range(num_tabs):
-            if i > 0:
-                frame = self.tabbed_frame.widget(i)
-                widget = frame.findChild(QWidget, 'text_box')
-                text_title = widget.findChild(QLabel, 'text_title')
-                text_title.setText(self.sermon_reference_field.text())
+            num_tabs = self.tabbed_frame.count()
+            for i in range(num_tabs):
+                if i > 0:
+                    frame = self.tabbed_frame.widget(i)
+                    widget = frame.findChild(QWidget, 'text_box')
+                    text_title = widget.findChild(QLabel, 'text_title')
+                    text_title.setText(self.sermon_reference_field.text())
 
-        self.changes = True
+            if self.auto_fill_on:
+                if not self.gs: # only create one instance of GetScripture
+                    gs = GetScripture(self.spd)
+
+                if ':' in self.sermon_reference_field.text(): # only attempt to get the text if there's enough to work with
+                    passage = gs.get_passage(self.sermon_reference_field.text())
+                    if passage and not passage == -1:
+                        self.sermon_text_edit.setText(passage)
+
+            self.changes = True
+        except Exception:
+            logging.exception('')
+
+    def auto_fill(self):
+        if self.auto_fill_checkbox.isChecked():
+            self.auto_fill_on = True
+        else:
+            self.auto_fill_on = False
 
     def text_changes(self):
         num_tabs = self.tabbed_frame.count()

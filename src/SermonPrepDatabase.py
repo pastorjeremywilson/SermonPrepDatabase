@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.9)
+This file is a part of the Sermon Prep Database program (v.3.4.0)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -54,6 +54,7 @@ class SermonPrepDatabase(QThread):
     references = []
     db_loc = None
     app_dir = None
+    bible_file = None
     disable_spell_check = None
     current_rec_index = 0
     user_settings = None
@@ -91,6 +92,9 @@ class SermonPrepDatabase(QThread):
                 with open(self.app_dir + '/custom_words.txt', 'w'):
                     pass
 
+            if exists(self.app_dir + '/my_bible.xml'):
+                self.bible_file = self.app_dir + '/my_bible.xml'
+
             if exists(self.db_loc):
                 self.disable_spell_check = self.check_spell_check()
 
@@ -125,6 +129,7 @@ class SermonPrepDatabase(QThread):
             conn.commit()
             cursor.execute('UPDATE user_settings SET disable_spell_check=0 WHERE ID="1";')
             conn.commit()
+            conn.close()
             return False
 
     def write_spell_check_changes(self):

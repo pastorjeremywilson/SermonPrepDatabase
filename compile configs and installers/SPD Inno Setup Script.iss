@@ -12,13 +12,15 @@
 AppId={{15E4F012-5C1F-466C-B6AB-E2F33CA12348}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-;AppVerName={#MyAppName} {#MyAppVersion}
+AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
 LicenseFile=C:\Users\pasto\Nextcloud\Documents\Python Workspace\Sermon Prep Database\compile configs and installers\output\SermonPrepDatabase\gpl-3.0.rtf
+WizardImageFile=C:\Users\pasto\Nextcloud\Documents\Python Workspace\Sermon Prep Database\resources\installImage.bmp
+WizardSmallImageFile = C:\Users\pasto\Nextcloud\Documents\Python Workspace\Sermon Prep Database\resources\installImageSmall.bmp
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
