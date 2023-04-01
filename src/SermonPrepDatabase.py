@@ -56,6 +56,7 @@ class SermonPrepDatabase(QThread):
     app_dir = None
     bible_file = None
     disable_spell_check = None
+    auto_fill = None
     current_rec_index = 0
     user_settings = None
     app = None
@@ -97,6 +98,7 @@ class SermonPrepDatabase(QThread):
 
             if exists(self.db_loc):
                 self.disable_spell_check = self.check_spell_check()
+                self.auto_fill = self.check_auto_fill()
 
                 if not self.disable_spell_check:
                     self.change_text.emit('Loading Dictionaries')
@@ -132,6 +134,25 @@ class SermonPrepDatabase(QThread):
             conn.close()
             return False
 
+    def check_auto_fill(self):
+        try:
+            conn = sqlite3.connect(self.db_loc)
+            cursor = conn.cursor()
+            result = cursor.execute('SELECT auto_fill FROM user_settings').fetchone()
+            conn.close()
+
+            if int(result[0]) == 0:
+                return False
+            else:
+                return True
+        except OperationalError:
+            cursor.execute('ALTER TABLE user_settings ADD auto_fill TEXT;')
+            conn.commit()
+            cursor.execute('UPDATE user_settings SET auto_fill=0 WHERE ID="1";')
+            conn.commit()
+            conn.close()
+            return False
+
     def write_spell_check_changes(self):
         conn = sqlite3.connect(self.db_loc)
         cursor = conn.cursor()
@@ -139,6 +160,16 @@ class SermonPrepDatabase(QThread):
             cursor.execute('UPDATE user_settings SET disable_spell_check=1 WHERE ID="1";')
         else:
             cursor.execute('UPDATE user_settings SET disable_spell_check=0 WHERE ID="1";')
+        conn.commit()
+        conn.close
+
+    def write_auto_fill_changes(self):
+        conn = sqlite3.connect(self.db_loc)
+        cursor = conn.cursor()
+        if self.auto_fill:
+            cursor.execute('UPDATE user_settings SET auto_fill=1 WHERE ID="1";')
+        else:
+            cursor.execute('UPDATE user_settings SET auto_fill=0 WHERE ID="1";')
         conn.commit()
         conn.close
 

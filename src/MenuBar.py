@@ -26,6 +26,7 @@ import os
 import re
 import shutil
 import sys
+from os.path import exists
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap
@@ -513,8 +514,41 @@ class MenuBar:
             if file[0]:
                 shutil.copy(file[0], self.spd.app_dir + '/my_bible.xml')
                 self.spd.bible_file = self.spd.app_dir + '/my_bible.xml'
+
+                # verify the file by attempting to get a passage from the new file
+                from getScripture import GetScripture
+                self.gui.gs = GetScripture(self.spd)
+                passage = self.gui.gs.get_passage('John 3:16')
+
+                if not passage or passage == -1 or passage == '':
+                    QMessageBox.warning(
+                        self.gui.win,
+                        'Bad Format',
+                        'There is a problem with your XML bible: ' + file[0] + '. Try downloading it again or ensuring '
+                        'that it is formatted according to Zefania standards.',
+                        QMessageBox.Ok
+                    )
+
+                    if exists(self.spd.app_dir + '/my_bible.xml'):
+                        os.remove(self.spd.app_dir + '/my_bible.xml')
+                else:
+                    QMessageBox.information(
+                        self.gui.win,
+                        'Import Complete',
+                        'Bible file has been successfully imported',
+                        QMessageBox.Ok
+                    )
         except Exception as ex:
             self.spd.write_to_log(str(ex))
+            QMessageBox.warning(
+                self.gui.win,
+                'Import Error',
+                'An error occurred while importing the file ' + file[0] + ':\n\n' + str(ex),
+                QMessageBox.Ok
+            )
+
+            if exists(self.spd.app_dir + '/my_bible.xml'):
+                os.remove(self.spd.app_dir + '/my_bible.xml')
 
     def rename_labels(self):
         self.rename_widget = QWidget()

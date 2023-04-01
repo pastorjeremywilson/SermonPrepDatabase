@@ -30,7 +30,8 @@ from os.path import exists
 
 from PyQt5.QtCore import Qt, QSize, QDate, QDateTime
 from PyQt5.QtGui import QIcon, QFont, QKeyEvent, QTextCursor, QStandardItemModel, QStandardItem, QPixmap
-from PyQt5.QtWidgets import *
+from PyQt5.QtWidgets import QBoxLayout, QWidget, QUndoStack, QMessageBox, QTabWidget, QGridLayout, QLabel, QLineEdit, \
+    QCheckBox, QDateEdit, QTextEdit, QAction, QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QTableView
 from symspellpy import Verbosity
 
 from getScripture import GetScripture
@@ -125,7 +126,9 @@ class GUI:
         self.scripture_frame = QWidget()
         self.scripture_frame.setStyleSheet('background-color: ' + self.background_color)
         self.scripture_frame_layout = QGridLayout()
-        self.scripture_frame_layout.setColumnMinimumWidth(1, 20)
+        self.scripture_frame_layout.setColumnStretch(0, 1)
+        self.scripture_frame_layout.setColumnStretch(1, 1)
+        self.scripture_frame_layout.setColumnStretch(2, 0)
         self.scripture_frame.setLayout(self.scripture_frame_layout)
         
         pericope_label = QLabel(self.spd.user_settings[5])
@@ -142,24 +145,31 @@ class GUI:
         self.scripture_frame_layout.addWidget(pericope_text_edit, 3, 0)
         
         sermon_reference_label = QLabel(self.spd.user_settings[7])
-        self.scripture_frame_layout.addWidget(sermon_reference_label, 0, 2)
+        self.scripture_frame_layout.addWidget(sermon_reference_label, 0, 1)
         
         self.sermon_reference_field = QLineEdit()
         self.sermon_reference_field.textChanged.connect(self.reference_changes)
-        self.scripture_frame_layout.addWidget(self.sermon_reference_field, 1, 2)
 
-        self.auto_fill_checkbox = QCheckBox('Auto-fill ' + self.spd.user_settings[8])
-        self.auto_fill_checkbox.stateChanged.connect(self.auto_fill)
-        self.auto_fill_checkbox.setChecked(True)
-        self.scripture_frame_layout.addWidget(self.auto_fill_checkbox, 1, 3)
-        self.auto_fill_on = True
+        if exists(self.spd.app_dir + '/my_bible.xml'):
+            self.scripture_frame_layout.addWidget(self.sermon_reference_field, 1, 1)
+
+            self.auto_fill_checkbox = QCheckBox('Auto-fill ' + self.spd.user_settings[8])
+            self.auto_fill_checkbox.setChecked(True)
+            self.scripture_frame_layout.addWidget(self.auto_fill_checkbox, 1, 2)
+            if self.spd.auto_fill:
+                self.auto_fill_checkbox.setChecked(True)
+            else:
+                self.auto_fill_checkbox.setChecked(False)
+            self.auto_fill_checkbox.stateChanged.connect(self.auto_fill)
+        else:
+            self.scripture_frame_layout.addWidget(self.sermon_reference_field, 1, 1, 1, 2)
         
         sermon_text_label = QLabel(self.spd.user_settings[8])
-        self.scripture_frame_layout.addWidget(sermon_text_label, 2, 2)
+        self.scripture_frame_layout.addWidget(sermon_text_label, 2, 1, 1, 2)
         
         self.sermon_text_edit = CustomTextEdit(self.win, self)
         self.sermon_text_edit.cursorPositionChanged.connect(lambda: self.set_style_buttons(self.sermon_text_edit))
-        self.scripture_frame_layout.addWidget(self.sermon_text_edit, 3, 2, 1, 2)
+        self.scripture_frame_layout.addWidget(self.sermon_text_edit, 3, 1, 1, 2)
         
         self.tabbed_frame.addTab(self.scripture_frame, QIcon(self.spd.cwd + 'resources/scriptureIcon.png'), 'Scripture')
         
@@ -528,12 +538,12 @@ class GUI:
                     text_title = widget.findChild(QLabel, 'text_title')
                     text_title.setText(self.sermon_reference_field.text())
 
-            if self.auto_fill_on:
+            if self.spd.auto_fill:
                 if not self.gs: # only create one instance of GetScripture
-                    gs = GetScripture(self.spd)
+                    self.gs = GetScripture(self.spd)
 
                 if ':' in self.sermon_reference_field.text(): # only attempt to get the text if there's enough to work with
-                    passage = gs.get_passage(self.sermon_reference_field.text())
+                    passage = self.gs.get_passage(self.sermon_reference_field.text())
                     if passage and not passage == -1:
                         self.sermon_text_edit.setText(passage)
 
@@ -542,10 +552,15 @@ class GUI:
             logging.exception('')
 
     def auto_fill(self):
-        if self.auto_fill_checkbox.isChecked():
-            self.auto_fill_on = True
-        else:
-            self.auto_fill_on = False
+        try:
+            if self.auto_fill_checkbox.isChecked():
+                self.spd.auto_fill = True
+                self.spd.write_auto_fill_changes()
+            else:
+                self.spd.auto_fill = False
+                self.spd.write_auto_fill_changes()
+        except Exception:
+            logging.exception('')
 
     def text_changes(self):
         num_tabs = self.tabbed_frame.count()
@@ -579,46 +594,6 @@ class CustomTextEdit(QTextEdit):
         if evt.key() == 32 or evt.key() == Qt.Key_Enter:
             print(evt.key())
             self.check_whole_text()
-
-            '''try:
-                self.gui.changes = True
-                self.blockSignals(True)
-
-                cursor = self.textCursor()
-                cursor.movePosition(QTextCursor.PreviousCharacter)
-                cursor.movePosition(QTextCursor.PreviousCharacter)
-                cursor.select(cursor.WordUnderCursor)
-                word = cursor.selection().toPlainText()
-
-                cursor.movePosition(QTextCursor.PreviousWord, cursor.KeepAnchor) #if apostrophed word, first move will be ""
-                cursor.movePosition(QTextCursor.PreviousWord, cursor.KeepAnchor) #then second move will be "'"
-                cursor.movePosition(QTextCursor.PreviousWord, cursor.KeepAnchor) #then this move will be the first part of the word plus the apostrophe
-                prev_word = cursor.selection().toPlainText()
-
-                if prev_word.endswith('\'') and not len(word.split(' ')) > 1:
-                    word = prev_word + word
-
-                cleaned_word = self.clean_word(word.strip())
-
-                if any(c.isalpha() for c in cleaned_word):
-                    suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
-                                                                include_unknown=True)
-
-                    char_format = cursor.charFormat()
-                    if not suggestions[0].term == cleaned_word:
-                        char_format.setForeground(Qt.red)
-                        cursor.mergeCharFormat(char_format)
-
-                    else:
-                        if char_format.foreground() == Qt.red:
-                            char_format.setForeground(Qt.black)
-                            cursor.mergeCharFormat(char_format)
-
-                cursor.clearSelection()
-
-                self.blockSignals(False)
-            except Exception:
-                logging.exception('')'''
 
     def changes(self):
         self.gui.changes = True
