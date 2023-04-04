@@ -112,8 +112,9 @@ class SermonPrepDatabase(QThread):
 
             self.finished.emit()
 
-        except Exception:
-            logging.exception('')
+        except Exception as ex:
+            self.write_to_log(str(ex), True)
+
 
     def check_spell_check(self):
         try:
@@ -189,7 +190,7 @@ class SermonPrepDatabase(QThread):
             widget.check_whole_text()
 
         except Exception as ex:
-            self.write_to_log(str(ex))
+            self.write_to_log(str(ex), True)
 
     # retrieve the list of ID numbers from the database
     def get_ids(self):
@@ -388,7 +389,7 @@ class SermonPrepDatabase(QThread):
 
             self.gui.changes = False
         except Exception as ex:
-            self.write_to_log(str(ex))
+            self.write_to_log(str(ex), True)
 
     # QTextEdit borks up the formatting when reloading markdown characters, so convert them to
     # HTML tags instead
@@ -649,7 +650,9 @@ class SermonPrepDatabase(QThread):
             return False
 
     # function to write various messages to a log file, takes a string message as an argument
-    def write_to_log(self, string):
+    def write_to_log(self, string, critical=False):
+        if critical:
+            QMessageBox.critical(None, 'Exception Thrown', 'An error has occurred:\n\n' + string)
         log_file_loc = self.app_dir + '/log.txt'
 
         if not exists(log_file_loc):
@@ -745,42 +748,45 @@ class SermonPrepDatabase(QThread):
 
 class LoadingBox(QDialog):
     def __init__(self, app):
-        super().__init__()
-        self.spd = SermonPrepDatabase()
-        self.spd.app = app
+        try:
+            super().__init__()
+            self.spd = SermonPrepDatabase()
+            self.spd.app = app
 
-        self.spd.cwd = os.getcwd().replace('\\', '/')
-        if str(self.spd.cwd).endswith('src'):
-            self.spd.cwd = self.spd.cwd.replace('src', '')
-        else:
-            self.spd.cwd = self.spd.cwd + '/'
+            self.spd.cwd = os.getcwd().replace('\\', '/')
+            if str(self.spd.cwd).endswith('src'):
+                self.spd.cwd = self.spd.cwd.replace('src', '')
+            else:
+                self.spd.cwd = self.spd.cwd + '/'
 
-        self.spd.finished.connect(self.end)
-        self.spd.change_text.connect(self.change_text)
-        self.spd.start()
+            self.spd.finished.connect(self.end)
+            self.spd.change_text.connect(self.change_text)
+            self.spd.start()
 
-        self.setWindowFlag(Qt.FramelessWindowHint)
-        self.setModal(True)
-        self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setStyleSheet('background-color: transparent')
-        self.setMinimumWidth(300)
+            self.setWindowFlag(Qt.FramelessWindowHint)
+            self.setModal(True)
+            self.setAttribute(Qt.WA_TranslucentBackground)
+            self.setStyleSheet('background-color: transparent')
+            self.setMinimumWidth(300)
 
-        layout = QGridLayout()
-        self.setLayout(layout)
+            layout = QGridLayout()
+            self.setLayout(layout)
 
-        self.working_label = QLabel()
-        self.working_label.setAutoFillBackground(False)
-        movie = QMovie(self.spd.cwd + 'resources/waitIcon.webp')
-        self.working_label.setMovie(movie)
-        layout.addWidget(self.working_label, 0, 0, Qt.AlignHCenter)
-        movie.start()
+            self.working_label = QLabel()
+            self.working_label.setAutoFillBackground(False)
+            movie = QMovie(self.spd.cwd + 'resources/waitIcon.webp')
+            self.working_label.setMovie(movie)
+            layout.addWidget(self.working_label, 0, 0, Qt.AlignHCenter)
+            movie.start()
 
-        self.status_label = QLabel('Starting...')
-        self.status_label.setFont(QFont('Helvetica', 16, QFont.Bold))
-        self.status_label.setStyleSheet('color: #d7d7f4; text-align: center;')
-        layout.addWidget(self.status_label, 1, 0, Qt.AlignHCenter)
+            self.status_label = QLabel('Starting...')
+            self.status_label.setFont(QFont('Helvetica', 16, QFont.Bold))
+            self.status_label.setStyleSheet('color: #d7d7f4; text-align: center;')
+            layout.addWidget(self.status_label, 1, 0, Qt.AlignHCenter)
 
-        self.show()
+            self.show()
+        except Exception as ex:
+            self.spd.write_to_log(str(ex), True)
 
     def change_text(self, text):
         self.status_label.setText(text)

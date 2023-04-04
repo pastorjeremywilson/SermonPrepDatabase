@@ -153,7 +153,6 @@ class GetScripture:
                             end_verse = passage_split[1]
                             reference_ok = True
                 else:
-                    print('reference split length is 1 or less')
                     return -1
 
                 if reference_ok:
@@ -200,14 +199,11 @@ class GetScripture:
                             if len(scripture_text) > 0:
                                 return scripture_text
                             else:
-                                print('scripture text is empty')
                                 return -1
                     else:
-                        print('book not found')
                         return -1
 
                 else:
-                    print('reference not ok')
                     return -1
-        except Exception:
-            logging.exception('')
+        except Exception as ex:
+            logging.exception(str(ex), True)

@@ -22,6 +22,7 @@ The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
 """
+import logging
 import os
 import re
 import shutil
@@ -411,7 +412,7 @@ class MenuBar:
 
             os.remove(printFileLoc)
         except Exception as err:
-            self.spd.write_to_log('MenuBar.linux_print: ' + str(err))
+            self.spd.write_to_log('MenuBar.linux_print: ' + str(err), True)
 
     def do_backup(self):
         import os
@@ -464,7 +465,7 @@ class MenuBar:
                 self.spd.last_rec()
             except Exception as err:
                 shutil.copy(self.spd.app_dir + '/active-database-backup.db', self.spd.db_loc)
-                self.spd.write_to_log('MenuBar.restore_backup: ' + str(err))
+                self.spd.write_to_log('MenuBar.restore_backup: ' + str(err), True)
 
                 QMessageBox.critical(
                     None,
@@ -538,6 +539,16 @@ class MenuBar:
                         'Bible file has been successfully imported',
                         QMessageBox.Ok
                     )
+                    try:
+                        self.gui.tabbed_frame.removeTab(0)
+                        self.gui.build_scripture_tab(True)
+                        self.gui.auto_fill_checkbox.setChecked(True)
+                        self.gui.set_style_sheets()
+                        self.gui.tabbed_frame.setCurrentIndex(0)
+                        self.spd.get_by_index(self.spd.current_rec_index)
+                    except Exception:
+                        logging.exception('')
+
         except Exception as ex:
             self.spd.write_to_log(str(ex))
             QMessageBox.warning(

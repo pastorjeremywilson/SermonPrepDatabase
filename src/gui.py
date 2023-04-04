@@ -122,7 +122,7 @@ class GUI:
         self.tabbed_frame.setIconSize(QSize(24, 24))
         self.layout.addWidget(self.tabbed_frame)
         
-    def build_scripture_tab(self):
+    def build_scripture_tab(self, insert=False):
         self.scripture_frame = QWidget()
         self.scripture_frame.setStyleSheet('background-color: ' + self.background_color)
         self.scripture_frame_layout = QGridLayout()
@@ -170,8 +170,20 @@ class GUI:
         self.sermon_text_edit = CustomTextEdit(self.win, self)
         self.sermon_text_edit.cursorPositionChanged.connect(lambda: self.set_style_buttons(self.sermon_text_edit))
         self.scripture_frame_layout.addWidget(self.sermon_text_edit, 3, 1, 1, 2)
-        
-        self.tabbed_frame.addTab(self.scripture_frame, QIcon(self.spd.cwd + 'resources/scriptureIcon.png'), 'Scripture')
+
+        if insert:
+            self.tabbed_frame.insertTab(
+                0,
+                self.scripture_frame,
+                QIcon(self.spd.cwd + 'resources/scriptureIcon.png'),
+                'Scripture'
+            )
+        else:
+            self.tabbed_frame.addTab(
+                self.scripture_frame,
+                QIcon(self.spd.cwd + 'resources/scriptureIcon.png'),
+                'Scripture'
+            )
         
     def build_exegesis_tab(self):
         self.exegesis_frame = QWidget()
@@ -548,19 +560,16 @@ class GUI:
                         self.sermon_text_edit.setText(passage)
 
             self.changes = True
-        except Exception:
-            logging.exception('')
+        except Exception as ex:
+            logging.exception(str(ex), True)
 
     def auto_fill(self):
-        try:
-            if self.auto_fill_checkbox.isChecked():
-                self.spd.auto_fill = True
-                self.spd.write_auto_fill_changes()
-            else:
-                self.spd.auto_fill = False
-                self.spd.write_auto_fill_changes()
-        except Exception:
-            logging.exception('')
+        if self.auto_fill_checkbox.isChecked():
+            self.spd.auto_fill = True
+            self.spd.write_auto_fill_changes()
+        else:
+            self.spd.auto_fill = False
+            self.spd.write_auto_fill_changes()
 
     def text_changes(self):
         num_tabs = self.tabbed_frame.count()
