@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.9)
+This file is a part of the Sermon Prep Database program (v.3.4.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -53,7 +53,10 @@ class SermonPrepDatabase(QThread):
     dates = []
     references = []
     db_loc = None
+    app_dir = None
+    bible_file = None
     disable_spell_check = None
+    auto_fill = None
     current_rec_index = 0
     user_settings = None
     app = None
@@ -86,8 +89,16 @@ class SermonPrepDatabase(QThread):
             self.write_to_log('application directory is ' + self.app_dir)
             self.write_to_log('database location is ' + self.db_loc)
 
+            if not exists(self.app_dir + '/custom_words.txt'):
+                with open(self.app_dir + '/custom_words.txt', 'w'):
+                    pass
+
+            if exists(self.app_dir + '/my_bible.xml'):
+                self.bible_file = self.app_dir + '/my_bible.xml'
+
             if exists(self.db_loc):
                 self.disable_spell_check = self.check_spell_check()
+                self.auto_fill = self.check_auto_fill()
 
                 if not self.disable_spell_check:
                     self.change_text.emit('Loading Dictionaries')
@@ -101,8 +112,9 @@ class SermonPrepDatabase(QThread):
 
             self.finished.emit()
 
-        except Exception:
-            logging.exception('')
+        except Exception as ex:
+            self.write_to_log(str(ex), True)
+
 
     def check_spell_check(self):
         try:
@@ -120,6 +132,26 @@ class SermonPrepDatabase(QThread):
             conn.commit()
             cursor.execute('UPDATE user_settings SET disable_spell_check=0 WHERE ID="1";')
             conn.commit()
+            conn.close()
+            return False
+
+    def check_auto_fill(self):
+        try:
+            conn = sqlite3.connect(self.db_loc)
+            cursor = conn.cursor()
+            result = cursor.execute('SELECT auto_fill FROM user_settings').fetchone()
+            conn.close()
+
+            if int(result[0]) == 0:
+                return False
+            else:
+                return True
+        except OperationalError:
+            cursor.execute('ALTER TABLE user_settings ADD auto_fill TEXT;')
+            conn.commit()
+            cursor.execute('UPDATE user_settings SET auto_fill=0 WHERE ID="1";')
+            conn.commit()
+            conn.close()
             return False
 
     def write_spell_check_changes(self):
@@ -132,10 +164,20 @@ class SermonPrepDatabase(QThread):
         conn.commit()
         conn.close
 
+    def write_auto_fill_changes(self):
+        conn = sqlite3.connect(self.db_loc)
+        cursor = conn.cursor()
+        if self.auto_fill:
+            cursor.execute('UPDATE user_settings SET auto_fill=1 WHERE ID="1";')
+        else:
+            cursor.execute('UPDATE user_settings SET auto_fill=0 WHERE ID="1";')
+        conn.commit()
+        conn.close
+
     def load_dictionary(self):
         self.sym_spell = SymSpell()
         self.sym_spell.create_dictionary(self.cwd + 'resources/default_dictionary.txt')
-        with open(self.cwd + 'resources/custom_words.txt', 'r') as file:
+        with open(self.app_dir + '/custom_words.txt', 'r') as file:
             custom_words = file.readlines()
         for entry in custom_words:
             self.sym_spell.create_dictionary_entry(entry.strip(), 1)
@@ -143,12 +185,12 @@ class SermonPrepDatabase(QThread):
     def add_to_dictionary(self, widget, word):
         try:
             self.sym_spell.create_dictionary_entry(word, 1)
-            with open(self.cwd + 'resources/custom_words.txt', 'a') as file:
+            with open(self.app_dir + '/custom_words.txt', 'a') as file:
                 file.write(word + '\n')
             widget.check_whole_text()
 
         except Exception as ex:
-            self.write_to_log(str(ex))
+            self.write_to_log(str(ex), True)
 
     # retrieve the list of ID numbers from the database
     def get_ids(self):
@@ -347,7 +389,7 @@ class SermonPrepDatabase(QThread):
 
             self.gui.changes = False
         except Exception as ex:
-            self.write_to_log(str(ex))
+            self.write_to_log(str(ex), True)
 
     # QTextEdit borks up the formatting when reloading markdown characters, so convert them to
     # HTML tags instead
@@ -608,7 +650,9 @@ class SermonPrepDatabase(QThread):
             return False
 
     # function to write various messages to a log file, takes a string message as an argument
-    def write_to_log(self, string):
+    def write_to_log(self, string, critical=False):
+        if critical:
+            QMessageBox.critical(None, 'Exception Thrown', 'An error has occurred:\n\n' + string)
         log_file_loc = self.app_dir + '/log.txt'
 
         if not exists(log_file_loc):
@@ -704,42 +748,45 @@ class SermonPrepDatabase(QThread):
 
 class LoadingBox(QDialog):
     def __init__(self, app):
-        super().__init__()
-        self.spd = SermonPrepDatabase()
-        self.spd.app = app
+        try:
+            super().__init__()
+            self.spd = SermonPrepDatabase()
+            self.spd.app = app
 
-        self.spd.cwd = os.getcwd().replace('\\', '/')
-        if str(self.spd.cwd).endswith('src'):
-            self.spd.cwd = self.spd.cwd.replace('src', '')
-        else:
-            self.spd.cwd = self.spd.cwd + '/'
+            self.spd.cwd = os.getcwd().replace('\\', '/')
+            if str(self.spd.cwd).endswith('src'):
+                self.spd.cwd = self.spd.cwd.replace('src', '')
+            else:
+                self.spd.cwd = self.spd.cwd + '/'
 
-        self.spd.finished.connect(self.end)
-        self.spd.change_text.connect(self.change_text)
-        self.spd.start()
+            self.spd.finished.connect(self.end)
+            self.spd.change_text.connect(self.change_text)
+            self.spd.start()
 
-        self.setWindowFlag(Qt.FramelessWindowHint)
-        self.setModal(True)
-        self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setStyleSheet('background-color: transparent')
-        self.setMinimumWidth(300)
+            self.setWindowFlag(Qt.FramelessWindowHint)
+            self.setModal(True)
+            self.setAttribute(Qt.WA_TranslucentBackground)
+            self.setStyleSheet('background-color: transparent')
+            self.setMinimumWidth(300)
 
-        layout = QGridLayout()
-        self.setLayout(layout)
+            layout = QGridLayout()
+            self.setLayout(layout)
 
-        self.working_label = QLabel()
-        self.working_label.setAutoFillBackground(False)
-        movie = QMovie(self.spd.cwd + 'resources/waitIcon.webp')
-        self.working_label.setMovie(movie)
-        layout.addWidget(self.working_label, 0, 0, Qt.AlignHCenter)
-        movie.start()
+            self.working_label = QLabel()
+            self.working_label.setAutoFillBackground(False)
+            movie = QMovie(self.spd.cwd + 'resources/waitIcon.webp')
+            self.working_label.setMovie(movie)
+            layout.addWidget(self.working_label, 0, 0, Qt.AlignHCenter)
+            movie.start()
 
-        self.status_label = QLabel('Starting...')
-        self.status_label.setFont(QFont('Helvetica', 16, QFont.Bold))
-        self.status_label.setStyleSheet('color: #d7d7f4; text-align: center;')
-        layout.addWidget(self.status_label, 1, 0, Qt.AlignHCenter)
+            self.status_label = QLabel('Starting...')
+            self.status_label.setFont(QFont('Helvetica', 16, QFont.Bold))
+            self.status_label.setStyleSheet('color: #d7d7f4; text-align: center;')
+            layout.addWidget(self.status_label, 1, 0, Qt.AlignHCenter)
 
-        self.show()
+            self.show()
+        except Exception as ex:
+            self.spd.write_to_log(str(ex), True)
 
     def change_text(self, text):
         self.status_label.setText(text)

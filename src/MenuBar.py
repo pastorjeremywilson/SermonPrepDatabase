@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.9)
+This file is a part of the Sermon Prep Database program (v.3.4.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -25,13 +25,14 @@ https://www.ghostscript.com/licensing/index.html for more information.
 import logging
 import os
 import re
+import shutil
 import sys
+from os.path import exists
 
-from PyQt5.QtCore import QSize, Qt
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap
 from PyQt5.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableView, QPushButton, QColorDialog, \
-    QTabWidget, QHBoxLayout, QComboBox, QScrollArea, QTextBrowser, QDialog, QLineEdit, QTextEdit, QDateEdit, QMenuBar, \
-    QMessageBox
+    QTabWidget, QHBoxLayout, QComboBox, QTextBrowser, QDialog, QLineEdit, QTextEdit, QDateEdit, QMessageBox
 from pynput.keyboard import Key, Controller
 from TopFrame import TopFrame
 
@@ -47,38 +48,48 @@ class MenuBar:
             QMenu { background: white; } 
             QMenu:separator:hr { background-color: white; height: 0px; border-top: 1px solid black; margin: 5px } 
             QMenu::item:unselected { background-color: white; } 
-            QMenu::item:selected { background: WhiteSmoke; color: black; }'''
+            QMenu::item:selected { background: ''' + self.gui.background_color + '''; color: black; }'''
 
         file_menu = menu_bar.addMenu('File')
         file_menu.setStyleSheet(menu_style)
+        file_menu.setToolTipsVisible(True)
 
         save_action = file_menu.addAction('Save (Ctrl-S)')
         save_action.triggered.connect(self.spd.save_rec)
 
         print_action = file_menu.addAction('Print (Ctrl-P)')
-        print_action.setStatusTip('Print the current record')
+        print_action.setToolTip('Print the current record')
         print_action.triggered.connect(self.print_rec)
 
+        file_menu.addSeparator()
+
         backup_action = file_menu.addAction('Create Backup')
-        backup_action.setStatusTip('Manually save a backup of your database')
+        backup_action.setToolTip('Manually save a backup of your database')
         backup_action.triggered.connect(self.do_backup)
 
         restore_action = file_menu.addAction('Restore from Backup')
-        restore_action.setStatusTip('Restore a previous backup of your database')
+        restore_action.setToolTip('Restore a previous backup of your database')
         restore_action.triggered.connect(self.restore_backup)
 
+        file_menu.addSeparator()
+
         import_action = file_menu.addAction('Import Sermons from Files')
-        import_action.setStatusTip('Import sermons that have been saved as .docx, .odt, or .txt')
+        import_action.setToolTip('Import sermons that have been saved as .docx, .odt, or .txt')
         import_action.triggered.connect(self.import_from_files)
+
+        bible_action = file_menu.addAction('Import Zefania XML Bible')
+        bible_action.setToolTip('Import a bible file saved in the Zefania XML format to use with your program')
+        bible_action.triggered.connect(self.import_bible)
 
         file_menu.addSeparator()
 
         exit_action = file_menu.addAction('Exit (Ctrl-Q)')
-        exit_action.setStatusTip('Quit the program')
+        exit_action.setToolTip('Quit the program')
         exit_action.triggered.connect(self.do_exit)
 
         edit_menu = menu_bar.addMenu('Edit')
         edit_menu.setStyleSheet(menu_style)
+        edit_menu.setToolTipsVisible(True)
 
         cut_action = edit_menu.addAction('Cut (Ctrl-X)')
         cut_action.triggered.connect(self.press_ctrl_x)
@@ -89,30 +100,37 @@ class MenuBar:
         paste_action = edit_menu.addAction('Paste (Ctrl-V)')
         paste_action.triggered.connect(self.press_ctrl_v)
 
+        edit_menu.addSeparator()
+
         config_menu = edit_menu.addMenu('Configure')
+        config_menu.setToolTipsVisible(True)
 
         bg_color_action = config_menu.addAction('Change Accent Color')
-        bg_color_action.setStatusTip('Choose a different color for accents and borders')
+        bg_color_action.setToolTip('Choose a different color for accents and borders')
         bg_color_action.triggered.connect(lambda: self.color_change('bg'))
 
         fg_color_action = config_menu.addAction('Change Background Color')
-        fg_color_action.setStatusTip('Choose a different color for the background')
+        fg_color_action.setToolTip('Choose a different color for the background')
         fg_color_action.triggered.connect(lambda: self.color_change('fg'))
 
-        rename_action = config_menu.addAction('Rename Labels')
-        rename_action.setStatusTip('Rename the labels in this program')
-        rename_action.triggered.connect(self.rename_labels)
-
         font_action = config_menu.addAction('Change Font')
-        font_action.setStatusTip('Change the font and font size used in the program')
+        font_action.setToolTip('Change the font and font size used in the program')
         font_action.triggered.connect(self.change_font)
 
+        config_menu.addSeparator()
+
+        rename_action = config_menu.addAction('Rename Labels')
+        rename_action.setToolTip('Rename the labels in this program')
+        rename_action.triggered.connect(self.rename_labels)
+
+        config_menu.addSeparator()
+
         remove_words_item = config_menu.addAction('Remove custom words from dictionary')
-        remove_words_item.setStatusTip('Choose words to remove from the dictionary that have been added by you')
+        remove_words_item.setToolTip('Choose words to remove from the dictionary that have been added by you')
         remove_words_item.triggered.connect(self.remove_words)
 
         self.disable_spell_check_action = config_menu.addAction('Disable Spell Check')
-        self.disable_spell_check_action.setStatusTip('Disabling spell check improves performance and memory usage')
+        self.disable_spell_check_action.setToolTip('Disabling spell check improves performance and memory usage')
         self.disable_spell_check_action.setCheckable(True)
         if self.spd.disable_spell_check:
             self.disable_spell_check_action.setChecked(True)
@@ -122,6 +140,7 @@ class MenuBar:
 
         record_menu = menu_bar.addMenu('Record')
         record_menu.setStyleSheet(menu_style)
+        record_menu.setToolTipsVisible(True)
 
         first_rec_action = record_menu.addAction('Jump to First Record')
         first_rec_action.triggered.connect(self.spd.first_rec)
@@ -393,7 +412,7 @@ class MenuBar:
 
             os.remove(printFileLoc)
         except Exception as err:
-            self.spd.write_to_log('MenuBar.linux_print: ' + str(err))
+            self.spd.write_to_log('MenuBar.linux_print: ' + str(err), True)
 
     def do_backup(self):
         import os
@@ -446,7 +465,7 @@ class MenuBar:
                 self.spd.last_rec()
             except Exception as err:
                 shutil.copy(self.spd.app_dir + '/active-database-backup.db', self.spd.db_loc)
-                self.spd.write_to_log('MenuBar.restore_backup: ' + str(err))
+                self.spd.write_to_log('MenuBar.restore_backup: ' + str(err), True)
 
                 QMessageBox.critical(
                     None,
@@ -484,6 +503,63 @@ class MenuBar:
             '2011-05-11.mark.3.1-12.docx', QMessageBox.Ok)
         from GetFromDocx import GetFromDocx
         GetFromDocx(self.gui)
+
+    def import_bible(self):
+        file = QFileDialog.getOpenFileName(
+            self.gui.win,
+            'Choose Bible File',
+            os.path.expanduser('~'),
+            'XML Bible File (*.xml)'
+        )
+        try:
+            if file[0]:
+                shutil.copy(file[0], self.spd.app_dir + '/my_bible.xml')
+                self.spd.bible_file = self.spd.app_dir + '/my_bible.xml'
+
+                # verify the file by attempting to get a passage from the new file
+                from getScripture import GetScripture
+                self.gui.gs = GetScripture(self.spd)
+                passage = self.gui.gs.get_passage('John 3:16')
+
+                if not passage or passage == -1 or passage == '':
+                    QMessageBox.warning(
+                        self.gui.win,
+                        'Bad Format',
+                        'There is a problem with your XML bible: ' + file[0] + '. Try downloading it again or ensuring '
+                        'that it is formatted according to Zefania standards.',
+                        QMessageBox.Ok
+                    )
+
+                    if exists(self.spd.app_dir + '/my_bible.xml'):
+                        os.remove(self.spd.app_dir + '/my_bible.xml')
+                else:
+                    QMessageBox.information(
+                        self.gui.win,
+                        'Import Complete',
+                        'Bible file has been successfully imported',
+                        QMessageBox.Ok
+                    )
+                    try:
+                        self.gui.tabbed_frame.removeTab(0)
+                        self.gui.build_scripture_tab(True)
+                        self.gui.auto_fill_checkbox.setChecked(True)
+                        self.gui.set_style_sheets()
+                        self.gui.tabbed_frame.setCurrentIndex(0)
+                        self.spd.get_by_index(self.spd.current_rec_index)
+                    except Exception:
+                        logging.exception('')
+
+        except Exception as ex:
+            self.spd.write_to_log(str(ex))
+            QMessageBox.warning(
+                self.gui.win,
+                'Import Error',
+                'An error occurred while importing the file ' + file[0] + ':\n\n' + str(ex),
+                QMessageBox.Ok
+            )
+
+            if exists(self.spd.app_dir + '/my_bible.xml'):
+                os.remove(self.spd.app_dir + '/my_bible.xml')
 
     def rename_labels(self):
         self.rename_widget = QWidget()
@@ -596,7 +672,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.3.3.9')
+        about_label = QLabel('Sermon Prep Database v.3.4.1')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 
@@ -815,7 +891,7 @@ class ShowHelp(QTabWidget):
         menu_pic_label.setPixmap(menu_pic)
         menu_layout.addWidget(menu_pic_label)
 
-        menu_text = QTextEdit()
+        menu_text = QTextBrowser()
         menu_text.setHtml(
             'At the very top of the screen is a menu bar containing the File, Edit, Record, and Help menus<br><br>'
             '<strong>File</strong><br>In the File menu, you will find <strong>Save</strong> and <strong>Print'
@@ -838,7 +914,12 @@ class ShowHelp(QTabWidget):
             '2023 on Mark 9:1-12, saved as a Microsoft Word document would have the file name <strong>2023-03-19.mark.'
             '9.1-12.docx</strong>. If the file names aren\'t renamed in this way, the program can still import your '
             'sermons, it just won\'t be able to automatically save the corresponding date and reference information '
-            'as well<br><br>'
+            'as well<br><br>Next, if you have your favorite bible downloaded as a Zefaniah XML file '
+            '(<a href="https://sourceforge.net/projects/zefania-sharp/files/Bibles/">'
+            'https://sourceforge.net/projects/zefania-sharp/files/Bibles/</a>), you can import that file '
+            'into the program by clicking <strong>Import XML Bible</strong>. This will allow the program to '
+            'automatically insert your sermon text into the "Sermon Text" area of the "Scripture" tab. This has only '
+            'been tested with Zephania bible files in particular, but others may work.<br><br>'
             '<strong>Edit</strong><br>In the Edit menu, you will find the customary <strong>Cut</strong>, <strong>Copy'
             '</strong>, and <strong>Paste</strong> commands. Again, <strong>Ctrl-X</strong>, <strong>Ctrl-C</strong>, '
             'and <strong>Ctrl-V</strong> will also perform these same functions.<br><br>In this menu you will '
@@ -863,6 +944,7 @@ class ShowHelp(QTabWidget):
         )
         menu_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
         menu_text.setReadOnly(True)
+        menu_text.setOpenExternalLinks(True)
         menu_layout.addWidget(menu_text)
 
         self.addTab(menu_widget, 'Menu Bar')
@@ -926,7 +1008,9 @@ class ShowHelp(QTabWidget):
             'under the "Edit" menu.<br><br>The first box you can enter text into is the "Pericope" box. An example of '
             'what goes here would be, "Second Sunday of Easter". Below that is where you can enter the recommended '
             'texts for that Pericope.<br><br>Next, you can enter the passage of the text you\'ll be using for your '
-            'sermon, entering the text of that passage underneath.'
+            'sermon, entering the text of that passage underneath.<br><br>If you have previously imported a Zefania '
+            'XML bible file, the text of the passage you typed in will be automatically filled in. To turn this '
+            'feature off, simply uncheck the box labeled "Auto-fill ' + self.spd.user_settings[8] + '".'
         )
         scripture_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
         scripture_text.setReadOnly(True)

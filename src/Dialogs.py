@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.3.9)
+This file is a part of the Sermon Prep Database program (v.3.4.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -50,72 +50,69 @@ def message_box(title, message, bg):
 
 # function to show a simple Yes/No/Cancel dialog box+
 def yes_no_cancel_box(*args):
-    try:
-        #args = title, message, bg, (yes, no)
-        result = -1
+    #args = title, message, bg, (yes, no)
+    result = -1
 
-        dialog = QDialog()
-        dialog.setStyleSheet('background: ' + args[2])
+    dialog = QDialog()
+    dialog.setStyleSheet('background: ' + args[2])
 
-        dialog.setWindowTitle(args[0])
+    dialog.setWindowTitle(args[0])
 
-        layout = QVBoxLayout()
-        dialog.setLayout(layout)
+    layout = QVBoxLayout()
+    dialog.setLayout(layout)
 
-        label = QLabel(args[1])
-        layout.addWidget(label)
+    label = QLabel(args[1])
+    layout.addWidget(label)
 
-        button_container = QWidget()
-        container_layout = QHBoxLayout()
-        button_container.setLayout(container_layout)
+    button_container = QWidget()
+    container_layout = QHBoxLayout()
+    button_container.setLayout(container_layout)
 
-        yes_button = QPushButton('Yes')
-        yes_button.pressed.connect(lambda: dialog.done(0))
-        container_layout.addWidget(yes_button)
+    yes_button = QPushButton('Yes')
+    yes_button.pressed.connect(lambda: dialog.done(0))
+    container_layout.addWidget(yes_button)
 
-        container_layout.addSpacing(10)
+    container_layout.addSpacing(10)
 
-        no_button = QPushButton('No')
-        no_button.pressed.connect(lambda: dialog.done(1))
-        container_layout.addWidget(no_button)
+    no_button = QPushButton('No')
+    no_button.pressed.connect(lambda: dialog.done(1))
+    container_layout.addWidget(no_button)
 
-        container_layout.addSpacing(10)
+    container_layout.addSpacing(10)
 
-        cancel_button = QPushButton('Cancel')
-        cancel_button.pressed.connect(lambda: dialog.done(2))
-        container_layout.addWidget(cancel_button)
+    cancel_button = QPushButton('Cancel')
+    cancel_button.pressed.connect(lambda: dialog.done(2))
+    container_layout.addWidget(cancel_button)
 
-        if len(args) == 5:
-            yes_button.setText(args[3])
-            no_button.setText(args[4])
+    if len(args) == 5:
+        yes_button.setText(args[3])
+        no_button.setText(args[4])
 
-        layout.addWidget(button_container)
+    layout.addWidget(button_container)
 
-        response = dialog.exec()
-    except Exception:
-        logging.exception('')
+    response = dialog.exec()
     return response
 
 # function to show a timed popup message, takes a message string and milliseconds to display as arguments
 def timed_popup(message, millis, bg):
-        dialog = QDialog()
-        dialog.setWindowFlag(Qt.FramelessWindowHint)
-        dialog.setWindowOpacity(0.75)
-        dialog.setBaseSize(QSize(200, 75))
-        dialog.setStyleSheet('background-color: ' + bg)
-        dialog.setModal(True)
+    dialog = QDialog()
+    dialog.setWindowFlag(Qt.FramelessWindowHint)
+    dialog.setWindowOpacity(0.75)
+    dialog.setBaseSize(QSize(200, 75))
+    dialog.setStyleSheet('background-color: ' + bg)
+    dialog.setModal(True)
 
-        layout = QVBoxLayout()
-        dialog.setLayout(layout)
+    layout = QVBoxLayout()
+    dialog.setLayout(layout)
 
-        label = QLabel(message)
-        label.setStyleSheet('font-size: 18pt; color: white;')
-        layout.addWidget(label)
+    label = QLabel(message)
+    label.setStyleSheet('font-size: 18pt; color: white;')
+    layout.addWidget(label)
 
-        timer = QTimer()
-        timer.singleShot(millis, lambda: dialog.done(0))
+    timer = QTimer()
+    timer.singleShot(millis, lambda: dialog.done(0))
 
-        dialog.show()
+    dialog.show()
 
 class RemoveCustomWords:
     def __init__(self, spd):
@@ -128,7 +125,7 @@ class RemoveCustomWords:
         layout = QVBoxLayout()
         self.widget.setLayout(layout)
 
-        with open(spd.cwd + 'resources/custom_words.txt') as file:
+        with open(spd.app_dir + '/custom_words.txt') as file:
             custom_words = file.readlines()
 
         self.word_list = QListWidget()
@@ -159,12 +156,12 @@ class RemoveCustomWords:
     def close(self):
         if self.changes:
             lines = []
-            file = open(self.spd.cwd + 'resources/custom_words.txt', 'w')
+            file = open(self.spd.app_dir + '/custom_words.txt', 'w')
             try:
                 for r in range(len(self.word_list)):
                     lines.append(self.word_list.item(r).text() + '\n')
                 file.writelines(lines)
                 file.close()
             except Exception as ex:
-                self.spd.write_to_log(ex)
+                self.spd.write_to_log(ex, True)
         self.widget.close()
