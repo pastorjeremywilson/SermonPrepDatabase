@@ -680,7 +680,7 @@ class SermonPrepDatabase(QThread):
                 highest_num += 1
                 date = sermon[0]
                 reference = sermon[1]
-                text = sermon[2]
+                text = self.reformat_string_for_save(sermon[2])
 
                 sql = 'INSERT INTO sermon_prep_database (ID, date, sermon_reference, manuscript) VALUES("'\
                     + str(highest_num) + '", "' + date + '", "' + reference + '", "' + text + '");'
@@ -743,7 +743,7 @@ class SermonPrepDatabase(QThread):
                 'Error Occurred', 'An error occurred while importing:\n\n' + str(ex),
                 QMessageBox.Ok
             )
-            self.write_to_log('From SermonPrepDatabase.insert_imports: ' + str(ex))
+            self.write_to_log('From SermonPrepDatabase.insert_imports: ' + str(ex) + '\nMost recent sql statement: ' + text)
 
 
 class LoadingBox(QDialog):
