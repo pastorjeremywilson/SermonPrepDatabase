@@ -448,6 +448,7 @@ class SermonPrepDatabase(QThread):
 
     # function to search the text of all database entries to see if user's string is found
     def get_search_results(self, search_text):
+        search_text = search_text.strip()
         full_text_result_list = []
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
@@ -471,20 +472,22 @@ class SermonPrepDatabase(QThread):
         text_split = search_text.split(' ')
         words_found = []
         add_item = True
+
         for line in all_data:
             for item in line:
                 for word in text_split:
-                    num_matches = str(item).lower().count(word.lower())
-                    words_found.append(word)
+                    search_word = word.strip()
+                    num_matches = str(item).lower().count(search_word.lower())
+                    words_found.append(search_word)
                     add_word = True
                     cleaned_words_found = []
 
-                    for word in words_found:
+                    for search_word in words_found:
                         for new_word in cleaned_words_found:
-                            if word == new_word:
+                            if search_word == new_word:
                                 add_word = False
                         if add_word:
-                            cleaned_words_found.append(word)
+                            cleaned_words_found.append(search_word)
 
                 if num_matches > 0:
                     for a in full_text_result_list:
@@ -736,7 +739,7 @@ class SermonPrepDatabase(QThread):
                     layout.addWidget(text_edit)
                     dialog.exec()
             else:
-                QMessageBox.information('Import Complete', message, QMessageBox.Ok)
+                QMessageBox.information(None, 'Import Complete', message, QMessageBox.Ok)
         except Exception as ex:
             QMessageBox.critical(
                 self.gui.win,

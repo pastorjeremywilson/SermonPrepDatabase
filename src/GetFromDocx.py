@@ -53,6 +53,7 @@ class GetFromDocx:
             'esther',
             'job',
             'psalms',
+            'psalm',
             'proverbs',
             'ecclesiastes',
             'song',
@@ -72,7 +73,7 @@ class GetFromDocx:
             'zephaniah',
             'haggai',
             'zechariah',
-            'malachi'
+            'malachi',
             'matthew',
             'mark',
             'luke',
@@ -126,6 +127,8 @@ class GetFromDocx:
             else:
                 split = file_name.split(' ')
 
+            print(split)
+
             index = 0
             date = ''
             reference = ''
@@ -140,7 +143,8 @@ class GetFromDocx:
                     pass
 
                 for book in self.books:
-                    if book in item:
+                    print(book, item.lower())
+                    if book in item.lower():
                         try:
                             item = item[0].upper() + item[1:len(item)]
                             reference = item + ' ' + period_split[index + 1] + ':' + period_split[index + 2]

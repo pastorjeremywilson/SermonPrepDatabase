@@ -146,9 +146,8 @@ class GUI:
         
         sermon_reference_label = QLabel(self.spd.user_settings[7])
         self.scripture_frame_layout.addWidget(sermon_reference_label, 0, 1)
-        
+
         self.sermon_reference_field = QLineEdit()
-        self.sermon_reference_field.textChanged.connect(self.reference_changes)
 
         if exists(self.spd.app_dir + '/my_bible.xml'):
             self.scripture_frame_layout.addWidget(self.sermon_reference_field, 1, 1)
@@ -170,6 +169,9 @@ class GUI:
         self.sermon_text_edit = CustomTextEdit(self.win, self)
         self.sermon_text_edit.cursorPositionChanged.connect(lambda: self.set_style_buttons(self.sermon_text_edit))
         self.scripture_frame_layout.addWidget(self.sermon_text_edit, 3, 1, 1, 2)
+
+        self.sermon_reference_field.textChanged.connect(self.reference_changes)
+        self.sermon_reference_field.textEdited.connect(self.reference_changes)
 
         if insert:
             self.tabbed_frame.insertTab(
@@ -449,7 +451,8 @@ class GUI:
                     component.setMarkdown(record[0][index].replace('&quot', '"').strip())
                     component.check_whole_text()
                 else:
-                    component.clear()
+                    if not self.spd.auto_fill:
+                        component.clear()
                 index += 1
         for i in range(self.exegesis_frame_layout.count()):
             component = self.exegesis_frame_layout.itemAt(i).widget()
@@ -538,6 +541,7 @@ class GUI:
         self.changes = True
 
     def reference_changes(self):
+        print(self.sermon_reference_field.text(), self.spd.auto_fill)
         try:
             self.top_frame.references_cb.setItemText(self.top_frame.references_cb.currentIndex(), self.sermon_reference_field.text())
             self.win.setWindowTitle('Sermon Prep Database - ' + self.sermon_date_edit.text() + ' - ' + self.sermon_reference_field.text())
@@ -556,6 +560,7 @@ class GUI:
 
                 if ':' in self.sermon_reference_field.text(): # only attempt to get the text if there's enough to work with
                     passage = self.gs.get_passage(self.sermon_reference_field.text())
+                    print(passage)
                     if passage and not passage == -1:
                         self.sermon_text_edit.setText(passage)
 
