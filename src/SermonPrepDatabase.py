@@ -469,38 +469,38 @@ class SermonPrepDatabase(QThread):
 
         # then search for each individual word in the search text
         individual_word_result_list = []
-        text_split = search_text.split(' ')
-        words_found = []
-        add_item = True
+
+        search_terms = []
+        quotes = re.findall('".*?"', search_text)
+        for item in quotes:
+            search_terms.append(item.replace('"', '').strip())
+            search_text = search_text.replace(item, '')
+
+        search_split = search_text.split(' ')
+        for item in search_split:
+            if len(item) > 0:
+                search_terms.append(item.strip())
 
         for line in all_data:
+            words_found_in_line = [None] * len(search_terms)
+            add_item = False
+
             for item in line:
-                for word in text_split:
-                    search_word = word.strip()
+                for i in range(len(search_terms)):
+                    search_word = search_terms[i]
                     num_matches = str(item).lower().count(search_word.lower())
-                    words_found.append(search_word)
-                    add_word = True
-                    cleaned_words_found = []
+                    if num_matches > 0:
+                        words_found_in_line[i] = True
+                        add_item = True
 
-                    for search_word in words_found:
-                        for new_word in cleaned_words_found:
-                            if search_word == new_word:
-                                add_word = False
-                        if add_word:
-                            cleaned_words_found.append(search_word)
-
-                if num_matches > 0:
-                    for a in full_text_result_list:
-                        if a[0][0] == line[0]:
-                            add_item = False
-                    for a in individual_word_result_list:
-                        if a[0][0] == line[0]:
-                            add_item = False
-                    if add_item:
-                        individual_word_result_list.append([line, cleaned_words_found, num_matches])
-
+            if add_item:
                 words_found = []
-            add_item = True
+                num_matches = 0
+                for i in range(len(search_terms)):
+                    if words_found_in_line[i]:
+                        words_found.append(search_terms[i])
+                        num_matches += 1
+                individual_word_result_list.append([line, words_found, num_matches])
 
         # reorder the search results based on number of matches, full text first
         sorted_results = []
