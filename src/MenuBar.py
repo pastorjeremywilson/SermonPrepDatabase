@@ -975,7 +975,7 @@ class ShowHelp(QTabWidget):
             'database, allowing you to see what you\'ve preached on in the past or how you\'ve dealt with particular '
             'texts.<br><br>Next to these is a search box. By entering a passage or keyword into this box and pressing '
             'Enter, you can search for scripture passages or words you\'ve used in past sermons.<br><br>To search for '
-            'phrases, use double quotes. For example, "God\'s love" or "empty tomb". The search will create a new tab '
+            'phrases, use double quotes. For example, "empty tomb" or "Matthew 1:". The search will create a new tab '
             'showing any records where your search term(s) appear, and double-clicking any of the results '
             'will bring up that particular sermon\'s record. The search results are sorted with exact matches first,'
             ' followed by results in order of how many search terms were found. This new tab can be closed by pressing '
