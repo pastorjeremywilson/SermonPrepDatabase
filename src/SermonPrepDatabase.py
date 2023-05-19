@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.4.2)
+This file is a part of the Sermon Prep Database program (v.3.4.3)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -453,18 +453,20 @@ class SermonPrepDatabase(QThread):
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
         all_data = cur.execute('SELECT * FROM sermon_prep_database').fetchall()
+        found_ids = []
 
         #search first for the full search text
         add_item = True
         for line in all_data:
             for item in line:
-                    num_matches = str(item).lower().count(search_text.lower())
-                    if num_matches > 0:
-                        for a in full_text_result_list:
-                            if a[0][0] == line[0]:
-                                add_item = False
-                        if add_item:
-                            full_text_result_list.append([line, search_text, num_matches])
+                num_matches = str(item).lower().count(search_text.lower())
+                if num_matches > 0:
+                    for id in found_ids:
+                        if line[0] == id:
+                            add_item = False
+                    if add_item:
+                        full_text_result_list.append([line, search_text, num_matches])
+                        found_ids.append(line[0])
             add_item = True
 
         # then search for each individual word in the search text
@@ -482,25 +484,32 @@ class SermonPrepDatabase(QThread):
                 search_terms.append(item.strip())
 
         for line in all_data:
-            words_found_in_line = [None] * len(search_terms)
-            add_item = False
+            already_found = False
+            for id in found_ids:
+                if line[0] == id:
+                    already_found = True
 
-            for item in line:
-                for i in range(len(search_terms)):
-                    search_word = search_terms[i]
-                    num_matches = str(item).lower().count(search_word.lower())
-                    if num_matches > 0:
-                        words_found_in_line[i] = True
-                        add_item = True
+            if not already_found:
+                words_found_in_line = [None] * len(search_terms)
+                add_item = False
 
-            if add_item:
-                words_found = []
-                num_matches = 0
-                for i in range(len(search_terms)):
-                    if words_found_in_line[i]:
-                        words_found.append(search_terms[i])
-                        num_matches += 1
-                individual_word_result_list.append([line, words_found, num_matches])
+                for item in line:
+                    for i in range(len(search_terms)):
+                        search_word = search_terms[i]
+                        num_matches = str(item).lower().count(search_word.lower())
+                        if num_matches > 0:
+                            words_found_in_line[i] = True
+                            add_item = True
+
+                if add_item:
+                    words_found = []
+                    num_matches = 0
+                    for i in range(len(search_terms)):
+                        if words_found_in_line[i]:
+                            words_found.append(search_terms[i])
+                            num_matches += 1
+                    individual_word_result_list.append([line, words_found, num_matches])
+                    found_ids.append(line[0])
 
         # reorder the search results based on number of matches, full text first
         sorted_results = []
