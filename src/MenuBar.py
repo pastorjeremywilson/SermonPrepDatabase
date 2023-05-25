@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.4.1)
+This file is a part of the Sermon Prep Database program (v.3.4.3)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -672,7 +672,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.3.4.1')
+        about_label = QLabel('Sermon Prep Database v.3.4.3')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 
@@ -974,10 +974,12 @@ class ShowHelp(QTabWidget):
             'or the sermon\'s scripture. This becomes increasingly useful as you add more and more sermons to the '
             'database, allowing you to see what you\'ve preached on in the past or how you\'ve dealt with particular '
             'texts.<br><br>Next to these is a search box. By entering a passage or keyword into this box and pressing '
-            'Enter, you can search for scripture passages or words you\'ve used in past sermons. Doing so will create '
-            'a new tab showing any records where your search term(s) appear, and double-clicking any of the results '
-            'will bring up that particular sermon\'s record. This new tab can be closed by pressing the "X" icon.<br>'
-            '<br><img src="' + self.spd.cwd + 'resources/navPic.png"><br>To the right of this upper bar are the navigation '
+            'Enter, you can search for scripture passages or words you\'ve used in past sermons.<br><br>To search for '
+            'phrases, use double quotes. For example, "empty tomb" or "Matthew 1:". The search will create a new tab '
+            'showing any records where your search term(s) appear, and double-clicking any of the results '
+            'will bring up that particular sermon\'s record. The search results are sorted with exact matches first,'
+            ' followed by results in order of how many search terms were found. This new tab can be closed by pressing '
+            'the "X" icon.<br><br><img src="' + self.spd.cwd + 'resources/navPic.png"><br>To the right of this upper bar are the navigation '
             'buttons, as well as the save and print buttons. These '
             'buttons will allow you to navigate to the first or last sermons in your database or switch to the '
             'previous or next sermons. Just to the right of these navigation buttons is the "New Record" button. '

@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.4.1)
+This file is a part of the Sermon Prep Database program (v.3.4.3)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -448,56 +448,68 @@ class SermonPrepDatabase(QThread):
 
     # function to search the text of all database entries to see if user's string is found
     def get_search_results(self, search_text):
+        search_text = search_text.strip()
         full_text_result_list = []
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
         all_data = cur.execute('SELECT * FROM sermon_prep_database').fetchall()
+        found_ids = []
 
         #search first for the full search text
         add_item = True
         for line in all_data:
             for item in line:
-                    num_matches = str(item).lower().count(search_text.lower())
-                    if num_matches > 0:
-                        for a in full_text_result_list:
-                            if a[0][0] == line[0]:
-                                add_item = False
-                        if add_item:
-                            full_text_result_list.append([line, search_text, num_matches])
+                num_matches = str(item).lower().count(search_text.lower())
+                if num_matches > 0:
+                    for id in found_ids:
+                        if line[0] == id:
+                            add_item = False
+                    if add_item:
+                        full_text_result_list.append([line, search_text, num_matches])
+                        found_ids.append(line[0])
             add_item = True
 
         # then search for each individual word in the search text
         individual_word_result_list = []
-        text_split = search_text.split(' ')
-        words_found = []
-        add_item = True
+
+        search_terms = []
+        quotes = re.findall('".*?"', search_text)
+        for item in quotes:
+            search_terms.append(item.replace('"', '').strip())
+            search_text = search_text.replace(item, '')
+
+        search_split = search_text.split(' ')
+        for item in search_split:
+            if len(item) > 0:
+                search_terms.append(item.strip())
+
         for line in all_data:
-            for item in line:
-                for word in text_split:
-                    num_matches = str(item).lower().count(word.lower())
-                    words_found.append(word)
-                    add_word = True
-                    cleaned_words_found = []
+            already_found = False
+            for id in found_ids:
+                if line[0] == id:
+                    already_found = True
 
-                    for word in words_found:
-                        for new_word in cleaned_words_found:
-                            if word == new_word:
-                                add_word = False
-                        if add_word:
-                            cleaned_words_found.append(word)
+            if not already_found:
+                words_found_in_line = [None] * len(search_terms)
+                add_item = False
 
-                if num_matches > 0:
-                    for a in full_text_result_list:
-                        if a[0][0] == line[0]:
-                            add_item = False
-                    for a in individual_word_result_list:
-                        if a[0][0] == line[0]:
-                            add_item = False
-                    if add_item:
-                        individual_word_result_list.append([line, cleaned_words_found, num_matches])
+                for item in line:
+                    for i in range(len(search_terms)):
+                        search_word = search_terms[i]
+                        num_matches = str(item).lower().count(search_word.lower())
+                        if num_matches > 0:
+                            words_found_in_line[i] = True
+                            add_item = True
 
-                words_found = []
-            add_item = True
+                if add_item:
+                    words_found = []
+                    num_matches = 0
+                    for i in range(len(search_terms)):
+                        if words_found_in_line[i]:
+                            words_found.append(search_terms[i])
+                            num_matches += 1
+                    individual_word_result_list.append([line, words_found, num_matches])
+                    found_ids.append(line[0])
 
         # reorder the search results based on number of matches, full text first
         sorted_results = []
@@ -680,7 +692,7 @@ class SermonPrepDatabase(QThread):
                 highest_num += 1
                 date = sermon[0]
                 reference = sermon[1]
-                text = sermon[2]
+                text = self.reformat_string_for_save(sermon[2])
 
                 sql = 'INSERT INTO sermon_prep_database (ID, date, sermon_reference, manuscript) VALUES("'\
                     + str(highest_num) + '", "' + date + '", "' + reference + '", "' + text + '");'
@@ -736,14 +748,14 @@ class SermonPrepDatabase(QThread):
                     layout.addWidget(text_edit)
                     dialog.exec()
             else:
-                QMessageBox.information('Import Complete', message, QMessageBox.Ok)
+                QMessageBox.information(None, 'Import Complete', message, QMessageBox.Ok)
         except Exception as ex:
             QMessageBox.critical(
                 self.gui.win,
                 'Error Occurred', 'An error occurred while importing:\n\n' + str(ex),
                 QMessageBox.Ok
             )
-            self.write_to_log('From SermonPrepDatabase.insert_imports: ' + str(ex))
+            self.write_to_log('From SermonPrepDatabase.insert_imports: ' + str(ex) + '\nMost recent sql statement: ' + text)
 
 
 class LoadingBox(QDialog):
