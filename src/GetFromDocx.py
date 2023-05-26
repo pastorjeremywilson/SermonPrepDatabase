@@ -199,6 +199,7 @@ class GetFromDocx:
                         zipped.extractall(unzip_folder)
                         unzip_success = True
                 except zipfile.BadZipfile:
+                    errors.append([file_list[i], 'Not a valid .docx file'])
                     unzip_success = False
 
                 if unzip_success:
@@ -240,6 +241,7 @@ class GetFromDocx:
                         zipped.extractall(unzip_folder)
                         unzip_success = True
                 except zipfile.BadZipfile:
+                    errors.append([file_list[i], 'Not a valid .odt file'])
                     unzip_success = False
 
                 if unzip_success:
