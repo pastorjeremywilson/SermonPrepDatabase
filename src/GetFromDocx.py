@@ -147,7 +147,7 @@ class GetFromDocx:
 
         errors = []
         sermons = []
-        self.gui.change_import_splash_dir.emit('Importing')
+        self.gui.change_import_splash_dir.emit('Converting')
         for i in range(0, len(file_list)):
             self.gui.change_import_splash_file.emit(file_list[i])
             file_name_split = file_list[i].split('/')
@@ -223,12 +223,12 @@ class GetFromDocx:
                                                 if len(sermon_text.strip()) > 0:
                                                     text_found = True
                                                 sermon_text += str(t_elem.text)
-                            sermon_text += '\n'
+                            sermon_text += '\n\n'
 
                     if not text_found:
                         errors.append([file_list[i], 'Unable to find any text in file'])
                     else:
-                        sermons.append([date, reference, sermon_text])
+                        sermons.append([date, reference, sermon_text, file_name])
 
             elif '.odt' in file_list[i].lower():
                 file_loc = file_list[i]
@@ -267,7 +267,7 @@ class GetFromDocx:
                                                             sermon_text += item.text
                                             sermon_text += '\n'
                     if len(sermon_text) > 0:
-                        sermons.append([date, reference, sermon_text])
+                        sermons.append([date, reference, sermon_text, file_name])
                     else:
                         errors.append([file_list[i], 'Unable to find any text in file'])
 
@@ -275,8 +275,9 @@ class GetFromDocx:
                 with open(file_list[i]) as file:
                     sermon_text = file.read()
                 if len(sermon_text) > 0:
-                    sermons.append([date, reference, sermon_text])
+                    sermons.append([date, reference, sermon_text, file_name])
                 else:
                     errors.append([file_list[i], 'Unable to find any text in file'])
 
         self.gui.spd.insert_imports(errors, sermons)
+        self.gui.close_import_splash.emit()

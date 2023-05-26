@@ -694,9 +694,10 @@ class SermonPrepDatabase(QThread):
                 date = sermon[0]
                 reference = sermon[1]
                 text = self.reformat_string_for_save(sermon[2])
+                title = sermon[3]
 
-                sql = 'INSERT INTO sermon_prep_database (ID, date, sermon_reference, manuscript) VALUES("'\
-                    + str(highest_num) + '", "' + date + '", "' + reference + '", "' + text + '");'
+                sql = 'INSERT INTO sermon_prep_database (ID, date, sermon_reference, manuscript, sermon_title) VALUES("'\
+                    + str(highest_num) + '", "' + date + '", "' + reference + '", "' + text + '", "' + title + '");'
                 cursor.execute(sql)
                 conn.commit()
 
@@ -759,16 +760,24 @@ class SermonPrepDatabase(QThread):
 
     def import_splash(self):
         self.widget = QWidget()
+        self.widget.setStyleSheet('border: 3px solid black; background-color: ' + self.gui.background_color + ';')
         layout = QVBoxLayout()
         self.widget.setLayout(layout)
 
         importing_label = QLabel('Importing...')
+        importing_label.setStyleSheet('border: none;')
+        importing_label.setFont(QFont(self.gui.font_family, int(self.gui.font_size), QFont.Bold))
         layout.addWidget(importing_label)
+        layout.addSpacing(50)
 
         self.dir_label = QLabel('Looking in...')
+        self.dir_label.setStyleSheet('border: none;')
+        self.dir_label.setFont(QFont(self.gui.font_family, int(self.gui.font_size)))
         layout.addWidget(self.dir_label)
 
         self.file_label = QLabel('Examining...')
+        self.file_label.setStyleSheet('border: none;')
+        self.file_label.setFont(QFont(self.gui.font_family, int(self.gui.font_size)))
         layout.addWidget(self.file_label)
 
         self.widget.setWindowModality(Qt.WindowModal)
@@ -843,6 +852,7 @@ class LoadingBox(QDialog):
         self.spd.current_rec_index = len(self.spd.ids) - 1
         self.spd.get_by_index(self.spd.current_rec_index)
         self.close()
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
