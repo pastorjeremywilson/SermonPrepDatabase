@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.4.3)
+This file is a part of the Sermon Prep Database program (v.3.4.4)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -36,7 +36,7 @@ from sqlite3 import OperationalError
 from PyQt5.QtCore import QThread, Qt, pyqtSignal
 from PyQt5.QtGui import QFont, QMovie
 from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDateEdit, QLabel, QGridLayout, QDialog, QVBoxLayout, \
-    QMessageBox
+    QMessageBox, QWidget
 from symspellpy import SymSpell
 
 from gui import GUI
@@ -70,6 +70,7 @@ class SermonPrepDatabase(QThread):
         self.change_text.emit('Getting Platform')
         time.sleep(0.5)
         self.platform = sys.platform
+
         try:
             self.change_text.emit('Getting Directories')
             time.sleep(0.5)
@@ -693,9 +694,10 @@ class SermonPrepDatabase(QThread):
                 date = sermon[0]
                 reference = sermon[1]
                 text = self.reformat_string_for_save(sermon[2])
+                title = sermon[3]
 
-                sql = 'INSERT INTO sermon_prep_database (ID, date, sermon_reference, manuscript) VALUES("'\
-                    + str(highest_num) + '", "' + date + '", "' + reference + '", "' + text + '");'
+                sql = 'INSERT INTO sermon_prep_database (ID, date, sermon_reference, manuscript, sermon_title) VALUES("'\
+                    + str(highest_num) + '", "' + date + '", "' + reference + '", "' + text + '", "' + title + '");'
                 cursor.execute(sql)
                 conn.commit()
 
@@ -723,9 +725,8 @@ class SermonPrepDatabase(QThread):
             if len(errors) > 0:
                 message += ' Error(s) occurred while importing. Would you like to view them now?'
                 result = QMessageBox.question(self.gui.win, 'Import Complete', message, QMessageBox.Yes | QMessageBox.No)
-                print(result)
+                
                 if result == QMessageBox.Yes:
-                    print('showing errors')
                     error_text = ''
                     for error in errors:
                         error_text += error[0] + ': ' + error[1] + '\n'
@@ -756,6 +757,43 @@ class SermonPrepDatabase(QThread):
                 QMessageBox.Ok
             )
             self.write_to_log('From SermonPrepDatabase.insert_imports: ' + str(ex) + '\nMost recent sql statement: ' + text)
+
+    def import_splash(self):
+        self.widget = QWidget()
+        self.widget.setStyleSheet('border: 3px solid black; background-color: ' + self.gui.background_color + ';')
+        layout = QVBoxLayout()
+        self.widget.setLayout(layout)
+
+        importing_label = QLabel('Importing...')
+        importing_label.setStyleSheet('border: none;')
+        importing_label.setFont(QFont(self.gui.font_family, int(self.gui.font_size), QFont.Bold))
+        layout.addWidget(importing_label)
+        layout.addSpacing(50)
+
+        self.dir_label = QLabel('Looking in...')
+        self.dir_label.setStyleSheet('border: none;')
+        self.dir_label.setFont(QFont(self.gui.font_family, int(self.gui.font_size)))
+        layout.addWidget(self.dir_label)
+
+        self.file_label = QLabel('Examining...')
+        self.file_label.setStyleSheet('border: none;')
+        self.file_label.setFont(QFont(self.gui.font_family, int(self.gui.font_size)))
+        layout.addWidget(self.file_label)
+
+        self.widget.setWindowModality(Qt.WindowModal)
+        self.widget.setWindowFlag(Qt.FramelessWindowHint)
+        self.widget.show()
+
+    def change_dir(self, text):
+        self.dir_label.setText(text)
+        app.processEvents()
+
+    def change_file(self, text):
+        self.file_label.setText(text)
+        app.processEvents()
+
+    def close_splash(self):
+        self.widget.deleteLater()
 
 
 class LoadingBox(QDialog):
@@ -806,9 +844,15 @@ class LoadingBox(QDialog):
 
     def end(self):
         self.spd.gui = GUI(self.spd)
+        self.spd.gui.open_import_splash.connect(self.spd.import_splash)
+        self.spd.gui.change_import_splash_dir.connect(self.spd.change_dir)
+        self.spd.gui.change_import_splash_file.connect(self.spd.change_file)
+        self.spd.gui.close_import_splash.connect(self.spd.close_splash)
+
         self.spd.current_rec_index = len(self.spd.ids) - 1
         self.spd.get_by_index(self.spd.current_rec_index)
         self.close()
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

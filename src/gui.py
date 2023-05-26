@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.4.3)
+This file is a part of the Sermon Prep Database program (v.3.4.4)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -28,7 +28,7 @@ import shutil
 import sys
 from os.path import exists
 
-from PyQt5.QtCore import Qt, QSize, QDate, QDateTime
+from PyQt5.QtCore import Qt, QSize, QDate, QDateTime, pyqtSignal, QObject
 from PyQt5.QtGui import QIcon, QFont, QKeyEvent, QTextCursor, QStandardItemModel, QStandardItem, QPixmap
 from PyQt5.QtWidgets import QBoxLayout, QWidget, QUndoStack, QMessageBox, QTabWidget, QGridLayout, QLabel, QLineEdit, \
     QCheckBox, QDateEdit, QTextEdit, QAction, QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QTableView
@@ -39,7 +39,7 @@ from MenuBar import MenuBar
 from TopFrame import TopFrame
 
 
-class GUI:
+class GUI(QObject):
     spd = None
     win = None
     undo_stack = None
@@ -47,8 +47,14 @@ class GUI:
     font_family = None
     font_size = None
     gs = None
+
+    open_import_splash = pyqtSignal()
+    change_import_splash_dir = pyqtSignal(str)
+    change_import_splash_file = pyqtSignal(str)
+    close_import_splash = pyqtSignal()
     
     def __init__(self, spd):
+        super().__init__()
         self.spd = spd
         self.check_for_db()
         self.init_components()
@@ -541,7 +547,6 @@ class GUI:
         self.changes = True
 
     def reference_changes(self):
-        print(self.sermon_reference_field.text(), self.spd.auto_fill)
         try:
             self.top_frame.references_cb.setItemText(self.top_frame.references_cb.currentIndex(), self.sermon_reference_field.text())
             self.win.setWindowTitle('Sermon Prep Database - ' + self.sermon_date_edit.text() + ' - ' + self.sermon_reference_field.text())
@@ -560,7 +565,6 @@ class GUI:
 
                 if ':' in self.sermon_reference_field.text(): # only attempt to get the text if there's enough to work with
                     passage = self.gs.get_passage(self.sermon_reference_field.text())
-                    print(passage)
                     if passage and not passage == -1:
                         self.sermon_text_edit.setText(passage)
 
@@ -606,7 +610,6 @@ class CustomTextEdit(QTextEdit):
 
     def keyReleaseEvent(self, evt):
         if evt.key() == 32 or evt.key() == Qt.Key_Enter:
-            print(evt.key())
             self.check_whole_text()
 
     def changes(self):
