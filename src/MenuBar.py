@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.4.3)
+This file is a part of the Sermon Prep Database program (v.3.4.4)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -291,7 +291,6 @@ class MenuBar:
         self.spd.write_to_log('Opening print subprocess')
 
         if sys.platform == 'win32':
-            print('beginning win32 print process')
             CREATE_NO_WINDOW = 0x08000000
             p = Popen(
                 [
@@ -672,7 +671,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.3.4.3')
+        about_label = QLabel('Sermon Prep Database v.3.4.4')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 
