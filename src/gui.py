@@ -70,6 +70,8 @@ class GUI(QObject):
         self.background_color = self.spd.user_settings[2]
         self.font_family = self.spd.user_settings[3]
         self.font_size = self.spd.user_settings[4]
+        self.standard_font = QFont(self.font_family, int(self.font_size))
+        self.bold_font = QFont(self.font_family, int(self.font_size), QFont.Bold)
 
         self.win = Win(self)
         icon_pixmap = QPixmap(self.spd.cwd + 'resources/icon.png')

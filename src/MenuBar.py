@@ -35,6 +35,8 @@ from PyQt5.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableVie
     QTabWidget, QHBoxLayout, QComboBox, QTextBrowser, QDialog, QLineEdit, QTextEdit, QDateEdit, QMessageBox
 from pynput.keyboard import Key, Controller
 from TopFrame import TopFrame
+from PrintDialog import PrintDialog
+
 
 class MenuBar:
     def __init__(self, win, gui, spd):
@@ -291,24 +293,8 @@ class MenuBar:
         self.spd.write_to_log('Opening print subprocess')
 
         if sys.platform == 'win32':
-            CREATE_NO_WINDOW = 0x08000000
-            p = Popen(
-                [
-                    self.spd.cwd + 'ghostscript/gsprint.exe',
-                    print_file_loc,
-                    '-ghostscript',
-                    self.spd.cwd + 'ghostscript/gswin64.exe',
-                    '-query'],
-                creationflags=CREATE_NO_WINDOW,
-                stdout=PIPE,
-                stderr=PIPE)
-
-            self.spd.write_to_log('Capturing print subprocess sdtout & stderr')
-            stdout, stderr = p.communicate()
-            self.spd.write_to_log('stdout:' + str(stdout))
-            self.spd.write_to_log('stderr:' + str(stderr))
-
-            os.remove(print_file_loc)
+            self.print_dialog = PrintDialog(print_file_loc, self.gui)
+            self.print_dialog.exec()
 
         elif sys.platform == 'linux':
             p = Popen(['/usr/bin/lpstat', '-a'], stdin = PIPE, stdout = PIPE, stderr = PIPE)
@@ -802,6 +788,7 @@ class MenuBar:
             goon = self.spd.ask_save()
         if goon:
             sys.exit(0)
+
 
 class ShowHelp(QTabWidget):
     def __init__(self, background_color, accent_color, font_family, font_size, spd):
