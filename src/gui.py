@@ -613,7 +613,7 @@ class CustomTextEdit(QTextEdit):
         if evt.key() == Qt.Key_Space or evt.key() == Qt.Key_Return or evt.key() == Qt.Key_Enter:
             self.check_previous_word()
 
-    def changes(self):
+    def changeEvent(self, evt):
         self.gui.changes = True
 
     def check_previous_word(self):
