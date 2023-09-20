@@ -881,8 +881,9 @@ class ShowHelp(QTabWidget):
         intro_label.setStyleSheet(self.bold_font)
         intro_layout.addWidget(intro_label)
 
-        intro_text = QTextEdit(
-            'Thank-you for trying out this Sermon Prep Database. Its purpose is to provide an easy-to-use program to '
+        intro_text = QTextBrowser()
+        intro_text.setText(
+            u'Thank-you for trying out this Sermon Prep Database. Its purpose is to provide an easy-to-use program to '
             'organize and store the many different facets of the sermon preparation process. Whatever information you '
             'save in this program is stored on your hard drive in the widely-used SQLite Database format. This allows '
             'for secure storage and quick retrieval of your important information.<br><br>Should you ever need to find '
@@ -895,8 +896,10 @@ class ShowHelp(QTabWidget):
             'program.<br><br> It is my hope and prayer that you will find this program both a useful and valuable '
             'tool.<br><br>This program is a work-in-progress by a guy who is not, in no way, a professional '
             'programmer. If you run into any problems, unexpected behavior, missing features, or attempts to '
-            'assimilate your unique biological and technological distinctiveness, email pastorjeremywilson@gmail.com'
+            'assimilate your unique biological and technological distinctiveness, email '
+            '<a href='"'mailto:pastorjeremywilson@gmail.com'"'>pastorjeremywilson@gmail.com</a>'
         )
+        intro_text.setOpenExternalLinks(True)
         intro_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
         intro_text.setMinimumWidth(750)
         intro_text.setReadOnly(True)
