@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.4.6)
+This file is a part of the Sermon Prep Database program (v.3.4.7)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -610,11 +610,65 @@ class CustomTextEdit(QTextEdit):
         self.gui = gui
 
     def keyReleaseEvent(self, evt):
-        if evt.key() == 32 or evt.key() == Qt.Key_Enter:
-            self.check_whole_text()
+        if evt.key() == Qt.Key_Space or evt.key() == Qt.Key_Return or evt.key() == Qt.Key_Enter:
+            self.check_previous_word()
 
     def changes(self):
         self.gui.changes = True
+
+    def check_previous_word(self):
+        self.blockSignals(True)
+        punctuations = [',', '.', '?', '!', ')', ';', ':', '-']
+
+        cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.PreviousWord)
+        cursor.select(cursor.WordUnderCursor)
+
+        word = cursor.selection().toPlainText()
+        for punctuation in punctuations:
+            if word == punctuation:
+                print('Word is punctuation')
+                cursor.clearSelection()
+                cursor.movePosition(QTextCursor.PreviousWord)
+                cursor.movePosition(QTextCursor.PreviousWord)
+                cursor.select(cursor.WordUnderCursor)
+                word = cursor.selection().toPlainText()
+                break
+
+        print('Previous Word:', word)
+
+        # if there's an apostrophe, check the next two characters for contraction letters
+        if cursor.selection().toPlainText().endswith('\''):
+            cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+            if re.search('[a-z]$', cursor.selection().toPlainText()):
+                word = cursor.selection().toPlainText()
+                cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+                if re.search('[a-z]$', cursor.selection().toPlainText()):
+                    word = cursor.selection().toPlainText()
+
+        cleaned_word = self.clean_word(word)
+
+        suggestions = None
+        if len(cleaned_word) > 0 and not any(c.isnumeric() for c in cleaned_word):
+            if any(h.isalpha() for h in cleaned_word):
+                suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+                                                            include_unknown=True)
+
+            if suggestions:
+                char_format = cursor.charFormat()
+                if not suggestions[0].term == cleaned_word:
+                    char_format.setForeground(Qt.red)
+                    cursor.mergeCharFormat(char_format)
+
+                else:
+                    if char_format.foreground() == Qt.red:
+                        char_format.setForeground(Qt.black)
+                        cursor.mergeCharFormat(char_format)
+
+        cursor.clearSelection()
+        cursor.movePosition(QTextCursor.NextWord)
+
+        self.blockSignals(False)
 
     def check_whole_text(self):
         self.blockSignals(True)
