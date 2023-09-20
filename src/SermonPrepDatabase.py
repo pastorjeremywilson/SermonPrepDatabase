@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.4.5)
+This file is a part of the Sermon Prep Database program (v.3.4.6)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -29,14 +29,13 @@ import re
 import sqlite3
 import sys
 import time
-
-from datetime import datetime
-from os.path import exists
-from sqlite3 import OperationalError
 from PyQt5.QtCore import QThread, Qt, pyqtSignal
 from PyQt5.QtGui import QFont, QMovie
 from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDateEdit, QLabel, QGridLayout, QDialog, QVBoxLayout, \
     QMessageBox, QWidget
+from datetime import datetime
+from os.path import exists
+from sqlite3 import OperationalError
 from symspellpy import SymSpell
 
 from gui import GUI
@@ -115,7 +114,6 @@ class SermonPrepDatabase(QThread):
 
         except Exception as ex:
             self.write_to_log(str(ex), True)
-
 
     def check_spell_check(self):
         try:
@@ -237,7 +235,7 @@ class SermonPrepDatabase(QThread):
             if 'backup-' in file:
                 backup_files.append(file)
 
-        if (len(backup_files) >= 5): # keep only 5 prior copies of the database
+        if (len(backup_files) >= 5):  # keep only 5 prior copies of the database
             os.remove(self.app_dir + '/' + backup_files[0])
 
         import shutil
@@ -246,7 +244,11 @@ class SermonPrepDatabase(QThread):
 
     # save user's color changes to the database
     def write_color_changes(self):
-        sql = 'UPDATE user_settings SET bgcolor = "' + self.gui.accent_color + '", fgcolor = "' + self.gui.background_color + '" WHERE ID = 1;'
+        sql = ('UPDATE user_settings SET bgcolor = "'
+               + self.gui.accent_color
+               + '", fgcolor = "'
+               + self.gui.background_color
+               + '" WHERE ID = 1;')
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
         cur.execute(sql)
@@ -593,7 +595,7 @@ class SermonPrepDatabase(QThread):
             conn.commit()
 
             import time
-            time.sleep(0.5) # prevent a database lock, just in case SQLite takes a bit to update
+            time.sleep(0.5)  # prevent a database lock, just in case SQLite takes a bit to update
             self.get_ids()
             self.get_date_list()
             self.get_scripture_list()
@@ -678,6 +680,7 @@ class SermonPrepDatabase(QThread):
         logfile.writelines(string)
         logfile.close()
 
+    #
     #function to add imported sermons to the database
     def insert_imports(self, errors, sermons):
         try:
@@ -695,7 +698,6 @@ class SermonPrepDatabase(QThread):
                 reference = sermon[1]
                 text = self.reformat_string_for_save(sermon[2])
                 title = sermon[3]
-
                 sql = 'INSERT INTO sermon_prep_database (ID, date, sermon_reference, manuscript, sermon_title) VALUES("'\
                     + str(highest_num) + '", "' + date + '", "' + reference + '", "' + text + '", "' + title + '");'
                 cursor.execute(sql)
@@ -724,7 +726,11 @@ class SermonPrepDatabase(QThread):
             message = str(len(sermons)) + ' sermons have been imported.'
             if len(errors) > 0:
                 message += ' Error(s) occurred while importing. Would you like to view them now?'
-                result = QMessageBox.question(self.gui.win, 'Import Complete', message, QMessageBox.Yes | QMessageBox.No)
+                result = QMessageBox.question(
+                    self.gui.win,
+                    'Import Complete',
+                    message,
+                    QMessageBox.Yes | QMessageBox.No)
                 
                 if result == QMessageBox.Yes:
                     error_text = ''
@@ -756,7 +762,8 @@ class SermonPrepDatabase(QThread):
                 'Error Occurred', 'An error occurred while importing:\n\n' + str(ex),
                 QMessageBox.Ok
             )
-            self.write_to_log('From SermonPrepDatabase.insert_imports: ' + str(ex) + '\nMost recent sql statement: ' + text)
+            self.write_to_log(
+                'From SermonPrepDatabase.insert_imports: ' + str(ex) + '\nMost recent sql statement: ' + text)
 
     def import_splash(self):
         self.widget = QWidget()

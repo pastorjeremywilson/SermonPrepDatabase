@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.4.5)
+This file is a part of the Sermon Prep Database program (v.3.4.6)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -22,6 +22,7 @@ The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
 """
+
 import logging
 import re
 import shutil
@@ -454,13 +455,11 @@ class GUI(QObject):
                 else:
                     component.clear()
                 index += 1
-            elif isinstance(component, QTextEdit):
+            elif isinstance(component, CustomTextEdit):
+                component.clear()
                 if record[0][index]:
                     component.setMarkdown(record[0][index].replace('&quot', '"').strip())
                     component.check_whole_text()
-                else:
-                    if not self.spd.auto_fill:
-                        component.clear()
                 index += 1
         for i in range(self.exegesis_frame_layout.count()):
             component = self.exegesis_frame_layout.itemAt(i).widget()

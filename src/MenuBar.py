@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.4.5)
+This file is a part of the Sermon Prep Database program (v.3.4.6)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -22,6 +22,7 @@ The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
 """
+
 import logging
 import os
 import re
@@ -107,11 +108,33 @@ class MenuBar:
         config_menu = edit_menu.addMenu('Configure')
         config_menu.setToolTipsVisible(True)
 
-        bg_color_action = config_menu.addAction('Change Accent Color')
+        color_menu = config_menu.addMenu('Change Colors')
+
+        red_color_action = color_menu.addAction('Red Theme')
+        red_color_action.triggered.connect(lambda: self.color_change('red'))
+
+        green_color_action = color_menu.addAction('Green Theme')
+        green_color_action.triggered.connect(lambda: self.color_change('green'))
+
+        blue_color_action = color_menu.addAction('Blue Theme')
+        blue_color_action.triggered.connect(lambda: self.color_change('blue'))
+
+        yellow_color_action = color_menu.addAction('Gold Theme')
+        yellow_color_action.triggered.connect(lambda: self.color_change('gold'))
+
+        surf_color_action = color_menu.addAction('Surf Theme')
+        surf_color_action.triggered.connect(lambda: self.color_change('surf'))
+
+        royal_color_action = color_menu.addAction('Royal Theme')
+        royal_color_action.triggered.connect(lambda: self.color_change('royal'))
+
+        custom_color_menu = color_menu.addMenu('Custom Colors')
+
+        bg_color_action = custom_color_menu.addAction('Change Accent Color')
         bg_color_action.setToolTip('Choose a different color for accents and borders')
         bg_color_action.triggered.connect(lambda: self.color_change('bg'))
 
-        fg_color_action = config_menu.addAction('Change Background Color')
+        fg_color_action = custom_color_menu.addAction('Change Background Color')
         fg_color_action.setToolTip('Choose a different color for the background')
         fg_color_action.triggered.connect(lambda: self.color_change('fg'))
 
@@ -618,7 +641,25 @@ class MenuBar:
         self.spd.get_by_index(self.spd.current_rec_index)
 
     def color_change(self, type):
-        if type == 'bg':
+        if type == 'red':
+            self.gui.accent_color = '#502020'
+            self.gui.background_color = '#fff0f0'
+        elif type == 'green':
+            self.gui.accent_color = '#205020'
+            self.gui.background_color = '#f0fff0'
+        elif type == 'blue':
+            self.gui.accent_color = '#202050'
+            self.gui.background_color = '#f0f0ff'
+        elif type == 'gold':
+            self.gui.accent_color = '#808020'
+            self.gui.background_color = '#fffff0'
+        elif type == 'surf':
+            self.gui.accent_color = '#208080'
+            self.gui.background_color = '#f0ffff'
+        elif type == 'royal':
+            self.gui.accent_color = '#602080'
+            self.gui.background_color = '#eff0ff'
+        elif type == 'bg':
             color_chooser = QColorDialog()
             new_color = color_chooser.getColor(QColor(self.gui.accent_color))
             if not new_color == QColor():
@@ -657,7 +698,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.3.4.5')
+        about_label = QLabel('Sermon Prep Database v.3.4.6')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 
