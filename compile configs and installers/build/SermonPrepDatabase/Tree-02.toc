@@ -1,0 +1,5 @@
+('c:\\users\\pasto\\appdata\\local\\programs\\python\\python311\\lib\\site-packages\\typing_extensions-4.8.0rc1-py3.11.egg',
+ None,
+ {'*.py', '*.cp311-win_amd64.pyd', '*.pyw', '*.pyc', '*.pyd', 'EGG-INFO'},
+ 'DATA',
+ [])

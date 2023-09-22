@@ -25,6 +25,7 @@ https://www.ghostscript.com/licensing/index.html for more information.
 
 import logging
 import os
+import pickle
 import re
 import sqlite3
 import sys
@@ -174,8 +175,14 @@ class SermonPrepDatabase(QThread):
         conn.close
 
     def load_dictionary(self):
-        self.sym_spell = SymSpell()
-        self.sym_spell.create_dictionary(self.cwd + 'resources/default_dictionary.txt')
+        if not exists(self.cwd + 'resources/default_dictionary.pkl'):
+            self.sym_spell = SymSpell()
+            self.sym_spell.create_dictionary(self.cwd + 'resources/default_dictionary.txt')
+            self.sym_spell.save_pickle(os.path.normpath(self.cwd + 'resources/default_dictionary.pkl'))
+        else:
+            self.sym_spell = SymSpell()
+            self.sym_spell.load_pickle(os.path.normpath(self.cwd + 'resources/default_dictionary.pkl'))
+
         with open(self.app_dir + '/custom_words.txt', 'r') as file:
             custom_words = file.readlines()
         for entry in custom_words:

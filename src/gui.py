@@ -149,6 +149,7 @@ class GUI(QObject):
         
         pericope_text_label = QLabel(self.spd.user_settings[6])
         self.scripture_frame_layout.addWidget(pericope_text_label, 2, 0)
+
         pericope_text_edit = CustomTextEdit(self.win, self)
         pericope_text_edit.cursorPositionChanged.connect(lambda: self.set_style_buttons(pericope_text_edit))
         self.scripture_frame_layout.addWidget(pericope_text_edit, 3, 0)
@@ -422,6 +423,9 @@ class GUI(QObject):
         self.research_frame.setStyleSheet(standard_style_sheet)
         self.sermon_frame.setStyleSheet(standard_style_sheet)
 
+        for component in self.tabbed_frame.findChildren(CustomTextEdit, 'custom_text_edit'):
+            component.document().setDefaultFont(QFont(self.font_family, int(self.font_size)))
+
     def set_style_buttons(self, component):
         cursor = component.textCursor()
         font = cursor.charFormat().font()
@@ -606,8 +610,10 @@ class GUI(QObject):
 class CustomTextEdit(QTextEdit):
     def __init__(self, win, gui):
         super().__init__()
+        self.setObjectName('custom_text_edit')
         self.win = win
         self.gui = gui
+        self.textChanged.connect(self.gui.changes_detected)
 
     def keyReleaseEvent(self, evt):
         if evt.key() == Qt.Key_Space or evt.key() == Qt.Key_Return or evt.key() == Qt.Key_Enter:
