@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.3.4.4)
+This file is a part of the Sermon Prep Database program (v.4.0.0)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -22,6 +22,7 @@ The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
 """
+
 import logging
 import os
 import re
@@ -35,6 +36,8 @@ from PyQt5.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableVie
     QTabWidget, QHBoxLayout, QComboBox, QTextBrowser, QDialog, QLineEdit, QTextEdit, QDateEdit, QMessageBox
 from pynput.keyboard import Key, Controller
 from TopFrame import TopFrame
+from PrintDialog import PrintDialog
+
 
 class MenuBar:
     def __init__(self, win, gui, spd):
@@ -105,11 +108,33 @@ class MenuBar:
         config_menu = edit_menu.addMenu('Configure')
         config_menu.setToolTipsVisible(True)
 
-        bg_color_action = config_menu.addAction('Change Accent Color')
+        color_menu = config_menu.addMenu('Change Colors')
+
+        red_color_action = color_menu.addAction('Red Theme')
+        red_color_action.triggered.connect(lambda: self.color_change('red'))
+
+        green_color_action = color_menu.addAction('Green Theme')
+        green_color_action.triggered.connect(lambda: self.color_change('green'))
+
+        blue_color_action = color_menu.addAction('Blue Theme')
+        blue_color_action.triggered.connect(lambda: self.color_change('blue'))
+
+        yellow_color_action = color_menu.addAction('Gold Theme')
+        yellow_color_action.triggered.connect(lambda: self.color_change('gold'))
+
+        surf_color_action = color_menu.addAction('Surf Theme')
+        surf_color_action.triggered.connect(lambda: self.color_change('surf'))
+
+        royal_color_action = color_menu.addAction('Royal Theme')
+        royal_color_action.triggered.connect(lambda: self.color_change('royal'))
+
+        custom_color_menu = color_menu.addMenu('Custom Colors')
+
+        bg_color_action = custom_color_menu.addAction('Change Accent Color')
         bg_color_action.setToolTip('Choose a different color for accents and borders')
         bg_color_action.triggered.connect(lambda: self.color_change('bg'))
 
-        fg_color_action = config_menu.addAction('Change Background Color')
+        fg_color_action = custom_color_menu.addAction('Change Background Color')
         fg_color_action.setToolTip('Choose a different color for the background')
         fg_color_action.triggered.connect(lambda: self.color_change('fg'))
 
@@ -291,24 +316,8 @@ class MenuBar:
         self.spd.write_to_log('Opening print subprocess')
 
         if sys.platform == 'win32':
-            CREATE_NO_WINDOW = 0x08000000
-            p = Popen(
-                [
-                    self.spd.cwd + 'ghostscript/gsprint.exe',
-                    print_file_loc,
-                    '-ghostscript',
-                    self.spd.cwd + 'ghostscript/gswin64.exe',
-                    '-query'],
-                creationflags=CREATE_NO_WINDOW,
-                stdout=PIPE,
-                stderr=PIPE)
-
-            self.spd.write_to_log('Capturing print subprocess sdtout & stderr')
-            stdout, stderr = p.communicate()
-            self.spd.write_to_log('stdout:' + str(stdout))
-            self.spd.write_to_log('stderr:' + str(stderr))
-
-            os.remove(print_file_loc)
+            self.print_dialog = PrintDialog(print_file_loc, self.gui)
+            self.print_dialog.exec()
 
         elif sys.platform == 'linux':
             p = Popen(['/usr/bin/lpstat', '-a'], stdin = PIPE, stdout = PIPE, stderr = PIPE)
@@ -632,7 +641,25 @@ class MenuBar:
         self.spd.get_by_index(self.spd.current_rec_index)
 
     def color_change(self, type):
-        if type == 'bg':
+        if type == 'red':
+            self.gui.accent_color = '#502020'
+            self.gui.background_color = '#fff0f0'
+        elif type == 'green':
+            self.gui.accent_color = '#205020'
+            self.gui.background_color = '#f0fff0'
+        elif type == 'blue':
+            self.gui.accent_color = '#202050'
+            self.gui.background_color = '#f0f0ff'
+        elif type == 'gold':
+            self.gui.accent_color = '#808020'
+            self.gui.background_color = '#fffff0'
+        elif type == 'surf':
+            self.gui.accent_color = '#208080'
+            self.gui.background_color = '#f0ffff'
+        elif type == 'royal':
+            self.gui.accent_color = '#602080'
+            self.gui.background_color = '#eff0ff'
+        elif type == 'bg':
             color_chooser = QColorDialog()
             new_color = color_chooser.getColor(QColor(self.gui.accent_color))
             if not new_color == QColor():
@@ -671,7 +698,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.3.4.4')
+        about_label = QLabel('Sermon Prep Database v.4.0.0')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 
@@ -803,6 +830,7 @@ class MenuBar:
         if goon:
             sys.exit(0)
 
+
 class ShowHelp(QTabWidget):
     def __init__(self, background_color, accent_color, font_family, font_size, spd):
         super().__init__()
@@ -853,8 +881,9 @@ class ShowHelp(QTabWidget):
         intro_label.setStyleSheet(self.bold_font)
         intro_layout.addWidget(intro_label)
 
-        intro_text = QTextEdit(
-            'Thank-you for trying out this Sermon Prep Database. Its purpose is to provide an easy-to-use program to '
+        intro_text = QTextBrowser()
+        intro_text.setText(
+            u'Thank-you for trying out this Sermon Prep Database. Its purpose is to provide an easy-to-use program to '
             'organize and store the many different facets of the sermon preparation process. Whatever information you '
             'save in this program is stored on your hard drive in the widely-used SQLite Database format. This allows '
             'for secure storage and quick retrieval of your important information.<br><br>Should you ever need to find '
@@ -867,8 +896,10 @@ class ShowHelp(QTabWidget):
             'program.<br><br> It is my hope and prayer that you will find this program both a useful and valuable '
             'tool.<br><br>This program is a work-in-progress by a guy who is not, in no way, a professional '
             'programmer. If you run into any problems, unexpected behavior, missing features, or attempts to '
-            'assimilate your unique biological and technological distinctiveness, email pastorjeremywilson@gmail.com'
+            'assimilate your unique biological and technological distinctiveness, email '
+            '<a href='"'mailto:pastorjeremywilson@gmail.com'"'>pastorjeremywilson@gmail.com</a>'
         )
+        intro_text.setOpenExternalLinks(True)
         intro_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
         intro_text.setMinimumWidth(750)
         intro_text.setReadOnly(True)

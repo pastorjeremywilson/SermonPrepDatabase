@@ -8,7 +8,7 @@ a = Analysis(
     ['C:/Users/pasto/Nextcloud/Documents/Python Workspace/Sermon Prep Database/src/SermonPrepDatabase.py'],
     pathex=[],
     binaries=[],
-    datas=[('C:/Users/pasto/Nextcloud/Documents/Python Workspace/Sermon Prep Database/gpl-3.0.rtf', '.'), ('C:/Users/pasto/Nextcloud/Documents/Python Workspace/Sermon Prep Database/ghostscript', 'ghostscript/'), ('C:/Users/pasto/Nextcloud/Documents/Python Workspace/Sermon Prep Database/resources', 'resources/'), ('C:/Users/pasto/Nextcloud/Documents/Python Workspace/Sermon Prep Database/src', 'src/')],
+    datas=[('C:/Users/pasto/Nextcloud/Documents/Python Workspace/Sermon Prep Database/gpl-3.0.rtf', '.'), ('C:/Users/pasto/Nextcloud/Documents/Python Workspace/Sermon Prep Database/src/ghostscript', 'ghostscript/'), ('C:/Users/pasto/Nextcloud/Documents/Python Workspace/Sermon Prep Database/resources', 'resources/'), ('C:/Users/pasto/Nextcloud/Documents/Python Workspace/Sermon Prep Database/src', 'src/')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -37,7 +37,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='C:\\Users\\pasto\\Nextcloud\\Documents\\Python Workspace\\Sermon Prep Database\\resources\\icons.ico',
+    icon=['C:\\Users\\pasto\\Nextcloud\\Documents\\Python Workspace\\Sermon Prep Database\\resources\\icons.ico'],
 )
 coll = COLLECT(
     exe,
