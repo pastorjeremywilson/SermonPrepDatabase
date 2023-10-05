@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.0)
+This file is a part of the Sermon Prep Database program (v.4.0.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -30,9 +30,10 @@ import sys
 from os.path import exists
 
 from PyQt5.QtCore import Qt, QSize, QDate, QDateTime, pyqtSignal, QObject
-from PyQt5.QtGui import QIcon, QFont, QKeyEvent, QTextCursor, QStandardItemModel, QStandardItem, QPixmap
+from PyQt5.QtGui import QIcon, QFont, QKeyEvent, QTextCursor, QStandardItemModel, QStandardItem, QPixmap, \
+    QTextBlockFormat, QAbstractTextDocumentLayout
 from PyQt5.QtWidgets import QBoxLayout, QWidget, QUndoStack, QMessageBox, QTabWidget, QGridLayout, QLabel, QLineEdit, \
-    QCheckBox, QDateEdit, QTextEdit, QAction, QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QTableView
+    QCheckBox, QDateEdit, QTextEdit, QAction, QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QTableView, QLayout
 from symspellpy import Verbosity
 
 from getScripture import GetScripture
@@ -73,6 +74,8 @@ class GUI(QObject):
         self.font_size = self.spd.user_settings[4]
         self.standard_font = QFont(self.font_family, int(self.font_size))
         self.bold_font = QFont(self.font_family, int(self.font_size), QFont.Bold)
+        self.line_spacing = self.spd.user_settings[28]
+        print(self.line_spacing)
 
         self.win = Win(self)
         icon_pixmap = QPixmap(self.spd.cwd + 'resources/icon.png')

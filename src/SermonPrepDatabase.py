@@ -1,9 +1,9 @@
 """
-@author Jeremy G. Wilson
+Author: Jeremy G. Wilson
 
-Copyright 2023 Jeremy G. Wilson
+Copyright: 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.0)
+This file is a part of the Sermon Prep Database program (v.4.0.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -42,9 +42,11 @@ from symspellpy import SymSpell
 from gui import GUI
 
 
-# The main program class that handles startup functions such as checking for/creating a new database, instantiating
-# the gui, and polling the database for data. Also handles any database reading and writing functions.
 class SermonPrepDatabase(QThread):
+    """
+    The main program class that handles startup functions such as checking for/creating a new database, instantiating
+    the gui, and polling the database for data. Also handles any database reading and writing functions.
+    """
     change_text = pyqtSignal(str)
     finished = pyqtSignal()
 
@@ -64,8 +66,11 @@ class SermonPrepDatabase(QThread):
     cwd = ''
     sym_spell = None
 
-    # On startup, initialize a QApplication, get the platform, set the app_dir and db_loc, instantiate the GUI
     def run(self):
+        """
+        On startup, initialize a QApplication, get the platform, set the app_dir and db_loc, instantiate the GUI
+        Use the change_text signal to alter the text on the splash screen
+        """
         time.sleep(1.0)
         self.change_text.emit('Getting Platform')
         time.sleep(0.5)
@@ -75,6 +80,8 @@ class SermonPrepDatabase(QThread):
             self.change_text.emit('Getting Directories')
             time.sleep(0.5)
             user_dir = os.path.expanduser('~')
+
+            #set the location of the user files differently depending on if we're on windows or linux
             if self.platform == 'win32':
                 self.app_dir = user_dir + '/AppData/Roaming/Sermon Prep Database'
             elif self.platform == 'linux':
@@ -82,6 +89,7 @@ class SermonPrepDatabase(QThread):
                 os.environ['QT_QPA_PLATFORM'] = 'offscreen'
             self.db_loc = self.app_dir + '/sermon_prep_database.db'
 
+            # create the user files directory if it doesn't exist
             if not exists(self.app_dir):
                 os.mkdir(self.app_dir)
 
@@ -117,6 +125,10 @@ class SermonPrepDatabase(QThread):
             self.write_to_log(str(ex), True)
 
     def check_spell_check(self):
+        """
+        Attempt to get the disable_spell_check value from the user's database. Create a disable_spell_check
+        column if OperationalError is thrown.
+        """
         try:
             conn = sqlite3.connect(self.db_loc)
             cursor = conn.cursor()
@@ -136,6 +148,10 @@ class SermonPrepDatabase(QThread):
             return False
 
     def check_auto_fill(self):
+        """
+        Attempt to get the auto_fill value from the user's database. Create a auto_fill
+        column if OperationalError is thrown.
+        """
         try:
             conn = sqlite3.connect(self.db_loc)
             cursor = conn.cursor()
@@ -155,6 +171,9 @@ class SermonPrepDatabase(QThread):
             return False
 
     def write_spell_check_changes(self):
+        """
+        Function to set the disable_spell_check value upon user input.
+        """
         conn = sqlite3.connect(self.db_loc)
         cursor = conn.cursor()
         if self.disable_spell_check:
@@ -165,6 +184,9 @@ class SermonPrepDatabase(QThread):
         conn.close
 
     def write_auto_fill_changes(self):
+        """
+        Function to set the auto_fill value upon user input.
+        """
         conn = sqlite3.connect(self.db_loc)
         cursor = conn.cursor()
         if self.auto_fill:
@@ -175,6 +197,10 @@ class SermonPrepDatabase(QThread):
         conn.close
 
     def load_dictionary(self):
+        """
+        Function to create a SymSpell object based on the default dictionary and the user's custom words list.
+        For SymSpellPy documentation, see https://symspellpy.readthedocs.io/en/latest/index.html
+        """
         if not exists(self.cwd + 'resources/default_dictionary.pkl'):
             self.sym_spell = SymSpell()
             self.sym_spell.create_dictionary(self.cwd + 'resources/default_dictionary.txt')
@@ -189,6 +215,12 @@ class SermonPrepDatabase(QThread):
             self.sym_spell.create_dictionary_entry(entry.strip(), 1)
 
     def add_to_dictionary(self, widget, word):
+        """
+        Function to add a word to the user's custom words file upon user input.
+
+        :param QWidget widget: the widget from which the word was added (so that it can be rechecked with the new word)
+        :param str word: the word to be added
+        """
         try:
             self.sym_spell.create_dictionary_entry(word, 1)
             with open(self.app_dir + '/custom_words.txt', 'a') as file:
@@ -198,8 +230,10 @@ class SermonPrepDatabase(QThread):
         except Exception as ex:
             self.write_to_log(str(ex), True)
 
-    # retrieve the list of ID numbers from the database
     def get_ids(self):
+        """
+        Function to retrieve all ID numbers from the user's database.
+        """
         self.ids = []
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
@@ -209,6 +243,9 @@ class SermonPrepDatabase(QThread):
 
     # retrieve the list of dates from the database
     def get_date_list(self):
+        """
+        Function to retrieve all dates from the user's database.
+        """
         self.dates = []
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
@@ -216,22 +253,29 @@ class SermonPrepDatabase(QThread):
         for item in results:
             self.dates.append(item[0])
 
-    # retrieve the list of scripture references from the database
     def get_scripture_list(self):
+        """
+        Function to retrieve all scripture references from the user's database.
+        """
         self.references = []
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
         self.references = cur.execute(
             'SELECT sermon_reference, ID FROM sermon_prep_database ORDER BY sermon_reference').fetchall()
 
-    # retrieve the user's custom settings from the database
     def get_user_settings(self):
+        """
+        Function to retrieve all user settings from the user's database.
+        """
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
         self.user_settings = cur.execute('SELECT * FROM user_settings').fetchall()[0]
 
-    # copy the current database to a dated file as a backup
     def backup_db(self):
+        """
+        Make a copy of the user's database, appending the date and time to the file name. Removes the oldest
+        file if the number of backups will be greater than 5.
+        """
         from datetime import datetime
         now = datetime.now().strftime("%m-%d-%Y_%H-%M-%S")
         backup_file = self.app_dir + '/sermon_prep_database.backup-' + now + '.db'
@@ -249,8 +293,10 @@ class SermonPrepDatabase(QThread):
         shutil.copy(self.db_loc, backup_file)
         self.write_to_log('New backup file created at ' + backup_file)
 
-    # save user's color changes to the database
     def write_color_changes(self):
+        """
+        Function to save the user's color changes to the database.
+        """
         sql = ('UPDATE user_settings SET bgcolor = "'
                + self.gui.accent_color
                + '", fgcolor = "'
@@ -262,8 +308,13 @@ class SermonPrepDatabase(QThread):
         conn.commit()
         self.get_user_settings()
 
-    # save user's font changes to the database
     def write_font_changes(self, family, size):
+        """
+        Function to save the user's font changes to the database.
+
+        :param str family: Name of the font family.
+        :param str size: Size of the font.
+        """
         sql = 'UPDATE user_settings SET font_family = "' + family + '", font_size = "' + size + '" WHERE ID = 1;'
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
@@ -273,6 +324,10 @@ class SermonPrepDatabase(QThread):
 
     # save user's label changes to the database
     def write_label_changes(self, new_labels):
+        """
+        Save the header label changes based on user input.
+        :param list of str new_labels: The list of new label names.
+        """
         sql = 'UPDATE user_settings SET '
         for i in range(1, 22):
             if i == 21:
@@ -286,14 +341,21 @@ class SermonPrepDatabase(QThread):
         self.get_user_settings()
 
     def get_record_data(self):
+        """
+        Function to retrieve a record from the user's database by id stored in self.current_rec_index
+        """
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
         results = cur.execute("SELECT * FROM sermon_prep_database WHERE ID = " + str(self.ids[self.current_rec_index]))
         record = results.fetchall()
         return record
 
-    # retrieve the data for a specific record based on the index of the ids array
     def get_by_index(self, index):
+        """
+        Function to retrieve a record based on a given index of self.ids.
+
+        :param int index: Index number of self.ids
+        """
         if len(self.ids) > 0:
             self.current_rec_index = index
             counter = 0
@@ -334,8 +396,10 @@ class SermonPrepDatabase(QThread):
         else:
             self.new_rec()
 
-    # save the user's data from all elements of the GUI
     def save_rec(self):
+        """
+        Function to retrieve all data from all elements of the GUI and save it to the user's database.
+        """
         try:
             conn = sqlite3.connect(self.db_loc)
             cur = conn.cursor()
@@ -404,6 +468,11 @@ class SermonPrepDatabase(QThread):
     # QTextEdit borks up the formatting when reloading markdown characters, so convert them to
     # HTML tags instead
     def reformat_string_for_save(self, string):
+        """
+        Function to handle the formatting of markdown characters, converting them to HTML for saving.
+
+        :param str string: The string to reformat.
+        """
         string = string.replace('"', '&quot') # also handle quotes for the sake of SQL
 
         slice = re.findall('_.*?_', string)
@@ -453,11 +522,21 @@ class SermonPrepDatabase(QThread):
 
     # change the &quot string back to '"', which was changed to facilitate easier SQL commands
     def reformat_string_for_load(self, string):
+        """
+        Function to handle the formatting of a database string for insertion into a QTextEdit. Only quotes need to
+        be handled as HTML tags will be handled by the QTextEdit.
+
+        :param str string: The string to reformat.
+        """
         string = string.replace('&quot', '"')
         return string
 
-    # function to search the text of all database entries to see if user's string is found
     def get_search_results(self, search_text):
+        """
+        Function to search the text of all database entries to see if the user's string is found.
+
+        :param str search_text: User's search term(s)
+        """
         search_text = search_text.strip()
         full_text_result_list = []
         conn = sqlite3.connect(self.db_loc)
@@ -545,8 +624,10 @@ class SermonPrepDatabase(QThread):
 
         return sorted_results
 
-    # retrieve the first record of the database and set the current index to 0
     def first_rec(self):
+        """
+        Retrieve the first record of the database and set the current index to 0.
+        """
         goon = True
         if self.gui.changes:
             goon = self.ask_save()
@@ -554,8 +635,10 @@ class SermonPrepDatabase(QThread):
             self.current_rec_index = 0
             self.get_by_index(self.current_rec_index)
 
-    # retrieve the previous record of the database and set the current index less by 1
     def prev_rec(self):
+        """
+        Retrieve the previous record of the database and set the current index less by 1.
+        """
         goon = True
         if self.gui.changes:
             goon = self.ask_save()
@@ -564,8 +647,10 @@ class SermonPrepDatabase(QThread):
                 self.current_rec_index = self.current_rec_index - 1
                 self.get_by_index(self.current_rec_index)
 
-    # retrieve the next record of the database and set the current index up by 1
     def next_rec(self):
+        """
+        Retrieve the next record of the database and set the current index more by 1.
+        """
         goon = True
         if self.gui.changes:
             goon = self.ask_save()
@@ -574,8 +659,10 @@ class SermonPrepDatabase(QThread):
                 self.current_rec_index = self.current_rec_index + 1
                 self.get_by_index(self.current_rec_index)
 
-    # retrieve the last record of the database and set the current index to the length of the ids array
     def last_rec(self):
+        """
+        Retrieve the last record of the database and set the current index to the highest index of the ids array.
+        """
         goon = True
         if self.gui.changes:
             goon = self.ask_save()
@@ -583,8 +670,10 @@ class SermonPrepDatabase(QThread):
             self.current_rec_index = len(self.ids) - 1
             self.get_by_index(self.current_rec_index)
 
-    # check for changes, then create a new record by inserting an id # that is one higher than the largest
     def new_rec(self):
+        """
+        Check for changes, then create a new record by inserting an id # that is one higher than the largest.
+        """
         goon = True
         if self.gui.changes:
             goon = self.ask_save()
@@ -619,9 +708,12 @@ class SermonPrepDatabase(QThread):
 
             self.last_rec()
 
-    # double-check that the user really wants to delete this record, then remove it from the database
-    # finish by loading the last record into the GUI
+
     def del_rec(self):
+        """
+        Double-check that the user really wants to delete this record, then remove it from the database.
+        Finish by loading the last record into the GUI.
+        """
         response = QMessageBox.question(
             self.gui.win,
             'Really Delete?',
@@ -653,8 +745,10 @@ class SermonPrepDatabase(QThread):
 
             self.last_rec()
 
-    # function to ask the user if they would like to save their work
     def ask_save(self):
+        """
+        Function to ask the user if they would like to save their work before continuing with their recent action.
+        """
         response = QMessageBox.question(
             self.gui.win,
             'Save Changes?',
@@ -671,12 +765,18 @@ class SermonPrepDatabase(QThread):
         else:
             return False
 
-    # function to write various messages to a log file, takes a string message as an argument
     def write_to_log(self, string, critical=False):
+        """
+        Function to write various messages to the log file.
+
+        :param str string: The text of the log message.
+        :param boolean critical: Designate this as a critical error, showing a QMessageBox to the user.
+        """
         if critical:
             QMessageBox.critical(None, 'Exception Thrown', 'An error has occurred:\n\n' + string)
         log_file_loc = self.app_dir + '/log.txt'
 
+        # Create the log file if it doesn't yet exist.
         if not exists(log_file_loc):
             logfile = open(log_file_loc, 'w')
             logfile.write('')
@@ -687,9 +787,13 @@ class SermonPrepDatabase(QThread):
         logfile.writelines(string)
         logfile.close()
 
-    #
-    #function to add imported sermons to the database
     def insert_imports(self, errors, sermons):
+        """
+        Function to add sermons, imported from .docx or .txt files, to the user's database.
+
+        :param list of str errors: Any errors encountered during the file parsing function.
+        :param list of str sermons: The sermons gathered from the parsed files.
+        """
         try:
             conn = sqlite3.connect(self.db_loc)
             cursor = conn.cursor()
@@ -773,6 +877,9 @@ class SermonPrepDatabase(QThread):
                 'From SermonPrepDatabase.insert_imports: ' + str(ex) + '\nMost recent sql statement: ' + text)
 
     def import_splash(self):
+        """
+        Function to apprise user of work being done while importing sermons.
+        """
         self.widget = QWidget()
         self.widget.setStyleSheet('border: 3px solid black; background-color: ' + self.gui.background_color + ';')
         layout = QVBoxLayout()
@@ -799,18 +906,35 @@ class SermonPrepDatabase(QThread):
         self.widget.show()
 
     def change_dir(self, text):
+        """
+        Function to change the directory shown on the import splash.
+        :param str text: Directory to show.
+        """
         self.dir_label.setText(text)
         app.processEvents()
 
     def change_file(self, text):
+        """
+        Function to change the file name shown on the import splash.
+
+        :param str text: File name to show.
+        """
         self.file_label.setText(text)
         app.processEvents()
 
     def close_splash(self):
+        """
+        Function to close the import splash widget.
+        """
         self.widget.deleteLater()
 
 
 class LoadingBox(QDialog):
+    """
+    QDialog class that shows the user the process of starting up the application.
+
+    :param QApplication app: The main QApplication for this program.
+    """
     def __init__(self, app):
         try:
             super().__init__()
@@ -853,21 +977,31 @@ class LoadingBox(QDialog):
             self.spd.write_to_log(str(ex), True)
 
     def change_text(self, text):
+        """
+        Function to change the text shown on the splash screen.
+
+        :param str text: The text to display.
+        """
         self.status_label.setText(text)
         app.processEvents()
 
     def end(self):
+        """
+        Function to instantiate the GUI after all other preload processes have finished, then close the splash screen.
+        """
         self.spd.gui = GUI(self.spd)
         self.spd.gui.open_import_splash.connect(self.spd.import_splash)
         self.spd.gui.change_import_splash_dir.connect(self.spd.change_dir)
         self.spd.gui.change_import_splash_file.connect(self.spd.change_file)
         self.spd.gui.close_import_splash.connect(self.spd.close_splash)
 
+        # set the GUI to display the most recent record
         self.spd.current_rec_index = len(self.spd.ids) - 1
         self.spd.get_by_index(self.spd.current_rec_index)
         self.close()
 
 
+# main entry point for the program
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     loading_box = LoadingBox(app)
