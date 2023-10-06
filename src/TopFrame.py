@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.1)
+This file is a part of the Sermon Prep Database program (v.4.0.2)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -36,7 +36,22 @@ class TopFrame(QWidget):
         self.gui = gui
         self.spd = spd
 
-        icon_size = QSize(24, 24)
+        button_style = '''
+            QPushButton { 
+                padding: 5;
+                border: 0;
+            }
+            QPushButton:pressed {
+                background-color: white;
+            }
+            QPushButton:hover {
+                background-color: %s;
+            }''' %self.gui.background_color
+
+        checkable_button_style = \
+            'QPushButton { padding: 5; border: 0; } QPushButton:checked { background-color: %s; } QPushButton:hover { background-color: %s; }' %(self.gui.background_color, self.gui.background_color)
+
+        icon_size = QSize(16, 16)
         button_frame = QWidget()
         self.setStyleSheet('background-color: white;')
 
@@ -44,16 +59,18 @@ class TopFrame(QWidget):
         self.setLayout(button_frame_layout)
 
         undo_button = QPushButton()
-        undo_button.setFixedSize(icon_size)
-        undo_button.setStyleSheet('QPushButton { icon: url(' + self.spd.cwd + 'resources/spUndoIcon.png); border: 0 } QPushButton:pressed { background-color: white; } QPushButton:hover { background-color: ' + self.gui.background_color + '; }')
+        undo_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spUndoIcon.svg'))
+        undo_button.setIconSize(icon_size)
+        undo_button.setStyleSheet(button_style)
         undo_button.setFocusPolicy(Qt.NoFocus)
         undo_button.clicked.connect(self.gui.menu_bar.press_ctrl_z)
         undo_button.setToolTip('Undo')
         button_frame_layout.addWidget(undo_button)
 
         redo_button = QPushButton()
-        redo_button.setFixedSize(icon_size)
-        redo_button.setStyleSheet('QPushButton { icon: url(' + self.spd.cwd + 'resources/spRedoIcon.png); border: 0 } QPushButton:checked { background-color: white; } QPushButton:hover { background-color: ' + self.gui.background_color + '; }')
+        redo_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spRedoIcon.svg'))
+        redo_button.setIconSize(icon_size)
+        redo_button.setStyleSheet(button_style)
         redo_button.setFocusPolicy(Qt.NoFocus)
         redo_button.clicked.connect(self.gui.menu_bar.press_ctrl_y)
         redo_button.setToolTip('Redo')
@@ -64,8 +81,9 @@ class TopFrame(QWidget):
         self.bold_button.setCheckable(True)
         self.bold_button.setFocusPolicy(Qt.NoFocus)
         self.bold_button.clicked.connect(self.set_bold)
-        self.bold_button.setFixedSize(icon_size)
-        self.bold_button.setStyleSheet('QPushButton { icon: url(' + self.spd.cwd + 'resources/spBoldIcon.png); border: 0 } QPushButton:checked { background-color: ' + self.gui.background_color + '; } QPushButton:hover { background-color: ' + self.gui.background_color + '; }')
+        self.bold_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spBoldIcon.svg'))
+        self.bold_button.setIconSize(icon_size)
+        self.bold_button.setStyleSheet(checkable_button_style)
         self.bold_button.setToolTip('Bold\n(Ctrl+B)')
         button_frame_layout.addWidget(self.bold_button)
 
@@ -73,8 +91,9 @@ class TopFrame(QWidget):
         self.italic_button.setCheckable(True)
         self.italic_button.setFocusPolicy(Qt.NoFocus)
         self.italic_button.clicked.connect(self.set_italic)
-        self.italic_button.setFixedSize(icon_size)
-        self.italic_button.setStyleSheet('QPushButton { icon: url(' + self.spd.cwd + 'resources/spItalicIcon.png); border: 0 } QPushButton:checked { background-color: ' + self.gui.background_color + '; } QPushButton:hover { background-color: ' + self.gui.background_color + ';  }')
+        self.italic_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spItalicIcon.svg'))
+        self.italic_button.setIconSize(icon_size)
+        self.italic_button.setStyleSheet(checkable_button_style)
         self.italic_button.setToolTip('Italic\n(Ctrl+I)')
         button_frame_layout.addWidget(self.italic_button)
 
@@ -82,8 +101,9 @@ class TopFrame(QWidget):
         self.underline_button.setCheckable(True)
         self.underline_button.setFocusPolicy(Qt.NoFocus)
         self.underline_button.clicked.connect(self.set_underline)
-        self.underline_button.setFixedSize(icon_size)
-        self.underline_button.setStyleSheet('QPushButton { icon: url(' + self.spd.cwd + 'resources/spUnderLineIcon.png); border: 0 } QPushButton:checked { background-color: ' + self.gui.background_color + '; } QPushButton:hover { background-color: ' + self.gui.background_color + '; }')
+        self.underline_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spUnderlineIcon.svg'))
+        self.underline_button.setIconSize(icon_size)
+        self.underline_button.setStyleSheet(checkable_button_style)
         self.underline_button.setToolTip('Underline\n(Ctrl+U)')
         button_frame_layout.addWidget(self.underline_button)
 
@@ -91,18 +111,23 @@ class TopFrame(QWidget):
         self.bullet_button.setCheckable(True)
         self.bullet_button.setFocusPolicy(Qt.NoFocus)
         self.bullet_button.clicked.connect(self.set_bullet)
-        self.bullet_button.setFixedSize(icon_size)
-        self.bullet_button.setStyleSheet('QPushButton { icon: url(' + self.spd.cwd + 'resources/spBulletIcon.png); border: 0 } QPushButton:checked { background-color: ' + self.gui.background_color + '; } QPushButton:hover { background-color: ' + self.gui.background_color + '; }')
+        self.bullet_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spBulletIcon.svg'))
+        self.bullet_button.setIconSize(icon_size)
+        self.bullet_button.setStyleSheet(checkable_button_style)
         self.bullet_button.setToolTip('Add Bullets\n(Ctrl+Shift+B)')
         button_frame_layout.addWidget(self.bullet_button)
+        button_frame_layout.addSpacing(20)
 
         text_visible = QPushButton()
         text_visible.setCheckable(True)
-        text_visible.setFixedSize(QSize(icon_size.width() * 3, icon_size.height()))
-        text_visible.setIconSize(QSize(round(icon_size.width() * 3 / 2), round(icon_size.height() / 2)))
         text_visible.setFocusPolicy(Qt.NoFocus)
         text_visible.setToolTip('Show Sermon Text on All Tabs')
-        text_visible.setStyleSheet('QPushButton { icon: url(' + self.spd.cwd + 'resources/spShowText.png); border: 0; padding: 0;} QPushButton:checked { icon: url(' + self.spd.cwd + 'resources/spShowTextChecked.png); }')
+        text_visible.setIcon(QIcon(self.spd.cwd + 'resources/svg/spShowText.svg'))
+        text_visible.setIconSize(QSize(round(icon_size.width() * 2.5), round(icon_size.height() * 2.5)))
+        text_visible.setStyleSheet(
+            'QPushButton { border: 0; padding: 5;} '
+            'QPushButton:checked { icon: url(' + self.spd.cwd + 'resources/svg/spShowTextChecked.svg); }'
+            'QPushButton:hover { background-color: ' + self.gui.background_color + '; }')
         text_visible.clicked.connect(lambda: self.keep_text_visible(text_visible.isChecked()))
         button_frame_layout.addWidget(text_visible)
 
@@ -112,7 +137,8 @@ class TopFrame(QWidget):
         button_frame_layout.addWidget(dates_label)
 
         self.dates_cb = QComboBox()
-        self.dates_cb.setStyleSheet('selection-background-color: ' + self.gui.background_color + '; selection-color: black')
+        self.dates_cb.setStyleSheet(
+            'selection-background-color: ' + self.gui.background_color + '; selection-color: black')
         self.dates_cb.addItems(self.spd.dates)
         self.dates_cb.currentIndexChanged.connect(lambda: self.spd.get_by_index(self.dates_cb.currentIndex()))
         button_frame_layout.addWidget(self.dates_cb)
@@ -140,36 +166,38 @@ class TopFrame(QWidget):
         button_frame_layout.addStretch(1)
 
         self.first_rec_button = QPushButton()
-        self.first_rec_button.setFixedSize(icon_size)
-        self.first_rec_button.setStyleSheet('QPushButton { icon: url(' + self.spd.cwd + 'resources/spFirstRecIcon.png); border: 0 } QPushButton:pressed { background-color: white; } QPushButton:hover { background-color: ' + self.gui.background_color + '; }')
+        self.first_rec_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spFirstRecIcon.svg'))
+        self.first_rec_button.setIconSize(icon_size)
+        self.first_rec_button.setStyleSheet(button_style)
         self.first_rec_button.clicked.connect(lambda: self.spd.first_rec())
         self.first_rec_button.setToolTip('Jump to First Record')
         button_frame_layout.addWidget(self.first_rec_button)
 
         self.prev_rec_button = QPushButton()
-        self.prev_rec_button.setFixedSize(icon_size)
-        self.prev_rec_button.setStyleSheet('QPushButton { icon: url(' + self.spd.cwd + 'resources/spPrevRecIcon.png); border: 0 } QPushButton:pressed { background-color: white; } QPushButton:hover { background-color: ' + self.gui.background_color + '; }')
+        self.prev_rec_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spPrevRecIcon.svg'))
+        self.prev_rec_button.setIconSize(icon_size)
+        self.prev_rec_button.setStyleSheet(button_style)
         self.prev_rec_button.clicked.connect(lambda: self.spd.prev_rec())
         self.prev_rec_button.setToolTip('Go to Previous Record')
         button_frame_layout.addWidget(self.prev_rec_button)
 
         self.next_rec_button = QPushButton()
-        self.next_rec_button.setFixedSize(icon_size)
-        self.next_rec_button.setStyleSheet('QPushButton { icon: url(' + self.spd.cwd + 'resources/spNextRecIcon.png); border: 0 } QPushButton:pressed { background-color: white; } QPushButton:hover { background-color: ' + self.gui.background_color + '; }')
+        self.next_rec_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spNextRecIcon.svg'))
+        self.next_rec_button.setStyleSheet(button_style)
         self.next_rec_button.clicked.connect(lambda: self.spd.next_rec())
         self.next_rec_button.setToolTip('Go to Next Record')
         button_frame_layout.addWidget(self.next_rec_button)
 
         self.last_rec_button = QPushButton()
-        self.last_rec_button.setFixedSize(icon_size)
-        self.last_rec_button.setStyleSheet('QPushButton { icon: url(' + self.spd.cwd + 'resources/spLastRecIcon.png); border: 0 } QPushButton:pressed { background-color: white; } QPushButton:hover { background-color: ' + self.gui.background_color + '; }')
+        self.last_rec_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spLastRecIcon.svg'))
+        self.last_rec_button.setStyleSheet(button_style)
         self.last_rec_button.clicked.connect(lambda: self.spd.last_rec())
         self.last_rec_button.setToolTip('Jump to Last Record')
         button_frame_layout.addWidget(self.last_rec_button)
 
         new_rec_button = QPushButton()
         new_rec_button.setFixedSize(icon_size)
-        new_rec_button.setStyleSheet('QPushButton { icon: url(' + self.spd.cwd + 'resources/spNewRecIcon.png); border: 0 } QPushButton:pressed { background-color: white; } QPushButton:hover { background-color: ' + self.gui.background_color + '; }')
+        new_rec_button.setStyleSheet(button_style)
         new_rec_button.clicked.connect(lambda: self.spd.new_rec())
         new_rec_button.setToolTip('Create a New Record')
         button_frame_layout.addWidget(new_rec_button)
@@ -177,14 +205,14 @@ class TopFrame(QWidget):
 
         save_button = QPushButton()
         save_button.setFixedSize(icon_size)
-        save_button.setStyleSheet('QPushButton { icon: url(' + self.spd.cwd + 'resources/spSaveIcon.png); border: 0 } QPushButton:pressed { background-color: white; } QPushButton:hover { background-color: ' + self.gui.background_color + '; }')
+        save_button.setStyleSheet(button_style)
         save_button.clicked.connect(lambda: self.spd.save_rec())
         save_button.setToolTip('Save this Record')
         button_frame_layout.addWidget(save_button)
 
         print_button = QPushButton()
         print_button.setFixedSize(icon_size)
-        print_button.setStyleSheet('QPushButton { icon: url(' + self.spd.cwd + 'resources/spPrintIcon.png); border: 0 } QPushButton:pressed { background-color: white; } QPushButton:hover { background-color: ' + self.gui.background_color + '; }')
+        print_button.setStyleSheet(button_style)
         print_button.clicked.connect(self.gui.menu_bar.print_rec)
         print_button.setToolTip('Print this Record')
         button_frame_layout.addWidget(print_button)
@@ -237,7 +265,7 @@ class TopFrame(QWidget):
         else:
             from gui import SearchBox
             search_box = SearchBox(self.gui)
-            self.gui.tabbed_frame.addTab(search_box, QIcon(self.gui.spd.cwd + 'resources/searchIcon.png'), 'Search')
+            self.gui.tabbed_frame.addTab(search_box, QIcon(self.gui.spd.cwd + 'resources/svg/spSearchIcon.svg'), 'Search')
             search_box.show_results(result_list)
             self.gui.tabbed_frame.setCurrentWidget(search_box)
 

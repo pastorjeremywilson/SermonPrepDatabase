@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.1)
+This file is a part of the Sermon Prep Database program (v.4.0.2)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -74,11 +74,13 @@ class GUI(QObject):
         self.font_size = self.spd.user_settings[4]
         self.standard_font = QFont(self.font_family, int(self.font_size))
         self.bold_font = QFont(self.font_family, int(self.font_size), QFont.Bold)
-        self.line_spacing = self.spd.user_settings[28]
-        print(self.line_spacing)
+        try:
+            self.line_spacing = self.spd.user_settings[28]
+        except IndexError:
+            self.line_spacing = 1
 
         self.win = Win(self)
-        icon_pixmap = QPixmap(self.spd.cwd + 'resources/icon.png')
+        icon_pixmap = QPixmap(self.spd.cwd + 'resources/svg/spIcon.svg')
         self.win.setWindowIcon(QIcon(icon_pixmap))
 
         self.layout = QBoxLayout(QBoxLayout.TopToBottom)
@@ -190,13 +192,13 @@ class GUI(QObject):
             self.tabbed_frame.insertTab(
                 0,
                 self.scripture_frame,
-                QIcon(self.spd.cwd + 'resources/scriptureIcon.png'),
+                QIcon(self.spd.cwd + 'resources/svg/spScriptureIcon.svg'),
                 'Scripture'
             )
         else:
             self.tabbed_frame.addTab(
                 self.scripture_frame,
-                QIcon(self.spd.cwd + 'resources/scriptureIcon.png'),
+                QIcon(self.spd.cwd + 'resources/svg/spScriptureIcon.svg'),
                 'Scripture'
             )
         
@@ -263,7 +265,7 @@ class GUI(QObject):
         scripture_box = ScriptureBox(self.background_color)
         self.exegesis_frame_layout.addWidget(scripture_box, 0, 6, 8, 1)
         
-        self.tabbed_frame.addTab(self.exegesis_frame, QIcon(self.spd.cwd + 'resources/exegIcon.png'), 'Exegesis')
+        self.tabbed_frame.addTab(self.exegesis_frame, QIcon(self.spd.cwd + 'resources/svg/spExegIcon.svg'), 'Exegesis')
         
     def build_outline_tab(self):
         self.outline_frame = QWidget()
@@ -297,7 +299,7 @@ class GUI(QObject):
         scripture_box = ScriptureBox(self.background_color)
         self.outline_frame_layout.addWidget(scripture_box, 0, 6, 5, 1)
 
-        self.tabbed_frame.addTab(self.outline_frame, QIcon(self.spd.cwd + 'resources/outlineIcon.png'), 'Outlines')
+        self.tabbed_frame.addTab(self.outline_frame, QIcon(self.spd.cwd + 'resources/svg/spOutlineIcon.svg'), 'Outlines')
         
     def build_research_tab(self):
         self.research_frame = QWidget()
@@ -309,14 +311,14 @@ class GUI(QObject):
         self.research_frame_layout.addWidget(research_label, 0, 0)
         
         research_text = CustomTextEdit(self.win, self)
-        research_text.setObjectName('research')
+        research_text.setObjectName('custom_text_edit')
         research_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(research_text))
         self.research_frame_layout.addWidget(research_text, 1, 0)
 
         scripture_box = ScriptureBox(self.background_color)
         self.research_frame_layout.addWidget(scripture_box, 0, 2, 2, 1)
         
-        self.tabbed_frame.addTab(self.research_frame, QIcon(self.spd.cwd + 'resources/researchIcon.png'), 'Research')
+        self.tabbed_frame.addTab(self.research_frame, QIcon(self.spd.cwd + 'resources/svg/spResearchIcon.svg'), 'Research')
         
     def build_sermon_tab(self):
         self.sermon_frame = QWidget()
@@ -375,7 +377,7 @@ class GUI(QObject):
         scripture_box = ScriptureBox(self.background_color)
         self.sermon_frame_layout.addWidget(scripture_box, 0, 9, 8, 1)
         
-        self.tabbed_frame.addTab(self.sermon_frame, QIcon(self.spd.cwd + 'resources/sermonIcon.png'), 'Sermon')
+        self.tabbed_frame.addTab(self.sermon_frame, QIcon(self.spd.cwd + 'resources/svg/spSermonIcon.svg'), 'Sermon')
 
     def set_style_sheets(self):
         self.tabbed_frame.setStyleSheet('''
@@ -419,12 +421,35 @@ class GUI(QObject):
                 padding: 3px;
                 border: 1px solid ''' + self.accent_color + ''';}
             ''')
+        if int(self.font_size) <= 12:
+            size = self.font_size
+        else:
+            size = 12
+
+        top_frame_style_sheet = ('''
+            QLabel {
+                font-family: "''' + self.font_family + '''";
+                font-size: ''' + str(size) + '''pt;}
+            QLineEdit {
+                background-color: white;
+                font-family: "''' + self.font_family + '''";
+                font-size: ''' + str(size) + '''pt;
+                padding: 3px;
+                border: 1px solid ''' + self.accent_color + ''';}
+            QComboBox {
+                background-color: white;
+                font-family: "''' + self.font_family + '''";
+                font-size: ''' + str(size) + '''pt;
+                padding: 3px;
+                border: 1px solid ''' + self.accent_color + ''';}
+            ''')
 
         self.scripture_frame.setStyleSheet(standard_style_sheet)
         self.exegesis_frame.setStyleSheet(standard_style_sheet)
         self.outline_frame.setStyleSheet(standard_style_sheet)
         self.research_frame.setStyleSheet(standard_style_sheet)
         self.sermon_frame.setStyleSheet(standard_style_sheet)
+        self.top_frame.setStyleSheet(top_frame_style_sheet)
 
         for component in self.tabbed_frame.findChildren(CustomTextEdit, 'custom_text_edit'):
             component.document().setDefaultFont(QFont(self.font_family, int(self.font_size)))
@@ -465,36 +490,32 @@ class GUI(QObject):
             elif isinstance(component, CustomTextEdit):
                 component.clear()
                 if record[0][index]:
-                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     component.check_whole_text()
                 index += 1
         for i in range(self.exegesis_frame_layout.count()):
             component = self.exegesis_frame_layout.itemAt(i).widget()
-            if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
+            if isinstance(component, CustomTextEdit) and not component.objectName() == 'text_box':
+                component.clear()
                 if record[0][index]:
-                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     component.check_whole_text()
-                else:
-                    component.clear()
                 index += 1
         for i in range(self.outline_frame_layout.count()):
             component = self.outline_frame_layout.itemAt(i).widget()
-            if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
+            if isinstance(component, CustomTextEdit) and not component.objectName() == 'text_box':
+                component.clear()
                 if record[0][index]:
-                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     component.check_whole_text()
-                else:
-                    component.clear()
                 index += 1
         for i in range(self.research_frame_layout.count()):
             component = self.research_frame_layout.itemAt(i).widget()
-            if isinstance(component, QTextEdit):
+            if isinstance(component, CustomTextEdit):
+                component.clear()
                 if record[0][index]:
-                    text = self.spd.reformat_string_for_load(record[0][index])
-                    component.setMarkdown(text.strip())
+                    component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     component.check_whole_text()
-                else:
-                    component.clear()
                 index += 1
         for i in range(self.sermon_frame_layout.count()):
             component = self.sermon_frame_layout.itemAt(i).widget()
@@ -527,11 +548,10 @@ class GUI(QObject):
                 index += 1
 
             if isinstance(component, CustomTextEdit):
+                component.clear()
                 if record[0][index]:
-                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     component.check_whole_text()
-                else:
-                    component.clear()
                 index += 1
 
             if component.objectName() == 'text_box':
@@ -950,7 +970,8 @@ class SearchBox(QWidget):
                             background-color: white;
                             font-family: "Helvetica";
                             font-size: 16px;
-                            padding: 3px;}
+                            padding: 3px;
+                        }
                         ''')
 
         results_header = QWidget()
@@ -961,7 +982,7 @@ class SearchBox(QWidget):
         header_layout.addWidget(results_label)
 
         close_button = QPushButton()
-        close_button.setIcon(QIcon(self.gui.spd.cwd + 'resources/closeIcon.png'))
+        close_button.setIcon(QIcon(self.gui.spd.cwd + 'resources/svg/spCloseIcon.svg'))
         close_button.setStyleSheet('background-color: ' + self.gui.accent_color)
         close_button.setToolTip('Close the search tab')
         close_button.pressed.connect(self.remove_self)

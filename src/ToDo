@@ -1,0 +1,4 @@
+Fixed font problem in research_text_edit.
+Changed fonts in TopFrame to user's fonts.
+Switched all icons to svg.
+Fixed "-" at end of text when bullet list left uncompleted.

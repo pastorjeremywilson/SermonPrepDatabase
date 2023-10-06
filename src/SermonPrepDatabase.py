@@ -3,7 +3,7 @@ Author: Jeremy G. Wilson
 
 Copyright: 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.1)
+This file is a part of the Sermon Prep Database program (v.4.0.2)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -523,11 +523,15 @@ class SermonPrepDatabase(QThread):
     # change the &quot string back to '"', which was changed to facilitate easier SQL commands
     def reformat_string_for_load(self, string):
         """
-        Function to handle the formatting of a database string for insertion into a QTextEdit. Only quotes need to
-        be handled as HTML tags will be handled by the QTextEdit.
+        Function to handle the formatting of a database string for insertion into a QTextEdit. Only quotes, leading/
+        trailing spaces, and errant markdown bulletting need to be handled as HTML tags will be handled by the
+        QTextEdit.
 
         :param str string: The string to reformat.
         """
+        string = string.strip()
+        if string.endswith('-'):
+            string = string[0:len(string) - 1].strip()
         string = string.replace('&quot', '"')
         return string
 
