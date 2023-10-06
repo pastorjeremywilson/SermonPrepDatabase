@@ -1,5 +1,5 @@
-('c:\\users\\pasto\\appdata\\local\\programs\\python\\python311\\lib\\site-packages\\pyyaml-6.0.1-py3.11-win-amd64.egg',
+('c:\\users\\pasto\\appdata\\local\\programs\\python\\python311\\lib\\site-packages\\typing_extensions-4.8.0rc1-py3.11.egg',
  None,
- {'*.py', '*.pyc', '*.pyd', '*.cp311-win_amd64.pyd', '*.pyw', 'EGG-INFO'},
+ {'EGG-INFO', '*.py', '*.pyc', '*.pyw', '*.pyd', '*.cp311-win_amd64.pyd'},
  'DATA',
  [])

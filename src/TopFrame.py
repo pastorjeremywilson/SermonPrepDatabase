@@ -196,7 +196,7 @@ class TopFrame(QWidget):
         button_frame_layout.addWidget(self.last_rec_button)
 
         new_rec_button = QPushButton()
-        new_rec_button.setFixedSize(icon_size)
+        new_rec_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spNewIcon.svg'))
         new_rec_button.setStyleSheet(button_style)
         new_rec_button.clicked.connect(lambda: self.spd.new_rec())
         new_rec_button.setToolTip('Create a New Record')
@@ -204,14 +204,16 @@ class TopFrame(QWidget):
         button_frame_layout.addSpacing(20)
 
         save_button = QPushButton()
-        save_button.setFixedSize(icon_size)
+        save_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spSaveIcon.svg'))
+        save_button.setIconSize(icon_size)
         save_button.setStyleSheet(button_style)
         save_button.clicked.connect(lambda: self.spd.save_rec())
         save_button.setToolTip('Save this Record')
         button_frame_layout.addWidget(save_button)
 
         print_button = QPushButton()
-        print_button.setFixedSize(icon_size)
+        print_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spPrintIcon.svg'))
+        print_button.setIconSize(icon_size)
         print_button.setStyleSheet(button_style)
         print_button.clicked.connect(self.gui.menu_bar.print_rec)
         print_button.setToolTip('Print this Record')

@@ -15,7 +15,7 @@ IMPORTANT: Do NOT post this list to the issue-tracker. Use it as a basis for
             tracking down the missing module yourself. Thanks!
 
 missing module named 'org.python' - imported by copy (optional), xml.sax (delayed, conditional)
-missing module named posix - imported by posixpath (optional), shutil (conditional), importlib._bootstrap_external (conditional), os (conditional, optional)
+missing module named posix - imported by os (conditional, optional), posixpath (optional), shutil (conditional), importlib._bootstrap_external (conditional)
 missing module named resource - imported by posix (top-level)
 missing module named _frozen_importlib_external - imported by importlib._bootstrap (delayed), importlib (optional), importlib.abc (optional), zipimport (top-level)
 excluded module named _frozen_importlib - imported by importlib (optional), importlib.abc (optional), zipimport (top-level)
@@ -224,7 +224,6 @@ missing module named 'numba.extending' - imported by pandas.core._numba.kernels.
 missing module named pyarrow - imported by pandas.core.arrays.masked (delayed), pandas.core.arrays.numeric (delayed, conditional), pandas.core.arrays.arrow._arrow_utils (top-level), pandas.core.arrays.string_ (delayed, conditional), pandas.core.arrays._arrow_string_mixins (conditional), pandas.core.arrays.string_arrow (conditional), pandas.core.arrays.period (delayed), pandas.core.arrays.arrow.extension_types (top-level), pandas.core.arrays.interval (delayed), pandas.core.strings.accessor (delayed, conditional), pandas.core.reshape.merge (delayed, conditional), pandas.core.arrays.boolean (delayed, conditional), pandas.core.methods.describe (delayed, conditional), pandas.io.parsers.base_parser (delayed, conditional), pandas.io.sql (delayed, conditional), pandas.core.interchange.utils (delayed, conditional), pandas.io.feather_format (delayed), pandas.core.indexes.base (delayed, conditional), pandas.core.arrays.arrow.array (conditional), pandas.core.dtypes.dtypes (delayed, conditional), pandas.compat.pyarrow (optional), pandas._testing (conditional)
 missing module named 'pyarrow.compute' - imported by pandas.core.arrays._arrow_string_mixins (conditional), pandas.core.arrays.string_arrow (conditional), pandas.core.reshape.merge (delayed, conditional), pandas.core.arrays.arrow.array (conditional)
 missing module named pytest - imported by scipy._lib._testutils (delayed), pandas._testing._io (delayed), pandas._testing (delayed)
-missing module named PyQt6 - imported by matplotlib.backends.qt_compat (delayed, conditional), matplotlib.backends.backend_qtagg (delayed, conditional, optional)
 missing module named shiboken2 - imported by matplotlib.backends.qt_compat (delayed, conditional, optional)
 missing module named PySide2 - imported by matplotlib.backends.qt_compat (delayed, conditional, optional)
 missing module named sip - imported by matplotlib.backends.qt_compat (delayed, conditional), PyQt5 (top-level)

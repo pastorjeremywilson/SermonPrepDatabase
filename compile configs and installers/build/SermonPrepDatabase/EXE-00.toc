@@ -73,6 +73,9 @@
   ('pyi_rth_pythoncom',
    'C:\\Users\\pasto\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\_pyinstaller_hooks_contrib\\hooks\\rthooks\\pyi_rth_pythoncom.py',
    'PYSOURCE'),
+  ('pyi_rth_pyqt6',
+   'C:\\Users\\pasto\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_pyqt6.py',
+   'PYSOURCE'),
   ('pyi_rth_pyqt5',
    'C:\\Users\\pasto\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\PyInstaller\\hooks\\rthooks\\pyi_rth_pyqt5.py',
    'PYSOURCE'),
@@ -86,7 +89,7 @@
  [],
  False,
  False,
- 1695413557,
+ 1696620695,
  [('runw.exe',
    'C:\\Users\\pasto\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\PyInstaller\\bootloader\\Windows-64bit-intel\\runw.exe',
    'EXECUTABLE')])

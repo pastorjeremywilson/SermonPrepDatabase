@@ -533,6 +533,24 @@ class SermonPrepDatabase(QThread):
         if string.endswith('-'):
             string = string[0:len(string) - 1].strip()
         string = string.replace('&quot', '"')
+
+        #break into paragraphs and set line spacing
+        paragraphs = string.split('\n\n')
+        string = ''
+        bullets = False
+        for i in range(len(paragraphs)):
+            if not paragraphs[i].startswith('-'):
+                #since bullets in markdown can't be encased in a proper paragraph, add a paragraph before the next one
+                #if a bullet came before
+                if bullets:
+                    paragraphs[i] = '<p>&nbsp;</p><p style="line-height: 1.2;">' + paragraphs[i] + '</p>'
+                else:
+                    paragraphs[i] = '<p style="line-height: 1.2;">' + paragraphs[i] + '</p>'
+                bullets = False
+            else:
+                paragraphs[i] = '\n\n' + paragraphs[i] + '\n\n'
+                bullets = True
+            string = string + paragraphs[i]
         return string
 
     def get_search_results(self, search_text):

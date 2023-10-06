@@ -246,6 +246,9 @@
   ('PyQt5',
    'C:\\Users\\pasto\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\PyQt5\\__init__.py',
    'PYMODULE'),
+  ('PyQt6',
+   'C:\\Users\\pasto\\AppData\\Local\\Programs\\Python\\Python311\\Lib\\site-packages\\PyQt6\\__init__.py',
+   'PYMODULE'),
   ('TopFrame',
    'C:\\Users\\pasto\\Nextcloud\\Documents\\Python Workspace\\Sermon Prep '
    'Database\\src\\TopFrame.py',
