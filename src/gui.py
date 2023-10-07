@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.2)
+This file is a part of the Sermon Prep Database program (v.4.0.3)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -637,10 +637,19 @@ class CustomTextEdit(QTextEdit):
         self.win = win
         self.gui = gui
         self.textChanged.connect(self.gui.changes_detected)
+        self.spelling_errors_present = False
 
     def keyReleaseEvent(self, evt):
+        arrow_keys = [Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down]
         if evt.key() == Qt.Key_Space or evt.key() == Qt.Key_Return or evt.key() == Qt.Key_Enter:
             self.check_previous_word()
+
+        if self.spelling_errors_present and evt.key() in arrow_keys:
+            self.check_whole_text()
+
+    def mouseReleaseEvent(self, evt):
+        if evt.button() == 1 and self.spelling_errors_present:
+            self.check_whole_text()
 
     def changeEvent(self, evt):
         self.gui.changes = True
@@ -688,19 +697,24 @@ class CustomTextEdit(QTextEdit):
                 if not suggestions[0].term == cleaned_word:
                     char_format.setForeground(Qt.red)
                     cursor.mergeCharFormat(char_format)
-
+                    self.spelling_errors_present = True
                 else:
-                    if char_format.foreground() == Qt.red:
-                        char_format.setForeground(Qt.black)
-                        cursor.mergeCharFormat(char_format)
+                    char_format.setForeground(Qt.black)
+                    cursor.mergeCharFormat(char_format)
 
         cursor.clearSelection()
         cursor.movePosition(QTextCursor.NextWord)
+
+        char_format = cursor.charFormat()
+        char_format.setForeground(Qt.black)
+        cursor.mergeCharFormat(char_format)
+        self.setTextCursor(cursor)
 
         self.blockSignals(False)
 
     def check_whole_text(self):
         self.blockSignals(True)
+        self.spelling_errors_present = False
 
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.Start)
@@ -740,6 +754,7 @@ class CustomTextEdit(QTextEdit):
                     if not suggestions[0].term == cleaned_word:
                         char_format.setForeground(Qt.red)
                         cursor.mergeCharFormat(char_format)
+                        self.spelling_errors_present = True
 
                     else:
                         if char_format.foreground() == Qt.red:
@@ -756,6 +771,7 @@ class CustomTextEdit(QTextEdit):
 
     def contextMenuEvent(self, e):
         menu = self.createStandardContextMenu()
+        menu.setStyleSheet('QMenu::item:selected { background: white; color: black; }')
 
         clean_whitespace_action = QAction("Remove extra whitespace")
         clean_whitespace_action.triggered.connect(self.clean_whitespace)
@@ -781,10 +797,10 @@ class CustomTextEdit(QTextEdit):
                     upper = True
 
                 cleaned_word = self.clean_word(word)
-
                 suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
                                                             include_unknown=True)
 
+                next_menu_index = 1
                 if not suggestions[0].term == cleaned_word:
                     spell_actions = {}
 
@@ -800,11 +816,13 @@ class CustomTextEdit(QTextEdit):
                         spell_actions['action% s' % str(i)].triggered.connect(self.replace_word)
                         menu.insertAction(menu.actions()[i], spell_actions['action% s' % str(i)])
 
-                    menu.insertSeparator(menu.actions()[i + 1])
-                    action = QAction('Add to dictionary')
-                    action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, cleaned_word))
-                    menu.insertAction(menu.actions()[i + 2], action)
-                    menu.insertSeparator(menu.actions()[i + 3])
+                        next_menu_index = i + 1
+
+                menu.insertSeparator(menu.actions()[next_menu_index])
+                action = QAction('Add to dictionary')
+                action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, cleaned_word))
+                menu.insertAction(menu.actions()[next_menu_index + 2], action)
+                menu.insertSeparator(menu.actions()[next_menu_index + 3])
 
         menu.exec(e.globalPos())
         menu.close()
@@ -842,26 +860,26 @@ class CustomTextEdit(QTextEdit):
         term = sender.data()[1]
 
         self.setTextCursor(cursor)
+        selected_word = self.textCursor().selectedText()
+
+        punctuation = ''
+        if not selected_word[len(selected_word) - 1].isalpha():
+            punctuation = selected_word[len(selected_word) - 1]
+
         self.textCursor().removeSelectedText()
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor)
         self.setTextCursor(cursor)
 
-        chars = ['.', ',', ';', ':', '?', '!', '"', '*', '-', '_', '\n', ' ', '\u2026', '\u201c', '\u201d', '\u2018', '\u2019']
-        add_space = True
-        for char in chars:
-            if self.textCursor().selectedText() == char:
-                add_space = False
-
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.PreviousCharacter, QTextCursor.MoveAnchor)
         self.setTextCursor(cursor)
 
-        if add_space:
-            self.textCursor().insertText(term + ' ')
+        if len(punctuation) > 0:
+            self.textCursor().insertText(term + punctuation + ' ')
         else:
-            self.textCursor().insertText(term)
-        self.changes()
+            self.textCursor().insertText(term + punctuation)
+        self.gui.changes = True
 
     def clean_whitespace(self):
         component = self.win.focusWidget()
@@ -871,7 +889,7 @@ class CustomTextEdit(QTextEdit):
             string = re.sub('\t+', '\t', string)
 
             component.setMarkdown(string)
-        self.changes()
+        self.gui.changes = True
 
 class Win(QMainWindow):
     from PyQt5.QtGui import QCloseEvent

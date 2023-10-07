@@ -1,4 +1,14 @@
+DONE
 Fixed font problem in research_text_edit.
 Changed fonts in TopFrame to user's fonts.
 Switched all icons to svg.
 Fixed "-" at end of text when bullet list left uncompleted.
+Fixed crash on choosing spell corrected word
+Fixed highlighted font color in right-click menu
+Made "add to dictionary" show even if no suggestions are available
+Got rid of red after manually correcting a word or typing after a corrected word
+
+TO DO
+
+FOR LATER RELEASES
+Improve efficiency of spell checking, maybe by saving positions of misspelled words.
