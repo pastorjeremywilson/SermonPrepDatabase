@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.3)
+This file is a part of the Sermon Prep Database program (v.4.0.4)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -34,6 +34,10 @@ from PyQt5.QtWidgets import QFileDialog, QDialog, QGridLayout, QLabel, QProgress
 
 
 class ConvertDatabase(QDialog):
+    """
+    ConvertDatabase is a class to perform the necessary alterations to a database from an older version of Sermon
+    Prep Database in order to make it work with this version.
+    """
     def __init__(self, spd):
         super(ConvertDatabase, self).__init__()
         self.spd = spd
@@ -57,6 +61,9 @@ class ConvertDatabase(QDialog):
             self.convert_database()
 
     def ask_for_file(self):
+        """
+        Method to create a QFileDialog to ask for the user's old database file
+        """
         dialog = QFileDialog()
         dialog.setWindowTitle('Select Database')
         dialog.setNameFilter('Database File (*.db)')
@@ -85,23 +92,25 @@ class ConvertDatabase(QDialog):
             file_location = dialog.selectedFiles()[0]
             self.spd.write_to_log('ConvertDatabase.__init__: Converting database from ' + file_location)
 
-            if not exists(self.spd.app_dir):
-                os.mkdir(self.spd.app_dir)
-
-            shutil.copy(self.spd.cwd + 'resources/database_template.db', self.spd.db_loc)
-
-            conn = sqlite3.connect(self.spd.db_loc)
-            cur = conn.cursor()
-            sql = 'DELETE FROM sermon_prep_database WHERE ID = 1'  # remove the initial entry from the database template
-            cur.execute(sql)
-            conn.commit()
-
             # retrieve all the data from the user's previous database
+            # do this first in case the old database is the same name and location as self.spd.db_loc
             conn = sqlite3.connect(file_location)
             cur = conn.cursor()
             sql = 'SELECT * FROM sermon_prep_database'
             results = cur.execute(sql)
             self.all_data = results.fetchall()
+
+            if not exists(self.spd.app_dir):
+                os.mkdir(self.spd.app_dir)
+
+            shutil.copy(self.spd.cwd + 'resources/database_template.db', self.spd.db_loc)
+
+            # remove the new user introduction record from the database template
+            conn = sqlite3.connect(self.spd.db_loc)
+            cur = conn.cursor()
+            sql = 'DELETE FROM sermon_prep_database WHERE ID = 1'  # remove the initial entry from the database template
+            cur.execute(sql)
+            conn.commit()
             return 1
 
     def convert_database(self):
@@ -133,7 +142,7 @@ class ConvertDatabase(QDialog):
                 self.progress_label.setText('Converting id # ' + str(row[0]))
                 self.progress_bar.setValue(self.progress_bar.value() + 1)
 
-                # add the data from the items in each row to the above declared arrays
+                # add the data from the items in each row to the above declared lists
                 id.append(row[0])
                 pericope_entry.append(self.clean_and_strip(row[2]))
                 pericope_text.append(self.clean_and_strip(row[3]))
@@ -210,8 +219,10 @@ class ConvertDatabase(QDialog):
             continue_button.pressed.connect(self.close)
             self.progress_layout.addWidget(continue_button, 2, 0)
 
-    # function to make the text from the old database work properly with the new version
     def clean_and_strip(self, string_in):
+        """
+        Method to convert any characters that won't work properly with the new version
+        """
         if string_in:
             string_out = string_in.strip()
             string_out = re.sub('"', '\'', string_out)

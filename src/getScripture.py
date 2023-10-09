@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.3)
+This file is a part of the Sermon Prep Database program (v.4.0.4)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -30,6 +30,10 @@ from os.path import exists
 
 
 class GetScripture:
+    """
+    GetScripture is a class that will retrieve a specific scripture passage from the user's xml bible based on
+    what is typed in the Scripture Reference LineEdit
+    """
     root = None
 
     def __init__(self, spd):
@@ -37,6 +41,7 @@ class GetScripture:
             tree = ET.parse(spd.bible_file)
             self.root = tree.getroot()
 
+        # list of bible books and their common abbreviations
         self.books = [
             ['Genesis', 'gen', 'ge', 'gn'],
             ['Exodus', 'exod', 'exo', 'ex'],
@@ -116,15 +121,24 @@ class GetScripture:
         ]
 
     def get_passage(self, reference):
+        """
+        Method to parse the user's inputted reference and retrieve the passage from the user's xml bible.
+
+        :param str reference: The user-provided scripture reference
+        """
         try:
             if self.root:
                 reference_split = reference.split(' ')
                 reference_ok = False
+                # only attempt to retrieve a passage if something more than the book has been provided
                 if len(reference_split) > 1:
+                    # some book names will be a number followed by a string (i.e. 1 Kings or 1st Corinthians)
                     if any(a.isnumeric() for a in reference_split[0]) and all(b.isalpha() for b in reference_split[1]):
                         book = reference_split[0] + ' ' + reference_split[1]
                         passage_split = reference_split[2].split(':')
                     else:
+                        # a reference_split greater than two in this case likely means that two or more words were given
+                        # for the book (i.e. Song of Solomon, The Revelation)
                         if len(reference_split) > 2:
                             book = reference_split[0]
                             if not any(c.isnumeric for c in reference_split[1]):
@@ -137,6 +151,7 @@ class GetScripture:
                             book = reference_split[0]
                             passage_split = reference_split[1].split(':')
 
+                    # Now that the book has been stripped from the reference, parse the chapter and verse(s)
                     if len(passage_split) > 1:
                         chapter = passage_split[0]
                         verse_split = []
@@ -155,6 +170,7 @@ class GetScripture:
                 else:
                     return -1
 
+                # go on to get the passage from the xml bible if the parsing worked out
                 if reference_ok:
                     book = book.replace('.', '')
                     book = book.lower()

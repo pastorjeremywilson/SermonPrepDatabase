@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.3)
+This file is a part of the Sermon Prep Database program (v.4.0.4)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -29,7 +29,9 @@ from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel, QComboBox
 
 
 class TopFrame(QWidget):
-
+    """
+    TopFrame creates the uppermost QWidget of the GUI that holds formatting, search, and navigation elements.
+    """
     def __init__(self, win, gui, spd):
         super().__init__()
         self.win = win
@@ -225,7 +227,13 @@ class TopFrame(QWidget):
         self.gui.layout.addWidget(button_frame)
 
     def keep_text_visible(self, check_state):
+        """
+        Handle the user's toggling of the text_visible button.
+
+        :param boolean check_state: The result of text_visible.isChecked()
+        """
         if check_state:
+            # add the reference and passage text to each tab's text_box then make it show
             num_tabs = self.gui.tabbed_frame.count()
             for i in range(num_tabs):
                 if i > 0:
@@ -238,6 +246,7 @@ class TopFrame(QWidget):
                     if widget:
                         widget.show()
         else:
+            # hide the text_box on each tab
             num_tabs = self.gui.tabbed_frame.count()
             for i in range(num_tabs):
                 if i > 0:
@@ -247,6 +256,11 @@ class TopFrame(QWidget):
                         widget.hide()
 
     def get_index_of_reference(self, index):
+        """
+        Method to find the index number of the user's chosen reference.
+
+        :param int index: The index of the reference combo box's chosen reference
+        """
         id_to_find = self.spd.references[index][1]
         counter = 0
         for item in self.spd.ids:
@@ -256,6 +270,11 @@ class TopFrame(QWidget):
         self.spd.get_by_index(counter)
 
     def do_search(self, text):
+        """
+        Method to call get_search_results from SermonPrepDatabase and display the results
+
+        :param str text: The user's search term(s)
+        """
         result_list = self.spd.get_search_results(text)
         if len(result_list) == 0:
             QMessageBox.information(
@@ -272,9 +291,13 @@ class TopFrame(QWidget):
             self.gui.tabbed_frame.setCurrentWidget(search_box)
 
     def set_bold(self):
+        """
+        Method to toggle the bold state of the text at the user's cursor or selection.
+        """
         component = self.win.focusWidget()
         if isinstance(component, QTextEdit):
             cursor = component.textCursor()
+            # handle this differently if the user has a section of text selected
             if cursor.hasSelection():
                 selection_start = cursor.selectionStart()
                 selection_end = cursor.selectionEnd()
@@ -299,6 +322,9 @@ class TopFrame(QWidget):
             self.bold_button.setChecked(False)
 
     def set_italic(self):
+        """
+        Method to toggle the italic state of the text at the user's cursor or selection.
+        """
         component = self.win.focusWidget()
         if isinstance(component, QTextEdit):
             cursor = component.textCursor()
@@ -322,6 +348,9 @@ class TopFrame(QWidget):
             self.italic_button.setChecked(False)
 
     def set_underline(self):
+        """
+        Method to toggle the underline state of the text at the user's cursor or selection.
+        """
         component = self.win.focusWidget()
         if isinstance(component, QTextEdit):
             cursor = component.textCursor()
@@ -345,6 +374,9 @@ class TopFrame(QWidget):
             self.underline_button.setChecked(False)
 
     def set_bullet(self):
+        """
+        Method to toggle the bulleted list state of the text at the user's cursor or selection.
+        """
         component = self.win.focusWidget()
         if isinstance(component, QTextEdit):
             cursor = component.textCursor()

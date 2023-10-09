@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.3)
+This file is a part of the Sermon Prep Database program (v.4.0.4)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -34,6 +34,10 @@ from PyQt5.QtWidgets import QFileDialog, QMessageBox
 
 
 class GetFromDocx:
+    """
+    GetFromDocx is a class that will parse data from .docx, .odt, or .txt files so they can be imported as
+    database entries
+    """
     def __init__(self, gui):
         self.gui = gui
         self.books = [
@@ -98,6 +102,7 @@ class GetFromDocx:
         ]
         folder = self.get_folder()
         if folder:
+            # give the option to also recurse subdirectories of the user's folder
             response = QMessageBox.question(
                 self.gui.win,
                 'Search Subdirectories',
@@ -111,6 +116,9 @@ class GetFromDocx:
                 self.parse_files(folder, False)
 
     def get_folder(self):
+        """
+        Method that creates a QFileDialog for the user to choose a directory to import files from
+        """
         folder = QFileDialog.getExistingDirectory(
             None,
             'Choose Folder',
@@ -120,16 +128,23 @@ class GetFromDocx:
         return folder
 
     def parse_files(self, folder, recurse):
+        """
+        Method to parse the files contained in the user's directory.
+
+        :param str folder: The user's chosen directory.
+        :param boolean recurse: Recurse subdirectories.
+        """
         self.gui.open_import_splash.emit()
         file_list = []
 
+        # get a list of file names located in the user's directory
         if recurse:
             walk = os.walk(folder, True, None, True)
             for item in walk:
                 self.gui.change_import_splash_dir.emit('Looking in ' + item[0])
                 if len(item[2]) > 0:
                     for file in item[2]:
-                        if '.docx' in file and not '~' in file:
+                        if '.docx' in file and not '~' in file: # skip over MS temporary files
                             file_list.append(item[0] + '/' + file)
                             self.gui.change_import_splash_file.emit('Found ' + file)
                         elif '.txt' in file or '.odt' in file:
@@ -149,6 +164,7 @@ class GetFromDocx:
         sermons = []
         self.gui.change_import_splash_dir.emit('Converting')
         for i in range(0, len(file_list)):
+            # first, attempt to extract reference and date from file name
             self.gui.change_import_splash_file.emit(file_list[i])
             file_name_split = file_list[i].split('/')
             file_name = file_name_split[len(file_name_split) - 1]
@@ -189,6 +205,7 @@ class GetFromDocx:
                 errors.append([file_list[i], 'Unable to parse scripture reference from file name'])
 
             if '.docx' in file_list[i].lower():
+                # first, unzip the .docx file and extract the document.xml file
                 file_loc = file_list[i]
                 unzip_folder = tempfile.gettempdir() + '/spd_zip'
                 if not exists(unzip_folder):
@@ -210,6 +227,7 @@ class GetFromDocx:
 
                     sermon_text = ''
                     text_found = False
+                    # iterate through the tags in document.xml and extract the paragraphs therein
                     for elem in root.iter():
                         tag = re.sub('{.*?}', '', elem.tag)
                         if tag == 'p':
@@ -231,6 +249,7 @@ class GetFromDocx:
                         sermons.append([date, reference, sermon_text, file_name])
 
             elif '.odt' in file_list[i].lower():
+                # first, unzip the .odt file and extract content.xml
                 file_loc = file_list[i]
                 unzip_folder = tempfile.gettempdir() + '/spd_zip'
                 if not exists(unzip_folder):
@@ -251,6 +270,7 @@ class GetFromDocx:
                     root = tree.getroot()
 
                     sermon_text = ''
+                    # iterate through the tags in content.xml and extract the paragraphs therein
                     for elem in root.iter():
                         tag = re.sub('{.*?}', '', elem.tag)
                         if tag == 'document-content':

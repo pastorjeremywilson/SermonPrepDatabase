@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.3)
+This file is a part of the Sermon Prep Database program (v.4.0.4)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -28,8 +28,14 @@ from PyQt5.QtCore import QSize, Qt, QTimer
 from PyQt5.QtWidgets import QDialog, QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QListWidget
 
 
-# function to show a simple OK dialog box
-def message_box(title, message, bg):
+def messageBox(title, message, bg):
+    """
+    Function to show a simple OK dialog box
+
+    :param str title: Window title
+    :param str message: Dialog message
+    :param str bg: Dialog box's background color
+    """
     dialog = QDialog()
     dialog.setWindowTitle(title)
     dialog.setStyleSheet('background: ' + bg)
@@ -48,8 +54,13 @@ def message_box(title, message, bg):
 
     dialog.exec()
 
-# function to show a simple Yes/No/Cancel dialog box+
-def yes_no_cancel_box(*args):
+
+def yesNoCancelBox(*args):
+    """
+    Function to show a simple Yes/No/Cancel dialog box
+
+    :param any args: Expects str title, str message, str bg, optional str replacement for Yes, optional str replacement for No
+    """
     #args = title, message, bg, (yes, no)
     result = -1
 
@@ -93,8 +104,15 @@ def yes_no_cancel_box(*args):
     response = dialog.exec()
     return response
 
-# function to show a timed popup message, takes a message string and milliseconds to display as arguments
-def timed_popup(message, millis, bg):
+
+def timedPopup(message, millis, bg):
+    """
+    Function to show a timed popup message.
+
+    :param str message: The message of the popup
+    :param int millis: The time, in milliseconds, to display the message
+    :param str bg: The background color of the message
+    """
     dialog = QDialog()
     dialog.setWindowFlag(Qt.FramelessWindowHint)
     dialog.setWindowOpacity(0.75)
@@ -115,7 +133,13 @@ def timed_popup(message, millis, bg):
     dialog.show()
 
 class RemoveCustomWords:
+    """
+    Class to enable the user to remove words they have added to the dictionary.
+    """
     def __init__(self, spd):
+        """
+        :param SermonPrepDatabase spd: The SermonPrepDatabase object
+        """
         self.changes = False
 
         self.spd = spd
@@ -125,6 +149,7 @@ class RemoveCustomWords:
         layout = QVBoxLayout()
         self.widget.setLayout(layout)
 
+        # retrieve the words from the custom word list
         with open(spd.app_dir + '/custom_words.txt') as file:
             custom_words = file.readlines()
 
@@ -150,10 +175,16 @@ class RemoveCustomWords:
         self.widget.show()
 
     def remove_word(self):
+        """
+        Method to acknowledge that changes were made and to remove the word from the word list
+        """
         self.changes = True
         self.word_list.takeItem(self.word_list.currentRow())
 
     def close(self):
+        """
+        If changes were made, write to the file. Close the widget.
+        """
         if self.changes:
             lines = []
             file = open(self.spd.app_dir + '/custom_words.txt', 'w')

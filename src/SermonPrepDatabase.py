@@ -3,7 +3,7 @@ Author: Jeremy G. Wilson
 
 Copyright: 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.3)
+This file is a part of the Sermon Prep Database program (v.4.0.4)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -44,8 +44,8 @@ from gui import GUI
 
 class SermonPrepDatabase(QThread):
     """
-    The main program class that handles startup functions such as checking for/creating a new database, instantiating
-    the gui, and polling the database for data. Also handles any database reading and writing functions.
+    The main program class that handles startup methods such as checking for/creating a new database, instantiating
+    the gui, and polling the database for data. Also handles any database reading and writing methods.
     """
     change_text = pyqtSignal(str)
     finished = pyqtSignal()
@@ -172,7 +172,7 @@ class SermonPrepDatabase(QThread):
 
     def write_spell_check_changes(self):
         """
-        Function to set the disable_spell_check value upon user input.
+        Method to set the disable_spell_check value upon user input.
         """
         conn = sqlite3.connect(self.db_loc)
         cursor = conn.cursor()
@@ -185,7 +185,7 @@ class SermonPrepDatabase(QThread):
 
     def write_auto_fill_changes(self):
         """
-        Function to set the auto_fill value upon user input.
+        Method to set the auto_fill value upon user input.
         """
         conn = sqlite3.connect(self.db_loc)
         cursor = conn.cursor()
@@ -198,7 +198,7 @@ class SermonPrepDatabase(QThread):
 
     def load_dictionary(self):
         """
-        Function to create a SymSpell object based on the default dictionary and the user's custom words list.
+        Method to create a SymSpell object based on the default dictionary and the user's custom words list.
         For SymSpellPy documentation, see https://symspellpy.readthedocs.io/en/latest/index.html
         """
         if not exists(self.cwd + 'resources/default_dictionary.pkl'):
@@ -216,7 +216,7 @@ class SermonPrepDatabase(QThread):
 
     def add_to_dictionary(self, widget, word):
         """
-        Function to add a word to the user's custom words file upon user input.
+        Method to add a word to the user's custom words file upon user input.
 
         :param QWidget widget: the widget from which the word was added (so that it can be rechecked with the new word)
         :param str word: the word to be added
@@ -232,7 +232,7 @@ class SermonPrepDatabase(QThread):
 
     def get_ids(self):
         """
-        Function to retrieve all ID numbers from the user's database.
+        Method to retrieve all ID numbers from the user's database.
         """
         self.ids = []
         conn = sqlite3.connect(self.db_loc)
@@ -244,7 +244,7 @@ class SermonPrepDatabase(QThread):
     # retrieve the list of dates from the database
     def get_date_list(self):
         """
-        Function to retrieve all dates from the user's database.
+        Method to retrieve all dates from the user's database.
         """
         self.dates = []
         conn = sqlite3.connect(self.db_loc)
@@ -255,7 +255,7 @@ class SermonPrepDatabase(QThread):
 
     def get_scripture_list(self):
         """
-        Function to retrieve all scripture references from the user's database.
+        Method to retrieve all scripture references from the user's database.
         """
         self.references = []
         conn = sqlite3.connect(self.db_loc)
@@ -265,7 +265,7 @@ class SermonPrepDatabase(QThread):
 
     def get_user_settings(self):
         """
-        Function to retrieve all user settings from the user's database.
+        Method to retrieve all user settings from the user's database.
         """
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
@@ -295,7 +295,7 @@ class SermonPrepDatabase(QThread):
 
     def write_color_changes(self):
         """
-        Function to save the user's color changes to the database.
+        Method to save the user's color changes to the database.
         """
         sql = ('UPDATE user_settings SET bgcolor = "'
                + self.gui.accent_color
@@ -310,7 +310,7 @@ class SermonPrepDatabase(QThread):
 
     def write_font_changes(self, family, size):
         """
-        Function to save the user's font changes to the database.
+        Method to save the user's font changes to the database.
 
         :param str family: Name of the font family.
         :param str size: Size of the font.
@@ -342,7 +342,7 @@ class SermonPrepDatabase(QThread):
 
     def get_record_data(self):
         """
-        Function to retrieve a record from the user's database by id stored in self.current_rec_index
+        Method to retrieve a record from the user's database by id stored in self.current_rec_index
         """
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
@@ -352,7 +352,7 @@ class SermonPrepDatabase(QThread):
 
     def get_by_index(self, index):
         """
-        Function to retrieve a record based on a given index of self.ids.
+        Method to retrieve a record based on a given index of self.ids.
 
         :param int index: Index number of self.ids
         """
@@ -398,7 +398,7 @@ class SermonPrepDatabase(QThread):
 
     def save_rec(self):
         """
-        Function to retrieve all data from all elements of the GUI and save it to the user's database.
+        Method to retrieve all data from all elements of the GUI and save it to the user's database.
         """
         try:
             conn = sqlite3.connect(self.db_loc)
@@ -457,8 +457,8 @@ class SermonPrepDatabase(QThread):
             cur.execute(sql)
             conn.commit()
 
-            from Dialogs import timed_popup
-            timed_popup('Record Saved', 1000, self.gui.accent_color)
+            from Dialogs import timedPopup
+            timedPopup('Record Saved', 1000, self.gui.accent_color)
             self.write_to_log('Database saved - ' + self.db_loc)
 
             self.gui.changes = False
@@ -469,7 +469,7 @@ class SermonPrepDatabase(QThread):
     # HTML tags instead
     def reformat_string_for_save(self, string):
         """
-        Function to handle the formatting of markdown characters, converting them to HTML for saving.
+        Method to handle the formatting of markdown characters, converting them to HTML for saving.
 
         :param str string: The string to reformat.
         """
@@ -523,7 +523,7 @@ class SermonPrepDatabase(QThread):
     # change the &quot string back to '"', which was changed to facilitate easier SQL commands
     def reformat_string_for_load(self, string):
         """
-        Function to handle the formatting of a database string for insertion into a QTextEdit. Only quotes, leading/
+        Method to handle the formatting of a database string for insertion into a QTextEdit. Only quotes, leading/
         trailing spaces, and errant markdown bulletting need to be handled as HTML tags will be handled by the
         QTextEdit.
 
@@ -555,7 +555,7 @@ class SermonPrepDatabase(QThread):
 
     def get_search_results(self, search_text):
         """
-        Function to search the text of all database entries to see if the user's string is found.
+        Method to search the text of all database entries to see if the user's string is found.
 
         :param str search_text: User's search term(s)
         """
@@ -769,7 +769,7 @@ class SermonPrepDatabase(QThread):
 
     def ask_save(self):
         """
-        Function to ask the user if they would like to save their work before continuing with their recent action.
+        Method to ask the user if they would like to save their work before continuing with their recent action.
         """
         response = QMessageBox.question(
             self.gui.win,
@@ -789,7 +789,7 @@ class SermonPrepDatabase(QThread):
 
     def write_to_log(self, string, critical=False):
         """
-        Function to write various messages to the log file.
+        Method to write various messages to the log file.
 
         :param str string: The text of the log message.
         :param boolean critical: Designate this as a critical error, showing a QMessageBox to the user.
@@ -811,9 +811,9 @@ class SermonPrepDatabase(QThread):
 
     def insert_imports(self, errors, sermons):
         """
-        Function to add sermons, imported from .docx or .txt files, to the user's database.
+        Method to add sermons, imported from .docx or .txt files, to the user's database.
 
-        :param list of str errors: Any errors encountered during the file parsing function.
+        :param list of str errors: Any errors encountered during the file parsing method.
         :param list of str sermons: The sermons gathered from the parsed files.
         """
         try:
@@ -900,7 +900,7 @@ class SermonPrepDatabase(QThread):
 
     def import_splash(self):
         """
-        Function to apprise user of work being done while importing sermons.
+        Method to apprise user of work being done while importing sermons.
         """
         self.widget = QWidget()
         self.widget.setStyleSheet('border: 3px solid black; background-color: ' + self.gui.background_color + ';')
@@ -929,7 +929,7 @@ class SermonPrepDatabase(QThread):
 
     def change_dir(self, text):
         """
-        Function to change the directory shown on the import splash.
+        Method to change the directory shown on the import splash.
         :param str text: Directory to show.
         """
         self.dir_label.setText(text)
@@ -937,7 +937,7 @@ class SermonPrepDatabase(QThread):
 
     def change_file(self, text):
         """
-        Function to change the file name shown on the import splash.
+        Method to change the file name shown on the import splash.
 
         :param str text: File name to show.
         """
@@ -946,7 +946,7 @@ class SermonPrepDatabase(QThread):
 
     def close_splash(self):
         """
-        Function to close the import splash widget.
+        Method to close the import splash widget.
         """
         self.widget.deleteLater()
 
@@ -1000,7 +1000,7 @@ class LoadingBox(QDialog):
 
     def change_text(self, text):
         """
-        Function to change the text shown on the splash screen.
+        Method to change the text shown on the splash screen.
 
         :param str text: The text to display.
         """
@@ -1009,7 +1009,7 @@ class LoadingBox(QDialog):
 
     def end(self):
         """
-        Function to instantiate the GUI after all other preload processes have finished, then close the splash screen.
+        Method to instantiate the GUI after all other preload processes have finished, then close the splash screen.
         """
         self.spd.gui = GUI(self.spd)
         self.spd.gui.open_import_splash.connect(self.spd.import_splash)

@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.3)
+This file is a part of the Sermon Prep Database program (v.4.0.4)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -32,7 +32,15 @@ from fitz import fitz
 
 
 class PrintDialog(QDialog):
+    """
+    PrintDialog is a class that will let the user preview their printout, choose a printer, and execute a print job.
+    """
     def __init__(self, pdf_file, gui, landscape=False):
+        """
+        :param str pdf_file: The file location of the PDF created by reportLab
+        :param GUI gui: The program's GUI object
+        :param boolean landscape: Whether the print should be landscape, defaults to False
+        """
         super().__init__()
 
         self.gui = gui
@@ -57,6 +65,9 @@ class PrintDialog(QDialog):
         self.init_components()
 
     def init_components(self):
+        """
+        Creates the components that will be included in this QDialog.
+        """
         self.preview_label = QLabel('Preview:')
         self.preview_label.setFont(self.gui.bold_font)
         self.layout.addWidget(self.preview_label, 0, 0)
@@ -122,6 +133,9 @@ class PrintDialog(QDialog):
         self.layout.addWidget(ok_cancel_buttons, 2, 1)
 
     def get_printers(self):
+        """
+        Obtain a list of printers from the system.
+        """
         win_management = wmi.WMI()
         printers = win_management.Win32_Printer()
 
@@ -137,6 +151,9 @@ class PrintDialog(QDialog):
         return printer_combobox
 
     def get_pages(self):
+        """
+        Method to extract pages from the pdf and convert them to pixmaps
+        """
         for page in self.pdf:
             pixmap = page.get_pixmap()
 
@@ -146,18 +163,27 @@ class PrintDialog(QDialog):
             self.pages.append(q_pixmap)
 
     def previous_page(self):
+        """
+        Method to change the preview to the previous page
+        """
         if not self.current_page == 0:
             self.current_page -= 1
             self.page_label.setText('Page ' + str(self.current_page + 1) + ' of ' + str(self.num_pages))
             self.pdf_label.setPixmap(self.pages[self.current_page])
 
     def next_page(self):
+        """
+        Method to change the preview to the next page
+        """
         if not self.current_page == self.num_pages - 1:
             self.current_page += 1
             self.page_label.setText('Page ' + str(self.current_page + 1) + ' of ' + str(self.num_pages))
             self.pdf_label.setPixmap(self.pages[self.current_page])
 
     def do_print(self, printer):
+        """
+        Method to create the print job
+        """
         print('Opening print subprocess')
         CREATE_NO_WINDOW = 0x08000000
         if self.landscape:

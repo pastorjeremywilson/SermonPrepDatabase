@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.3)
+This file is a part of the Sermon Prep Database program (v.4.0.4)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -40,7 +40,15 @@ from PrintDialog import PrintDialog
 
 
 class MenuBar:
+    """
+    Builds the QMainWindow's menuBar and handles the actions performed by the menu.
+    """
     def __init__(self, win, gui, spd):
+        """
+        :param QMainWindow win: The program's QMainWindow
+        :param GUI gui: The program's GUI Object
+        :param SermonPrepDatabase spd: The program's SermonPrepDatabase object
+        """
         self.keyboard = Controller()
         self.win = win
         self.gui = gui
@@ -197,12 +205,14 @@ class MenuBar:
         about_action.triggered.connect(self.show_about)
 
     def print_rec(self):
+        """
+        Method for sending to user's printer the currently shown record
+        """
         from reportlab.lib.pagesizes import letter
         from reportlab.lib.styles import ParagraphStyle
         from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate, Paragraph
-        import os
 
-        #get text from gui
+        # get all text values from the GUI
         text = []
         for i in range(self.gui.scripture_frame_layout.count()):
             component = self.gui.scripture_frame_layout.itemAt(i).widget()
@@ -243,6 +253,7 @@ class MenuBar:
 
         print_file_loc = self.spd.app_dir + '/print.pdf'
 
+        # create a ParagraphStyle for the different types of formatting that will be used on the printout
         normal = ParagraphStyle(
             name='Normal',
             fontName='Helvetica',
@@ -315,11 +326,13 @@ class MenuBar:
         from subprocess import Popen, PIPE
         self.spd.write_to_log('Opening print subprocess')
 
+        # For the Windows platform, use PrintDialog.py to handle printing
         if sys.platform == 'win32':
             self.print_dialog = PrintDialog(print_file_loc, self.gui)
             self.print_dialog.exec()
 
         elif sys.platform == 'linux':
+            # get the list of printers from the OS and ask user to choose
             p = Popen(['/usr/bin/lpstat', '-a'], stdin = PIPE, stdout = PIPE, stderr = PIPE)
             stdout, stderr = p.communicate()
             stdout = str(stdout).replace('b\'', '')
@@ -347,7 +360,8 @@ class MenuBar:
             button_widget.setLayout(button_layout)
 
             ok_button = QPushButton('OK')
-            ok_button.pressed.connect(lambda: self.linux_print(print_dialog, printer_combobox.currentText(), print_file_loc))
+            ok_button.pressed.connect(
+                lambda: self.linux_print(print_dialog, printer_combobox.currentText(), print_file_loc))
             button_layout.addWidget(ok_button)
 
             cancel_button = QPushButton('Cancel')
@@ -359,6 +373,12 @@ class MenuBar:
             print_dialog.show()
 
     def format_paragraph(self, comp_text):
+        """
+        format_paragraph takes the getHtml() string from a QTextEdit and reformats the tags into ones that reportlab
+        likes.
+
+        :param str comp_text: the HTML string from a QTextEdit
+        """
         comp_text = re.sub('<p.*?>', '', comp_text, flags=re.DOTALL)
         comp_text = re.sub('</p>', '<br><br>', comp_text)
 
@@ -394,6 +414,13 @@ class MenuBar:
         return text_split
 
     def linux_print(self, print_dialog, item_text, printFileLoc):
+        """
+        Method for performing a print operation in the Linux platform.
+
+        :param QDialog print_dialog: The print dialog from which this method was called
+        :param str item_text: The string representation of the user's chosen printer
+        :param printFileLoc: The location where the print file will be written
+        """
         print_dialog.destroy()
         item_text = item_text.replace(' ', '_')
 
@@ -423,23 +450,34 @@ class MenuBar:
             self.spd.write_to_log('MenuBar.linux_print: ' + str(err), True)
 
     def do_backup(self):
-        import os
-        user_dir = os.path.expanduser('~')
+        """
+        Creates a QFileDialog where the user can save a custom backup of their database
+        """
+        try:
+            import os
+            user_dir = os.path.expanduser('~')
 
-        fileName = QFileDialog.getSaveFileName(self.win, 'Create Backup',
-                                               user_dir + '/sermon_prep_database_backup.db', 'Database File (*.db)');
-        import shutil
-        shutil.copy(self.spd.db_loc, fileName[0])
-        self.spd.write_to_log('Created Backup as ' + fileName[0])
+            fileName = QFileDialog.getSaveFileName(self.win, 'Create Backup',
+                                                   user_dir + '/sermon_prep_database_backup.db', 'Database File (*.db)');
+            import shutil
+            shutil.copy(self.spd.db_loc, fileName[0])
+            self.spd.write_to_log('Created Backup as ' + fileName[0])
 
-        QMessageBox.information(
-            None,
-            'Backup Created',
-            'Backup successfully created as ' + fileName[0],
-            QMessageBox.Ok
-        )
+            QMessageBox.information(
+                None,
+                'Backup Created',
+                'Backup successfully created as ' + fileName[0],
+                QMessageBox.Ok
+            )
+        # make this more precise you lazy turd
+        except Exception as ex:
+            self.spd.write_to_log('There was a problem creating the backup:\n\n' + str(ex), True)
 
     def restore_backup(self):
+        """
+        Method to restore the user's database from a backup file. Creates a QFileDialog for the user to choose
+        their backup then copies that backup to the user's app data location.
+        """
         dialog = QFileDialog()
         dialog.setWindowTitle('Restore from Backup')
         dialog.setNameFilter('Database File (*.db)')
@@ -501,6 +539,10 @@ class MenuBar:
                 )
 
     def import_from_files(self):
+        """
+        Method to inform user about the best format for imported file names and to begin the import by calling
+        GetFromDocx.
+        """
         QMessageBox.information(
             self.gui.win,
             'Import from Files',
@@ -513,6 +555,9 @@ class MenuBar:
         GetFromDocx(self.gui)
 
     def import_bible(self):
+        """
+        Method to import and save a user's xml bible for use in the program.
+        """
         file = QFileDialog.getOpenFileName(
             self.gui.win,
             'Choose Bible File',
@@ -538,6 +583,7 @@ class MenuBar:
                         QMessageBox.Ok
                     )
 
+                    # we're just not going to worry about the option to have multiple bibles
                     if exists(self.spd.app_dir + '/my_bible.xml'):
                         os.remove(self.spd.app_dir + '/my_bible.xml')
                 else:
@@ -570,6 +616,10 @@ class MenuBar:
                 os.remove(self.spd.app_dir + '/my_bible.xml')
 
     def rename_labels(self):
+        """
+        Method to allow the user to change the text of heading labels used in the program (i.e. 'Sermon Text Reference'
+        or 'Fallen Condition Focus of the Text'.
+        """
         self.rename_widget = QWidget()
         self.rename_widget.setWindowFlag(Qt.Window)
         self.rename_widget.resize(920, 400)
@@ -594,6 +644,8 @@ class MenuBar:
                              'Double-click a label under "New Label" to rename it')
         rename_widget_layout.addWidget(rename_label)
 
+        # provide two columns in the QTableView; one that will contain the labels as they are, the other to provide
+        # an area to change the label's name
         model = QStandardItemModel(len(self.spd.user_settings), 2)
         for i in range(len(self.spd.user_settings)):
             if i > 4:
@@ -618,6 +670,12 @@ class MenuBar:
         self.rename_widget.show()
 
     def write_label_changes(self, model):
+        """
+        Method to write the user's heading label changes to the database's user_settings table.
+        Perhaps this belongs in the SermonPrepDatabase class.
+
+        :param QStandardItemModel model: The QStandardItemModel that contains the user's new label names.
+        """
         new_labels = []
         for i in range(model.rowCount()):
             new_labels.append(model.data(model.index(i, 1)))
@@ -641,6 +699,10 @@ class MenuBar:
         self.spd.get_by_index(self.spd.current_rec_index)
 
     def color_change(self, type):
+        """
+        Method to apply the user's chosen theme or custom colors to the GUI.
+        :param str type: The theme or custom color chosen by the user.
+        """
         if type == 'red':
             self.gui.accent_color = '#502020'
             self.gui.background_color = '#fff0f0'
@@ -673,24 +735,33 @@ class MenuBar:
         self.spd.write_color_changes()
 
     def disable_spell_check(self):
+        """
+        Method to turn on or off the spell checking capabilities of the CustomTextEdit.
+        """
         if self.disable_spell_check_action.isChecked():
             self.spd.disable_spell_check = True
             self.spd.write_spell_check_changes()
-        else:
+        else: # if spell check is enabled after having been disabled at startup, the dictionary will need to be loaded
             self.spd.disable_spell_check = False
             if not self.spd.sym_spell:
-                from Dialogs import timed_popup
-                timed_popup('Please wait while the dictionary is loaded...', 5000, self.gui.accent_color)
+                from Dialogs import timedPopup
+                timedPopup('Please wait while the dictionary is loaded...', 5000, self.gui.accent_color)
                 self.spd.app.processEvents()
                 self.spd.load_dictionary()
             self.spd.write_spell_check_changes()
 
     def show_help(self):
+        """
+        Call the ShowHelp class on user's input
+        """
         global sh
         sh = ShowHelp(self.gui.background_color, self.gui.accent_color, self.gui.font_family, self.gui.font_size, self.spd)
         sh.show()
 
     def show_about(self):
+        """
+        Display the 'about' text on user's input
+        """
         global about_win
         about_win = QWidget()
         about_win.setStyleSheet('background-color: ' + self.gui.background_color + ';')
@@ -698,7 +769,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.4.0.3')
+        about_label = QLabel('Sermon Prep Database v.4.0.4')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 
@@ -734,10 +805,17 @@ class MenuBar:
         about_win.show()
 
     def remove_words(self):
+        """
+        Instantiate the RemoveCustomWords class from Dialogs.py
+        """
         from Dialogs import RemoveCustomWords
         self.rcm = RemoveCustomWords(self.spd)
 
     def change_font(self):
+        """
+        Method to provide a font choosing widget to the user by obtaining a list of all the fonts available to
+        the system.
+        """
         fonts = QFontDatabase()
         current_font = self.gui.font_family
         current_size = self.gui.font_size
@@ -786,6 +864,14 @@ class MenuBar:
         font_chooser.show()
 
     def apply_font(self, fontChooser, family, size, close):
+        """
+        Method to apply the user's font changes to the GUI
+
+        :param QWidget fontChooser: The widget created in the change_font method.
+        :param str family: The family name of the font the user chose.
+        :param int size: The font size the user chose.
+        :param boolean close: True if this was called when the user clicked 'OK', so close fontChooser.
+        """
         self.gui.font_family = family
         self.gui.font_size = size
         self.gui.set_style_sheets()
@@ -794,36 +880,54 @@ class MenuBar:
             fontChooser.destroy()
 
     def press_ctrl_z(self):
+        """
+        Method to programmatically execute this key combination
+        """
         self.keyboard.press(Key.ctrl)
         self.keyboard.press('z')
         self.keyboard.release('z')
         self.keyboard.release(Key.ctrl)
 
     def press_ctrl_y(self):
+        """
+        Method to programmatically execute this key combination
+        """
         self.keyboard.press(Key.ctrl)
         self.keyboard.press('y')
         self.keyboard.release('y')
         self.keyboard.release(Key.ctrl)
 
     def press_ctrl_x(self):
+        """
+        Method to programmatically execute this key combination
+        """
         self.keyboard.press(Key.ctrl)
         self.keyboard.press('x')
         self.keyboard.release('x')
         self.keyboard.release(Key.ctrl)
 
     def press_ctrl_c(self):
+        """
+        Method to programmatically execute this key combination
+        """
         self.keyboard.press(Key.ctrl)
         self.keyboard.press('c')
         self.keyboard.release('c')
         self.keyboard.release(Key.ctrl)
 
     def press_ctrl_v(self):
+        """
+        Method to programmatically execute this key combination
+        """
         self.keyboard.press(Key.ctrl)
         self.keyboard.press('v')
         self.keyboard.release('v')
         self.keyboard.release(Key.ctrl)
 
     def do_exit(self):
+        """
+        Method to ask if changes should be saved, then exit the program.
+        """
         goon = True
         if self.gui.changes:
             goon = self.spd.ask_save()
@@ -832,6 +936,9 @@ class MenuBar:
 
 
 class ShowHelp(QTabWidget):
+    """
+    Method to create a QTabbedWidget to hold the different help topics.
+    """
     def __init__(self, background_color, accent_color, font_family, font_size, spd):
         super().__init__()
         self.background_color = background_color
@@ -872,6 +979,9 @@ class ShowHelp(QTabWidget):
         self.make_sermon()
 
     def make_intro(self):
+        """
+        Method to create the intro widget for the help tabs.
+        """
         intro_widget = QWidget()
         intro_widget.setStyleSheet('background-color: ' + self.background_color)
         intro_layout = QVBoxLayout()
@@ -908,6 +1018,9 @@ class ShowHelp(QTabWidget):
         self.addTab(intro_widget, 'Introduction')
 
     def make_menu(self):
+        """
+        Method to create the menu widget for the help tabs.
+        """
         menu_widget = QWidget()
         menu_widget.setStyleSheet('background-color: ' + self.background_color)
         menu_layout = QVBoxLayout()
@@ -980,6 +1093,9 @@ class ShowHelp(QTabWidget):
         self.addTab(menu_widget, 'Menu Bar')
 
     def make_tool(self):
+        """
+        Method to create the toolbar widget for the help tabs.
+        """
         tool_widget = QWidget()
         tool_layout = QVBoxLayout()
         tool_widget.setLayout(tool_layout)
@@ -1025,6 +1141,9 @@ class ShowHelp(QTabWidget):
         self.addTab(tool_widget, 'Toolbar')
 
     def make_scripture(self):
+        """
+        Method to create the scripture widget for the help tabs.
+        """
         scripture_widget = QWidget()
         scripture_layout = QVBoxLayout()
         scripture_widget.setLayout(scripture_layout)
@@ -1051,6 +1170,9 @@ class ShowHelp(QTabWidget):
         self.addTab(scripture_widget, 'Scripture Tab')
 
     def make_exeg(self):
+        """
+        Method to create the exegesis widget for the help tabs.
+        """
         exeg_widget = QWidget()
         exeg_layout = QVBoxLayout()
         exeg_widget.setLayout(exeg_layout)
@@ -1079,6 +1201,9 @@ class ShowHelp(QTabWidget):
         self.addTab(exeg_widget, 'Exegesis Tab')
 
     def make_outline(self):
+        """
+        Method to create the outlines widget for the help tabs.
+        """
         outline_widget = QWidget()
         outline_layout = QVBoxLayout()
         outline_widget.setLayout(outline_layout)
@@ -1099,6 +1224,9 @@ class ShowHelp(QTabWidget):
         self.addTab(outline_widget, 'Outline Tab')
 
     def make_research(self):
+        """
+        Method to create the research widget for the help tabs.
+        """
         research_widget = QWidget()
         research_layout = QVBoxLayout()
         research_widget.setLayout(research_layout)
@@ -1118,6 +1246,9 @@ class ShowHelp(QTabWidget):
         self.addTab(research_widget, 'Research Tab')
 
     def make_sermon(self):
+        """
+        Method to create the sermon widget for the help tabs.
+        """
         sermon_widget = QWidget()
         sermon_layout = QVBoxLayout()
         sermon_widget.setLayout(sermon_layout)

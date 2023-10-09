@@ -8,7 +8,12 @@ Fixed highlighted font color in right-click menu
 Made "add to dictionary" show even if no suggestions are available
 Got rid of red after manually correcting a word or typing after a corrected word
 
+Finished documenting the rest of the scripts.
+
 TO DO
+Implement line spacing.
+Add line spacing to database template user settings.
 
 FOR LATER RELEASES
 Improve efficiency of spell checking, maybe by saving positions of misspelled words.
+Switch date recognition to native Python date parsing.
