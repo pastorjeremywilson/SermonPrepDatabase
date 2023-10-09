@@ -3,7 +3,7 @@ Author: Jeremy G. Wilson
 
 Copyright: 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.4)
+This file is a part of the Sermon Prep Database program (v.4.0.5)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -59,6 +59,7 @@ class SermonPrepDatabase(QThread):
     bible_file = None
     disable_spell_check = None
     auto_fill = None
+    line_spacing = None
     current_rec_index = 0
     user_settings = None
     app = None
@@ -108,6 +109,7 @@ class SermonPrepDatabase(QThread):
             if exists(self.db_loc):
                 self.disable_spell_check = self.check_spell_check()
                 self.auto_fill = self.check_auto_fill()
+                self.line_spacing = self.check_line_spacing()
 
                 if not self.disable_spell_check:
                     self.change_text.emit('Loading Dictionaries')
@@ -166,6 +168,26 @@ class SermonPrepDatabase(QThread):
             cursor.execute('ALTER TABLE user_settings ADD auto_fill TEXT;')
             conn.commit()
             cursor.execute('UPDATE user_settings SET auto_fill=0 WHERE ID="1";')
+            conn.commit()
+            conn.close()
+            return False
+
+    def check_line_spacing(self):
+        """
+        Attempt to get the auto_fill value from the user's database. Create a auto_fill
+        column if OperationalError is thrown.
+        """
+        try:
+            conn = sqlite3.connect(self.db_loc)
+            cursor = conn.cursor()
+            result = cursor.execute('SELECT line_spacing FROM user_settings').fetchone()
+            conn.close()
+
+            return result[0]
+        except OperationalError:
+            cursor.execute('ALTER TABLE user_settings ADD line_spacing TEXT;')
+            conn.commit()
+            cursor.execute('UPDATE user_settings SET line_spacing=1.3 WHERE ID="1";')
             conn.commit()
             conn.close()
             return False
@@ -457,8 +479,8 @@ class SermonPrepDatabase(QThread):
             cur.execute(sql)
             conn.commit()
 
-            from Dialogs import timedPopup
-            timedPopup('Record Saved', 1000, self.gui.accent_color)
+            from dialogs import timed_popup
+            timed_popup('Record Saved', 1000, self.gui.accent_color)
             self.write_to_log('Database saved - ' + self.db_loc)
 
             self.gui.changes = False
@@ -543,9 +565,9 @@ class SermonPrepDatabase(QThread):
                 #since bullets in markdown can't be encased in a proper paragraph, add a paragraph before the next one
                 #if a bullet came before
                 if bullets:
-                    paragraphs[i] = '<p>&nbsp;</p><p style="line-height: 1.2;">' + paragraphs[i] + '</p>'
+                    paragraphs[i] = '<p>&nbsp;</p><p style="line-height: ' + self.line_spacing + ';">' + paragraphs[i] + '</p>'
                 else:
-                    paragraphs[i] = '<p style="line-height: 1.2;">' + paragraphs[i] + '</p>'
+                    paragraphs[i] = '<p style="line-height: ' + self.line_spacing + ';">' + paragraphs[i] + '</p>'
                 bullets = False
             else:
                 paragraphs[i] = '\n\n' + paragraphs[i] + '\n\n'
@@ -729,7 +751,6 @@ class SermonPrepDatabase(QThread):
             self.gui.top_frame.references_cb.blockSignals(False)
 
             self.last_rec()
-
 
     def del_rec(self):
         """

@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.4)
+This file is a part of the Sermon Prep Database program (v.4.0.5)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -28,7 +28,7 @@ from PyQt5.QtCore import QSize, Qt, QTimer
 from PyQt5.QtWidgets import QDialog, QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QListWidget
 
 
-def messageBox(title, message, bg):
+def message_box(title, message, bg):
     """
     Function to show a simple OK dialog box
 
@@ -55,7 +55,7 @@ def messageBox(title, message, bg):
     dialog.exec()
 
 
-def yesNoCancelBox(*args):
+def yes_no_cancel_box(*args):
     """
     Function to show a simple Yes/No/Cancel dialog box
 
@@ -105,7 +105,7 @@ def yesNoCancelBox(*args):
     return response
 
 
-def timedPopup(message, millis, bg):
+def timed_popup(message, millis, bg):
     """
     Function to show a timed popup message.
 

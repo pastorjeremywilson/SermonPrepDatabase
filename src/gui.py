@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.4)
+This file is a part of the Sermon Prep Database program (v.4.0.5)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -36,9 +36,9 @@ from PyQt5.QtWidgets import QBoxLayout, QWidget, QUndoStack, QMessageBox, QTabWi
     QCheckBox, QDateEdit, QTextEdit, QAction, QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QTableView, QLayout
 from symspellpy import Verbosity
 
-from getScripture import GetScripture
-from MenuBar import MenuBar
-from TopFrame import TopFrame
+from get_scripture import GetScripture
+from menu_bar import MenuBar
+from top_frame import TopFrame
 
 
 class GUI(QObject):
@@ -72,7 +72,7 @@ class GUI(QObject):
 
     def init_components(self):
         """
-        Builds the QT GUI, also using elements from MenuBar.py, TopFrame.py, and PrintDialog.py
+        Builds the QT GUI, also using elements from menu_bar.py, top_frame.py, and print_dialog.py
         """
         self.spd.get_ids()
         self.spd.get_date_list()
@@ -133,7 +133,7 @@ class GUI(QObject):
             )
 
             if response == QMessageBox.Yes:
-                from ConvertDatabase import ConvertDatabase
+                from convert_database import ConvertDatabase
                 ConvertDatabase(self.spd)
             elif response == QMessageBox.No:
                 # Create a new database in the user's App Data directory by copying the existing database template
@@ -605,6 +605,7 @@ class GUI(QObject):
             if isinstance(component, CustomTextEdit):
                 component.clear()
                 if record[0][index]:
+                    print(self.spd.reformat_string_for_load(record[0][index]))
                     component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     component.check_whole_text()
                 index += 1

@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.4)
+This file is a part of the Sermon Prep Database program (v.4.0.5)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -35,8 +35,8 @@ from PyQt5.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem
 from PyQt5.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableView, QPushButton, QColorDialog, \
     QTabWidget, QHBoxLayout, QComboBox, QTextBrowser, QDialog, QLineEdit, QTextEdit, QDateEdit, QMessageBox
 from pynput.keyboard import Key, Controller
-from TopFrame import TopFrame
-from PrintDialog import PrintDialog
+from top_frame import TopFrame
+from print_dialog import PrintDialog
 
 
 class MenuBar:
@@ -149,6 +149,24 @@ class MenuBar:
         font_action = config_menu.addAction('Change Font')
         font_action.setToolTip('Change the font and font size used in the program')
         font_action.triggered.connect(self.change_font)
+
+        line_spacing_menu = config_menu.addMenu('Change Line Spacing')
+        line_spacing_menu.setToolTip('Increase or decrease the line spacing of the text')
+
+        compact_spacing_action = line_spacing_menu.addAction('Compact')
+        compact_spacing_action.setObjectName('compact')
+        compact_spacing_action.setToolTip('Set line spacing to compact')
+        compact_spacing_action.triggered.connect(lambda: self.change_line_spacing('compact'))
+
+        regular_spacing_action = line_spacing_menu.addAction('Regular')
+        regular_spacing_action.setObjectName('regular')
+        regular_spacing_action.setToolTip('Set line spacing to regular')
+        regular_spacing_action.triggered.connect(lambda: self.change_line_spacing('regular'))
+
+        wide_spacing_action = line_spacing_menu.addAction('Wide')
+        wide_spacing_action.setObjectName('wide')
+        wide_spacing_action.setToolTip('Set line spacing to wide')
+        wide_spacing_action.triggered.connect(lambda: self.change_line_spacing('wide'))
 
         config_menu.addSeparator()
 
@@ -326,7 +344,7 @@ class MenuBar:
         from subprocess import Popen, PIPE
         self.spd.write_to_log('Opening print subprocess')
 
-        # For the Windows platform, use PrintDialog.py to handle printing
+        # For the Windows platform, use print_dialog.py to handle printing
         if sys.platform == 'win32':
             self.print_dialog = PrintDialog(print_file_loc, self.gui)
             self.print_dialog.exec()
@@ -551,7 +569,7 @@ class MenuBar:
             'For example, a sermon preached on May 20th, 2011 on Mark 3:1-12, saved as a Microsoft Word document,'
             'would be named:\n\n'
             '2011-05-11.mark.3.1-12.docx', QMessageBox.Ok)
-        from GetFromDocx import GetFromDocx
+        from get_from_docx import GetFromDocx
         GetFromDocx(self.gui)
 
     def import_bible(self):
@@ -570,7 +588,7 @@ class MenuBar:
                 self.spd.bible_file = self.spd.app_dir + '/my_bible.xml'
 
                 # verify the file by attempting to get a passage from the new file
-                from getScripture import GetScripture
+                from get_scripture import GetScripture
                 self.gui.gs = GetScripture(self.spd)
                 passage = self.gui.gs.get_passage('John 3:16')
 
@@ -744,8 +762,8 @@ class MenuBar:
         else: # if spell check is enabled after having been disabled at startup, the dictionary will need to be loaded
             self.spd.disable_spell_check = False
             if not self.spd.sym_spell:
-                from Dialogs import timedPopup
-                timedPopup('Please wait while the dictionary is loaded...', 5000, self.gui.accent_color)
+                from dialogs import timed_popup
+                timed_popup('Please wait while the dictionary is loaded...', 5000, self.gui.accent_color)
                 self.spd.app.processEvents()
                 self.spd.load_dictionary()
             self.spd.write_spell_check_changes()
@@ -769,7 +787,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.4.0.4')
+        about_label = QLabel('Sermon Prep Database v.4.0.5')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 
@@ -806,9 +824,9 @@ class MenuBar:
 
     def remove_words(self):
         """
-        Instantiate the RemoveCustomWords class from Dialogs.py
+        Instantiate the RemoveCustomWords class from dialogs.py
         """
-        from Dialogs import RemoveCustomWords
+        from dialogs import RemoveCustomWords
         self.rcm = RemoveCustomWords(self.spd)
 
     def change_font(self):
@@ -862,6 +880,24 @@ class MenuBar:
         bottom_layout.addWidget(cancel_button)
 
         font_chooser.show()
+
+    def change_line_spacing(self, spacing):
+        """
+        Method to change the line spacing in the custom text edits. Since the data needs to be reloaded for the changes
+        to be effected, ask for save first.
+        """
+        goon = True
+        if self.gui.changes:
+            goon = self.spd.ask_save()
+        if goon:
+            if spacing == 'compact':
+                self.spd.line_spacing = '1.0'
+            elif spacing == 'regular':
+                self.spd.line_spacing = '1.2'
+            elif spacing == 'wide':
+                self.spd.line_spacing = '1.5'
+
+            self.gui.fill_values(self.spd.get_record_data())
 
     def apply_font(self, fontChooser, family, size, close):
         """
