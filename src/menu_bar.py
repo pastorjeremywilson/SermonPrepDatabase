@@ -898,6 +898,7 @@ class MenuBar:
                 self.spd.line_spacing = '1.5'
 
             self.gui.fill_values(self.spd.get_record_data())
+            self.spd.write_line_spacing_changes()
 
     def apply_font(self, fontChooser, family, size, close):
         """

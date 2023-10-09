@@ -218,6 +218,16 @@ class SermonPrepDatabase(QThread):
         conn.commit()
         conn.close
 
+    def write_line_spacing_changes(self):
+        """
+        Method to write user's line spacing choice to the database.
+        """
+        conn = sqlite3.connect(self.db_loc)
+        cursor = conn.cursor()
+        cursor.execute('UPDATE user_settings SET line_spacing=' + self.line_spacing + ' WHERE ID="1";')
+        conn.commit()
+        conn.close
+
     def load_dictionary(self):
         """
         Method to create a SymSpell object based on the default dictionary and the user's custom words list.

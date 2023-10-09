@@ -605,7 +605,6 @@ class GUI(QObject):
             if isinstance(component, CustomTextEdit):
                 component.clear()
                 if record[0][index]:
-                    print(self.spd.reformat_string_for_load(record[0][index]))
                     component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     component.check_whole_text()
                 index += 1
