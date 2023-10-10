@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.5)
+This file is a part of the Sermon Prep Database program (v.4.0.6)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -38,10 +38,16 @@ class ConvertDatabase(QDialog):
     ConvertDatabase is a class to perform the necessary alterations to a database from an older version of Sermon
     Prep Database in order to make it work with this version.
     """
-    def __init__(self, spd):
+    def __init__(self, spd, type=None):
         super(ConvertDatabase, self).__init__()
         self.spd = spd
-        result = self.ask_for_file()
+
+        if type == 'existing':
+            shutil.copy(self.spd.db_loc, os.path.expanduser('~') + '/sermon_prep_database.db.old')
+            result = self.ask_for_file(self.spd.db_loc)
+        else:
+            result = self.ask_for_file()
+
         if result == 1:
             self.setWindowTitle('Importing Records')
             self.setModal(True)
@@ -60,19 +66,24 @@ class ConvertDatabase(QDialog):
             self.show()
             self.convert_database()
 
-    def ask_for_file(self):
+    def ask_for_file(self, file=None):
         """
         Method to create a QFileDialog to ask for the user's old database file
         """
-        dialog = QFileDialog()
-        dialog.setWindowTitle('Select Database')
-        dialog.setNameFilter('Database File (*.db)')
-        dialog.setFileMode(QFileDialog.ExistingFile)
-        dialog.setDirectory(os.path.expanduser('~'))
+        if not file:
+            dialog = QFileDialog()
+            dialog.setWindowTitle('Select Database')
+            dialog.setNameFilter('Database File (*.db)')
+            dialog.setFileMode(QFileDialog.ExistingFile)
+            dialog.setDirectory(os.path.expanduser('~'))
 
-        dialog.exec()
+            dialog.exec()
+            if not dialog.selectedFiles():
+                file = None
+            else:
+                file = dialog.selectedFiles()[0]
 
-        if not dialog.selectedFiles():  # create a new database if user didn't choose a file
+        if not file:  # create a new database if user didn't choose a file or file wasn't provided
             self.spd.write_to_log('ConvertDatabase.__init__: No file selected')
 
             app_dir = os.path.expanduser('~') + '/AppData/Roaming/Sermon Prep Database'
@@ -89,29 +100,33 @@ class ConvertDatabase(QDialog):
             )
             return 0
         else:
-            file_location = dialog.selectedFiles()[0]
-            self.spd.write_to_log('ConvertDatabase.__init__: Converting database from ' + file_location)
+            # if the database's user_settings table has the line_spacing column, this database doesn't need to be
+            # converted
+            if not self.spd.check_line_spacing == -1:
+                shutil.copy(file, self.spd.db_loc)
+            else:
+                self.spd.write_to_log('ConvertDatabase.__init__: Converting database from ' + file)
 
-            # retrieve all the data from the user's previous database
-            # do this first in case the old database is the same name and location as self.spd.db_loc
-            conn = sqlite3.connect(file_location)
-            cur = conn.cursor()
-            sql = 'SELECT * FROM sermon_prep_database'
-            results = cur.execute(sql)
-            self.all_data = results.fetchall()
+                # retrieve all the data from the user's previous database
+                # do this first in case the old database is the same name and location as self.spd.db_loc
+                conn = sqlite3.connect(file)
+                cur = conn.cursor()
+                sql = 'SELECT * FROM sermon_prep_database'
+                results = cur.execute(sql)
+                self.all_data = results.fetchall()
 
-            if not exists(self.spd.app_dir):
-                os.mkdir(self.spd.app_dir)
+                if not exists(self.spd.app_dir):
+                    os.mkdir(self.spd.app_dir)
 
-            shutil.copy(self.spd.cwd + 'resources/database_template.db', self.spd.db_loc)
+                shutil.copy(self.spd.cwd + 'resources/database_template.db', self.spd.db_loc)
 
-            # remove the new user introduction record from the database template
-            conn = sqlite3.connect(self.spd.db_loc)
-            cur = conn.cursor()
-            sql = 'DELETE FROM sermon_prep_database WHERE ID = 1'  # remove the initial entry from the database template
-            cur.execute(sql)
-            conn.commit()
-            return 1
+                # remove the new user introduction record from the database template
+                conn = sqlite3.connect(self.spd.db_loc)
+                cur = conn.cursor()
+                sql = 'DELETE FROM sermon_prep_database WHERE ID = 1'  # remove the initial entry from the database template
+                cur.execute(sql)
+                conn.commit()
+                return 1
 
     def convert_database(self):
         try:

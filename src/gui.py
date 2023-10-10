@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.5)
+This file is a part of the Sermon Prep Database program (v.4.0.6)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -30,8 +30,7 @@ import sys
 from os.path import exists
 
 from PyQt5.QtCore import Qt, QSize, QDate, QDateTime, pyqtSignal, QObject
-from PyQt5.QtGui import QIcon, QFont, QKeyEvent, QTextCursor, QStandardItemModel, QStandardItem, QPixmap, \
-    QTextBlockFormat, QAbstractTextDocumentLayout
+from PyQt5.QtGui import QIcon, QFont, QTextCursor, QStandardItemModel, QStandardItem, QPixmap
 from PyQt5.QtWidgets import QBoxLayout, QWidget, QUndoStack, QMessageBox, QTabWidget, QGridLayout, QLabel, QLineEdit, \
     QCheckBox, QDateEdit, QTextEdit, QAction, QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QTableView, QLayout
 from symspellpy import Verbosity
@@ -87,9 +86,9 @@ class GUI(QObject):
         self.standard_font = QFont(self.font_family, int(self.font_size))
         self.bold_font = QFont(self.font_family, int(self.font_size), QFont.Bold)
         try:
-            self.line_spacing = self.spd.user_settings[28]
+            self.spd.line_spacing = str(self.spd.user_settings[28])
         except IndexError:
-            self.line_spacing = 1
+            self.spd.line_spacing = '1'
 
         self.win = Win(self)
         icon_pixmap = QPixmap(self.spd.cwd + 'resources/svg/spIcon.svg')
@@ -120,7 +119,8 @@ class GUI(QObject):
 
     def check_for_db(self):
         """
-        Check if the database file exists. Prompt to import an existing database or create a new database if not.
+        Check if the database file exists. Prompt to import an existing database or create a new database if not. If
+        it exists, but does not include the line_spacing column in the user_settings table, then it is an old version.
         """
         if not exists(self.spd.db_loc):
             response = QMessageBox.question(
@@ -142,6 +142,23 @@ class GUI(QObject):
                 self.spd.app.processEvents()
             else:
                 quit(0)
+        else:
+            # check that the existing database is in the new format
+            result = self.spd.check_line_spacing()
+            if result == -1:
+                response = QMessageBox.question(
+                    None,
+                    'Old Database Found',
+                    'It appears that you are upgrading from a previous version of Sermon Prep Database. Your database'
+                    'file will need to be upgraded before you can continue. Upgrade now?',
+                    QMessageBox.Yes | QMessageBox.No
+                )
+
+                if response == QMessageBox.Yes:
+                    from convert_database import ConvertDatabase
+                    ConvertDatabase(self.spd, 'existing')
+                else:
+                    quit(0)
 
         self.spd.write_to_log('checkForDB completed')
     
@@ -731,11 +748,12 @@ class CustomTextEdit(QTextEdit):
         navigating using arrow keys, check the whole text to see if user has changed previously misspelled words.
         """
         arrow_keys = [Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down]
-        if evt.key() == Qt.Key_Space or evt.key() == Qt.Key_Return or evt.key() == Qt.Key_Enter:
-            self.check_previous_word()
+        if not self.gui.spd.disable_spell_check:
+            if evt.key() == Qt.Key_Space or evt.key() == Qt.Key_Return or evt.key() == Qt.Key_Enter:
+                self.check_previous_word()
 
-        if self.spelling_errors_present and evt.key() in arrow_keys:
-            self.check_whole_text()
+            if self.spelling_errors_present and evt.key() in arrow_keys:
+                self.check_whole_text()
 
     def mouseReleaseEvent(self, evt):
         """
@@ -743,7 +761,7 @@ class CustomTextEdit(QTextEdit):
         If user is navigating using mouse clicks, check the whole text to see if user has changed previously misspelled
         words.
         """
-        if evt.button() == 1 and self.spelling_errors_present:
+        if evt.button() == 1 and self.spelling_errors_present and not self.gui.spd.disable_spell_check:
             self.check_whole_text()
 
     def changeEvent(self, evt):

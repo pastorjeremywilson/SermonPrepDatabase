@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.5)
+This file is a part of the Sermon Prep Database program (v.4.0.6)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -301,3 +301,5 @@ class GetFromDocx:
 
         self.gui.spd.insert_imports(errors, sermons)
         self.gui.close_import_splash.emit()
+
+        self.gui.tabbed_frame.setCurrentWidget(self.gui.sermon_frame)

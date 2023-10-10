@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.5)
+This file is a part of the Sermon Prep Database program (v.4.0.6)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -31,10 +31,11 @@ import sys
 from os.path import exists
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap
+from PyQt5.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap, QTextCursor
 from PyQt5.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableView, QPushButton, QColorDialog, \
     QTabWidget, QHBoxLayout, QComboBox, QTextBrowser, QDialog, QLineEdit, QTextEdit, QDateEdit, QMessageBox
 from pynput.keyboard import Key, Controller
+
 from top_frame import TopFrame
 from print_dialog import PrintDialog
 
@@ -665,7 +666,7 @@ class MenuBar:
         # provide two columns in the QTableView; one that will contain the labels as they are, the other to provide
         # an area to change the label's name
         model = QStandardItemModel(len(self.spd.user_settings), 2)
-        for i in range(len(self.spd.user_settings)):
+        for i in range(len(self.spd.user_settings) - 3):
             if i > 4:
                 item = QStandardItem(self.spd.user_settings[i])
                 item.setEditable(False)
@@ -753,20 +754,42 @@ class MenuBar:
         self.spd.write_color_changes()
 
     def disable_spell_check(self):
+        from src.gui import CustomTextEdit
         """
         Method to turn on or off the spell checking capabilities of the CustomTextEdit.
         """
         if self.disable_spell_check_action.isChecked():
             self.spd.disable_spell_check = True
             self.spd.write_spell_check_changes()
-        else: # if spell check is enabled after having been disabled at startup, the dictionary will need to be loaded
+
+            # remove any red formatting created by spell check
+            for widget in self.gui.tabbed_frame.findChildren(QTextEdit, 'custom_text_edit'):
+                widget.blockSignals(True)
+
+                cursor = widget.textCursor()
+                cursor.select(QTextCursor.Document)
+
+                char_format = cursor.charFormat()
+                char_format.setForeground(Qt.black)
+                cursor.mergeCharFormat(char_format)
+                cursor.clearSelection()
+
+                widget.setTextCursor(cursor)
+
+                widget.blockSignals(False)
+
+        else:
+            # if spell check is enabled after having been disabled at startup, the dictionary will need to be loaded
             self.spd.disable_spell_check = False
             if not self.spd.sym_spell:
-                from dialogs import timed_popup
-                timed_popup('Please wait while the dictionary is loaded...', 5000, self.gui.accent_color)
-                self.spd.app.processEvents()
                 self.spd.load_dictionary()
             self.spd.write_spell_check_changes()
+
+            # run spell check on all CustomTextEdits
+            for widget in self.gui.tabbed_frame.findChildren(QTextEdit, 'custom_text_edit'):
+                widget.blockSignals(True)
+                widget.check_whole_text()
+                widget.blockSignals(False)
 
     def show_help(self):
         """
@@ -787,7 +810,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.4.0.5')
+        about_label = QLabel('Sermon Prep Database v.4.0.6')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 

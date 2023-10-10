@@ -3,7 +3,7 @@ Author: Jeremy G. Wilson
 
 Copyright: 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.5)
+This file is a part of the Sermon Prep Database program (v.4.0.6)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -183,14 +183,9 @@ class SermonPrepDatabase(QThread):
             result = cursor.execute('SELECT line_spacing FROM user_settings').fetchone()
             conn.close()
 
-            return result[0]
+            return str(result[0])
         except OperationalError:
-            cursor.execute('ALTER TABLE user_settings ADD line_spacing TEXT;')
-            conn.commit()
-            cursor.execute('UPDATE user_settings SET line_spacing=1.3 WHERE ID="1";')
-            conn.commit()
-            conn.close()
-            return False
+            return -1
 
     def write_spell_check_changes(self):
         """
@@ -203,7 +198,7 @@ class SermonPrepDatabase(QThread):
         else:
             cursor.execute('UPDATE user_settings SET disable_spell_check=0 WHERE ID="1";')
         conn.commit()
-        conn.close
+        conn.close()
 
     def write_auto_fill_changes(self):
         """
@@ -216,7 +211,7 @@ class SermonPrepDatabase(QThread):
         else:
             cursor.execute('UPDATE user_settings SET auto_fill=0 WHERE ID="1";')
         conn.commit()
-        conn.close
+        conn.close()
 
     def write_line_spacing_changes(self):
         """
@@ -226,7 +221,7 @@ class SermonPrepDatabase(QThread):
         cursor = conn.cursor()
         cursor.execute('UPDATE user_settings SET line_spacing=' + self.line_spacing + ' WHERE ID="1";')
         conn.commit()
-        conn.close
+        conn.close()
 
     def load_dictionary(self):
         """
@@ -270,6 +265,8 @@ class SermonPrepDatabase(QThread):
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
         results = cur.execute('SELECT ID FROM sermon_prep_database').fetchall()
+        conn.close()
+
         for item in results:
             self.ids.append(item[0])
 
@@ -282,6 +279,8 @@ class SermonPrepDatabase(QThread):
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
         results = cur.execute('SELECT date FROM sermon_prep_database').fetchall()
+        conn.close()
+
         for item in results:
             self.dates.append(item[0])
 
@@ -294,6 +293,7 @@ class SermonPrepDatabase(QThread):
         cur = conn.cursor()
         self.references = cur.execute(
             'SELECT sermon_reference, ID FROM sermon_prep_database ORDER BY sermon_reference').fetchall()
+        conn.close()
 
     def get_user_settings(self):
         """
@@ -302,6 +302,7 @@ class SermonPrepDatabase(QThread):
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
         self.user_settings = cur.execute('SELECT * FROM user_settings').fetchall()[0]
+        conn.close()
 
     def backup_db(self):
         """
@@ -338,6 +339,8 @@ class SermonPrepDatabase(QThread):
         cur = conn.cursor()
         cur.execute(sql)
         conn.commit()
+        conn.close()
+
         self.get_user_settings()
 
     def write_font_changes(self, family, size):
@@ -352,6 +355,8 @@ class SermonPrepDatabase(QThread):
         cur = conn.cursor()
         cur.execute(sql)
         conn.commit()
+        conn.close()
+
         self.get_user_settings()
 
     # save user's label changes to the database
@@ -370,6 +375,8 @@ class SermonPrepDatabase(QThread):
         cur = conn.cursor()
         cur.execute(sql)
         conn.commit()
+        conn.close()
+
         self.get_user_settings()
 
     def get_record_data(self):
@@ -380,6 +387,8 @@ class SermonPrepDatabase(QThread):
         cur = conn.cursor()
         results = cur.execute("SELECT * FROM sermon_prep_database WHERE ID = " + str(self.ids[self.current_rec_index]))
         record = results.fetchall()
+        conn.close()
+
         return record
 
     def get_by_index(self, index):
@@ -408,6 +417,8 @@ class SermonPrepDatabase(QThread):
             cur = conn.cursor()
             results = cur.execute("SELECT * FROM sermon_prep_database WHERE ID = " + str(self.ids[index]))
             record = results.fetchall()
+            conn.close()
+
             self.gui.fill_values(record)
 
             if index == 0:
@@ -488,6 +499,7 @@ class SermonPrepDatabase(QThread):
             cur = conn.cursor()
             cur.execute(sql)
             conn.commit()
+            conn.close()
 
             from dialogs import timed_popup
             timed_popup('Record Saved', 1000, self.gui.accent_color)
@@ -596,8 +608,9 @@ class SermonPrepDatabase(QThread):
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
         all_data = cur.execute('SELECT * FROM sermon_prep_database').fetchall()
-        found_ids = []
+        conn.close()
 
+        found_ids = []
         #search first for the full search text
         add_item = True
         for line in all_data:
@@ -743,6 +756,7 @@ class SermonPrepDatabase(QThread):
             cur = conn.cursor()
             cur.execute(sql)
             conn.commit()
+            conn.close()
 
             import time
             time.sleep(0.5)  # prevent a database lock, just in case SQLite takes a bit to update
@@ -781,6 +795,7 @@ class SermonPrepDatabase(QThread):
             cur = conn.cursor()
             cur.execute(sql)
             conn.commit()
+            conn.close()
 
             self.get_ids()
             self.get_date_list()
