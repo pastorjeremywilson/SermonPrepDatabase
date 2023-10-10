@@ -3,7 +3,7 @@ Author: Jeremy G. Wilson
 
 Copyright: 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.6)
+This file is a part of the Sermon Prep Database program (v.4.0.7)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -23,9 +23,7 @@ licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
 """
 
-import logging
 import os
-import pickle
 import re
 import sqlite3
 import sys
@@ -1009,7 +1007,12 @@ class LoadingBox(QDialog):
             self.spd = SermonPrepDatabase()
             self.spd.app = app
 
-            self.spd.cwd = os.getcwd().replace('\\', '/')
+            if exists(os.getcwd() + '/_internal'):
+                self.spd.cwd = os.getcwd() + '/_internal/'
+                self.spd.cwd = self.spd.cwd.replace('\\', '/')
+            else:
+                self.spd.cwd = os.getcwd().replace('\\', '/')
+
             if str(self.spd.cwd).endswith('src'):
                 self.spd.cwd = self.spd.cwd.replace('src', '')
             else:
