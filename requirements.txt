@@ -1,0 +1,4 @@
+PyQt5~=5.15.9
+symspellpy~=6.7.7
+pynput~=1.7.6
+WMI~=1.5.1

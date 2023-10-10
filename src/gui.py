@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.0)
+This file is a part of the Sermon Prep Database program (v.4.0.7)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -30,17 +30,23 @@ import sys
 from os.path import exists
 
 from PyQt5.QtCore import Qt, QSize, QDate, QDateTime, pyqtSignal, QObject
-from PyQt5.QtGui import QIcon, QFont, QKeyEvent, QTextCursor, QStandardItemModel, QStandardItem, QPixmap
+from PyQt5.QtGui import QIcon, QFont, QTextCursor, QStandardItemModel, QStandardItem, QPixmap
 from PyQt5.QtWidgets import QBoxLayout, QWidget, QUndoStack, QMessageBox, QTabWidget, QGridLayout, QLabel, QLineEdit, \
-    QCheckBox, QDateEdit, QTextEdit, QAction, QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QTableView
+    QCheckBox, QDateEdit, QTextEdit, QAction, QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QTableView, QLayout
 from symspellpy import Verbosity
 
-from getScripture import GetScripture
-from MenuBar import MenuBar
-from TopFrame import TopFrame
+from get_scripture import GetScripture
+from menu_bar import MenuBar
+from top_frame import TopFrame
 
 
 class GUI(QObject):
+    """
+    GUI handles all the operations from the user interface. It builds the QT window and elements and requires the
+    SermonPrepDatabase object in order to access its methods.
+
+    :param SermonPrepDatabase spd: SermonPrepDatabase object
+    """
     spd = None
     win = None
     undo_stack = None
@@ -55,12 +61,18 @@ class GUI(QObject):
     close_import_splash = pyqtSignal()
     
     def __init__(self, spd):
+        """
+        Attach SermonPrepDatabase object to self, run a check on the database file, and initiate the QT GUI
+        """
         super().__init__()
         self.spd = spd
         self.check_for_db()
         self.init_components()
 
     def init_components(self):
+        """
+        Builds the QT GUI, also using elements from menu_bar.py, top_frame.py, and print_dialog.py
+        """
         self.spd.get_ids()
         self.spd.get_date_list()
         self.spd.get_scripture_list()
@@ -73,9 +85,13 @@ class GUI(QObject):
         self.font_size = self.spd.user_settings[4]
         self.standard_font = QFont(self.font_family, int(self.font_size))
         self.bold_font = QFont(self.font_family, int(self.font_size), QFont.Bold)
+        try:
+            self.spd.line_spacing = str(self.spd.user_settings[28])
+        except IndexError:
+            self.spd.line_spacing = '1'
 
         self.win = Win(self)
-        icon_pixmap = QPixmap(self.spd.cwd + 'resources/icon.png')
+        icon_pixmap = QPixmap(self.spd.cwd + 'resources/svg/spIcon.svg')
         self.win.setWindowIcon(QIcon(icon_pixmap))
 
         self.layout = QBoxLayout(QBoxLayout.TopToBottom)
@@ -101,8 +117,11 @@ class GUI(QObject):
 
         self.win.showMaximized()
 
-    # check if the database file exists, and that the user_settings table exists. Prompt to create new if not.
     def check_for_db(self):
+        """
+        Check if the database file exists. Prompt to import an existing database or create a new database if not. If
+        it exists, but does not include the line_spacing column in the user_settings table, then it is an old version.
+        """
         if not exists(self.spd.db_loc):
             response = QMessageBox.question(
                 None,
@@ -114,24 +133,50 @@ class GUI(QObject):
             )
 
             if response == QMessageBox.Yes:
-                from ConvertDatabase import ConvertDatabase
+                from convert_database import ConvertDatabase
                 ConvertDatabase(self.spd)
             elif response == QMessageBox.No:
+                # Create a new database in the user's App Data directory by copying the existing database template
                 shutil.copy(self.spd.cwd + 'resources/database_template.db', self.spd.db_loc)
                 QMessageBox.information(None, 'Database Created', 'A new database has been created.', QMessageBox.Ok)
                 self.spd.app.processEvents()
             else:
                 quit(0)
+        else:
+            # check that the existing database is in the new format
+            result = self.spd.check_line_spacing()
+            if result == -1:
+                response = QMessageBox.question(
+                    None,
+                    'Old Database Found',
+                    'It appears that you are upgrading from a previous version of Sermon Prep Database. Your database'
+                    'file will need to be upgraded before you can continue. Upgrade now?',
+                    QMessageBox.Yes | QMessageBox.No
+                )
+
+                if response == QMessageBox.Yes:
+                    from convert_database import ConvertDatabase
+                    ConvertDatabase(self.spd, 'existing')
+                else:
+                    quit(0)
 
         self.spd.write_to_log('checkForDB completed')
     
     def build_tabbed_frame(self):
+        """
+        Create a QTabWidget
+        """
         self.tabbed_frame = QTabWidget()
         self.tabbed_frame.setTabPosition(QTabWidget.West)
         self.tabbed_frame.setIconSize(QSize(24, 24))
         self.layout.addWidget(self.tabbed_frame)
         
     def build_scripture_tab(self, insert=False):
+        """
+        Create a QWidget to hold the scripture tab's elements. Adds the elements.
+
+        :param boolean insert: If other tabs already exist, insert tab at position 0.
+        """
         self.scripture_frame = QWidget()
         self.scripture_frame.setStyleSheet('background-color: ' + self.background_color)
         self.scripture_frame_layout = QGridLayout()
@@ -187,17 +232,20 @@ class GUI(QObject):
             self.tabbed_frame.insertTab(
                 0,
                 self.scripture_frame,
-                QIcon(self.spd.cwd + 'resources/scriptureIcon.png'),
+                QIcon(self.spd.cwd + 'resources/svg/spScriptureIcon.svg'),
                 'Scripture'
             )
         else:
             self.tabbed_frame.addTab(
                 self.scripture_frame,
-                QIcon(self.spd.cwd + 'resources/scriptureIcon.png'),
+                QIcon(self.spd.cwd + 'resources/svg/spScriptureIcon.svg'),
                 'Scripture'
             )
         
     def build_exegesis_tab(self):
+        """
+        Create a QWidget to hold the exegesis tab's elements. Adds the elements.
+        """
         self.exegesis_frame = QWidget()
         self.exegesis_frame_layout = QGridLayout()
         self.exegesis_frame_layout.setColumnMinimumWidth(1, 20)
@@ -260,9 +308,12 @@ class GUI(QObject):
         scripture_box = ScriptureBox(self.background_color)
         self.exegesis_frame_layout.addWidget(scripture_box, 0, 6, 8, 1)
         
-        self.tabbed_frame.addTab(self.exegesis_frame, QIcon(self.spd.cwd + 'resources/exegIcon.png'), 'Exegesis')
+        self.tabbed_frame.addTab(self.exegesis_frame, QIcon(self.spd.cwd + 'resources/svg/spExegIcon.svg'), 'Exegesis')
         
     def build_outline_tab(self):
+        """
+        Create a QWidget to hold the outline tab's elements. Adds the elements.
+        """
         self.outline_frame = QWidget()
         self.outline_frame_layout = QGridLayout()
         self.outline_frame_layout.setColumnMinimumWidth(1, 20)
@@ -294,9 +345,12 @@ class GUI(QObject):
         scripture_box = ScriptureBox(self.background_color)
         self.outline_frame_layout.addWidget(scripture_box, 0, 6, 5, 1)
 
-        self.tabbed_frame.addTab(self.outline_frame, QIcon(self.spd.cwd + 'resources/outlineIcon.png'), 'Outlines')
+        self.tabbed_frame.addTab(self.outline_frame, QIcon(self.spd.cwd + 'resources/svg/spOutlineIcon.svg'), 'Outlines')
         
     def build_research_tab(self):
+        """
+        Create a QWidget to hold the research tab's elements. Adds the elements.
+        """
         self.research_frame = QWidget()
         self.research_frame_layout = QGridLayout()
         self.research_frame.setLayout(self.research_frame_layout)
@@ -306,16 +360,19 @@ class GUI(QObject):
         self.research_frame_layout.addWidget(research_label, 0, 0)
         
         research_text = CustomTextEdit(self.win, self)
-        research_text.setObjectName('research')
+        research_text.setObjectName('custom_text_edit')
         research_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(research_text))
         self.research_frame_layout.addWidget(research_text, 1, 0)
 
         scripture_box = ScriptureBox(self.background_color)
         self.research_frame_layout.addWidget(scripture_box, 0, 2, 2, 1)
         
-        self.tabbed_frame.addTab(self.research_frame, QIcon(self.spd.cwd + 'resources/researchIcon.png'), 'Research')
+        self.tabbed_frame.addTab(self.research_frame, QIcon(self.spd.cwd + 'resources/svg/spResearchIcon.svg'), 'Research')
         
     def build_sermon_tab(self):
+        """
+        Create a QWidget to hold the sermon tab's elements. Adds the elements.
+        """
         self.sermon_frame = QWidget()
         self.sermon_frame_layout = QGridLayout()
         self.sermon_frame.setLayout(self.sermon_frame_layout)
@@ -372,9 +429,14 @@ class GUI(QObject):
         scripture_box = ScriptureBox(self.background_color)
         self.sermon_frame_layout.addWidget(scripture_box, 0, 9, 8, 1)
         
-        self.tabbed_frame.addTab(self.sermon_frame, QIcon(self.spd.cwd + 'resources/sermonIcon.png'), 'Sermon')
+        self.tabbed_frame.addTab(self.sermon_frame, QIcon(self.spd.cwd + 'resources/svg/spSermonIcon.svg'), 'Sermon')
 
     def set_style_sheets(self):
+        """
+        Applies predetermined style sheets to self.tabbed_frame as well as each tab's QWidget. Also makes font changes
+        to the TopFrame. Customizes the styles with the user's background color, accent color, font family, and font
+        size.
+        """
         self.tabbed_frame.setStyleSheet('''
             QTabWidget::pane {
                 border: 50px solid ''' + self.background_color + ''';}
@@ -416,17 +478,47 @@ class GUI(QObject):
                 padding: 3px;
                 border: 1px solid ''' + self.accent_color + ''';}
             ''')
+        # anything larger than 12 is too big for the top frame
+        if int(self.font_size) <= 12:
+            size = self.font_size
+        else:
+            size = 12
+
+        top_frame_style_sheet = ('''
+            QLabel {
+                font-family: "''' + self.font_family + '''";
+                font-size: ''' + str(size) + '''pt;}
+            QLineEdit {
+                background-color: white;
+                font-family: "''' + self.font_family + '''";
+                font-size: ''' + str(size) + '''pt;
+                padding: 3px;
+                border: 1px solid ''' + self.accent_color + ''';}
+            QComboBox {
+                background-color: white;
+                font-family: "''' + self.font_family + '''";
+                font-size: ''' + str(size) + '''pt;
+                padding: 3px;
+                border: 1px solid ''' + self.accent_color + ''';}
+            ''')
 
         self.scripture_frame.setStyleSheet(standard_style_sheet)
         self.exegesis_frame.setStyleSheet(standard_style_sheet)
         self.outline_frame.setStyleSheet(standard_style_sheet)
         self.research_frame.setStyleSheet(standard_style_sheet)
         self.sermon_frame.setStyleSheet(standard_style_sheet)
+        self.top_frame.setStyleSheet(top_frame_style_sheet)
 
         for component in self.tabbed_frame.findChildren(CustomTextEdit, 'custom_text_edit'):
             component.document().setDefaultFont(QFont(self.font_family, int(self.font_size)))
 
     def set_style_buttons(self, component):
+        """
+        Method for changing the GUI's style buttons (bold, italic, underline, bullets) based on where the cursor is
+        located.
+
+        :param QObject component: the QObject (CustomTextEdit) that is currently being used.
+        """
         cursor = component.textCursor()
         font = cursor.charFormat().font()
         if font.weight() == QFont.Normal:
@@ -449,6 +541,11 @@ class GUI(QObject):
             self.top_frame.bullet_button.setChecked(False)
         
     def fill_values(self, record):
+        """
+        Takes all the values from the currently accessed record and places them in their proper elements in the GUI.
+
+        :param list of str record: a list whose first element is a list of values in their proper order.
+        """
         index = 1
         self.win.setWindowTitle('Sermon Prep Database - ' + str(record[0][17]) + ' - ' + str(record[0][3]))
         for i in range(self.scripture_frame_layout.count()):
@@ -462,36 +559,32 @@ class GUI(QObject):
             elif isinstance(component, CustomTextEdit):
                 component.clear()
                 if record[0][index]:
-                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     component.check_whole_text()
                 index += 1
         for i in range(self.exegesis_frame_layout.count()):
             component = self.exegesis_frame_layout.itemAt(i).widget()
-            if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
+            if isinstance(component, CustomTextEdit) and not component.objectName() == 'text_box':
+                component.clear()
                 if record[0][index]:
-                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     component.check_whole_text()
-                else:
-                    component.clear()
                 index += 1
         for i in range(self.outline_frame_layout.count()):
             component = self.outline_frame_layout.itemAt(i).widget()
-            if isinstance(component, QTextEdit) and not component.objectName() == 'text_box':
+            if isinstance(component, CustomTextEdit) and not component.objectName() == 'text_box':
+                component.clear()
                 if record[0][index]:
-                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     component.check_whole_text()
-                else:
-                    component.clear()
                 index += 1
         for i in range(self.research_frame_layout.count()):
             component = self.research_frame_layout.itemAt(i).widget()
-            if isinstance(component, QTextEdit):
+            if isinstance(component, CustomTextEdit):
+                component.clear()
                 if record[0][index]:
-                    text = self.spd.reformat_string_for_load(record[0][index])
-                    component.setMarkdown(text.strip())
+                    component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     component.check_whole_text()
-                else:
-                    component.clear()
                 index += 1
         for i in range(self.sermon_frame_layout.count()):
             component = self.sermon_frame_layout.itemAt(i).widget()
@@ -505,6 +598,9 @@ class GUI(QObject):
             if isinstance(component, QDateEdit):
                 date = record[0][index]
                 unusable_date = False
+
+                # Check for common date delimiters. If they don't exist, don't use the date.
+                # Switch this to Python's native date parsing in the future.
                 if '/' in date:
                     date_split = date.split('/')
                 elif '\\' in date:
@@ -524,11 +620,10 @@ class GUI(QObject):
                 index += 1
 
             if isinstance(component, CustomTextEdit):
+                component.clear()
                 if record[0][index]:
-                    component.setMarkdown(record[0][index].replace('&quot', '"').strip())
+                    component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     component.check_whole_text()
-                else:
-                    component.clear()
                 index += 1
 
             if component.objectName() == 'text_box':
@@ -549,9 +644,17 @@ class GUI(QObject):
         self.changes = False
 
     def changes_detected(self):
+        """
+        Simply sets self.changes to True
+        """
         self.changes = True
 
     def reference_changes(self):
+        """
+        When the sermon text reference TextEdit is changed, reflect those changes in the references combobox, the
+        optional sermon text box on each tab, and on the MainWindow's title. If user has imported a bible and has auto
+        fill turned on, use GetScripture to fill the sermon text TextEdit.
+        """
         try:
             self.top_frame.references_cb.setItemText(self.top_frame.references_cb.currentIndex(), self.sermon_reference_field.text())
             self.win.setWindowTitle('Sermon Prep Database - ' + self.sermon_date_edit.text() + ' - ' + self.sermon_reference_field.text())
@@ -578,6 +681,9 @@ class GUI(QObject):
             logging.exception(str(ex), True)
 
     def auto_fill(self):
+        """
+        Method to change the self.spd.auto_fill value based on user input then save that change to the database.
+        """
         if self.auto_fill_checkbox.isChecked():
             self.spd.auto_fill = True
             self.spd.write_auto_fill_changes()
@@ -586,6 +692,10 @@ class GUI(QObject):
             self.spd.write_auto_fill_changes()
 
     def text_changes(self):
+        """
+        Method to fill the optional sermon text box on each tab with scripture when the Scripture Text text is
+        changed
+        """
         num_tabs = self.tabbed_frame.count()
         for i in range(num_tabs):
             if i > 0:
@@ -595,12 +705,18 @@ class GUI(QObject):
                 text_edit.setText(self.sermon_text_edit.toPlainText())
 
     def date_changes(self):
+        """
+        Method to change the dates combobox and window title to reflect changes made to the sermon date.
+        """
         self.top_frame.dates_cb.setItemText(self.top_frame.dates_cb.currentIndex(), self.sermon_date_edit.text())
         self.win.setWindowTitle(
             'Sermon Prep Database - ' + self.sermon_date_edit.text() + ' - ' + self.sermon_reference_field.text())
         self.changes = True
 
     def do_exit(self):
+        """
+        Method to ask if changes are to be saved before exiting the program.
+        """
         goon = True
         if self.changes:
             goon = self.spd.ask_save()
@@ -608,22 +724,59 @@ class GUI(QObject):
             sys.exit(0)
 
 class CustomTextEdit(QTextEdit):
+    """
+    CustomTextEdit is an implementation of QTextEdit that adds spell-checking capabilities. Two different types of
+    spell checking are done depending on user input and current spell-check state: check previous word, or check
+    whole text. Also modifies the standard context menu to include spell check suggestions and an option to remove
+    extra white space from the text.
+
+    :param QMainWindow win: GUI's Main Window
+    :param GUI gui: The GUI object
+    """
     def __init__(self, win, gui):
         super().__init__()
         self.setObjectName('custom_text_edit')
         self.win = win
         self.gui = gui
         self.textChanged.connect(self.gui.changes_detected)
+        self.spelling_errors_present = False
 
     def keyReleaseEvent(self, evt):
-        if evt.key() == Qt.Key_Space or evt.key() == Qt.Key_Return or evt.key() == Qt.Key_Enter:
-            self.check_previous_word()
+        """
+        @override
+        During normal word completion events like space or enter, check the previous word's spelling. If user is
+        navigating using arrow keys, check the whole text to see if user has changed previously misspelled words.
+        """
+        arrow_keys = [Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down]
+        if not self.gui.spd.disable_spell_check:
+            if evt.key() == Qt.Key_Space or evt.key() == Qt.Key_Return or evt.key() == Qt.Key_Enter:
+                self.check_previous_word()
+
+            if self.spelling_errors_present and evt.key() in arrow_keys:
+                self.check_whole_text()
+
+    def mouseReleaseEvent(self, evt):
+        """
+        @override
+        If user is navigating using mouse clicks, check the whole text to see if user has changed previously misspelled
+        words.
+        """
+        if evt.button() == 1 and self.spelling_errors_present and not self.gui.spd.disable_spell_check:
+            self.check_whole_text()
 
     def changeEvent(self, evt):
+        """
+        @override
+        Set self.gui.changes to true.
+        """
         self.gui.changes = True
 
     def check_previous_word(self):
-        self.blockSignals(True)
+        """
+        Method to spell-check the word previous to the user's cursor. Skips over punctuation if that is the first
+        previous "word" found.
+        """
+        self.blockSignals(True) # we don't want changeevent fired while manipulating for spell check
         punctuations = [',', '.', '?', '!', ')', ';', ':', '-']
 
         cursor = self.textCursor()
@@ -633,15 +786,12 @@ class CustomTextEdit(QTextEdit):
         word = cursor.selection().toPlainText()
         for punctuation in punctuations:
             if word == punctuation:
-                print('Word is punctuation')
                 cursor.clearSelection()
                 cursor.movePosition(QTextCursor.PreviousWord)
                 cursor.movePosition(QTextCursor.PreviousWord)
                 cursor.select(cursor.WordUnderCursor)
                 word = cursor.selection().toPlainText()
                 break
-
-        print('Previous Word:', word)
 
         # if there's an apostrophe, check the next two characters for contraction letters
         if cursor.selection().toPlainText().endswith('\''):
@@ -662,22 +812,31 @@ class CustomTextEdit(QTextEdit):
 
             if suggestions:
                 char_format = cursor.charFormat()
+                # if the first suggestion is the same as the word, then it's not spelled wrong
                 if not suggestions[0].term == cleaned_word:
                     char_format.setForeground(Qt.red)
                     cursor.mergeCharFormat(char_format)
-
+                    self.spelling_errors_present = True
                 else:
-                    if char_format.foreground() == Qt.red:
-                        char_format.setForeground(Qt.black)
-                        cursor.mergeCharFormat(char_format)
+                    char_format.setForeground(Qt.black)
+                    cursor.mergeCharFormat(char_format)
 
         cursor.clearSelection()
         cursor.movePosition(QTextCursor.NextWord)
 
+        char_format = cursor.charFormat()
+        char_format.setForeground(Qt.black)
+        cursor.mergeCharFormat(char_format)
+        self.setTextCursor(cursor)
+
         self.blockSignals(False)
 
     def check_whole_text(self):
+        """
+        Method to check every word in this QTextEdit for spelling errors.
+        """
         self.blockSignals(True)
+        self.spelling_errors_present = False
 
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.Start)
@@ -717,6 +876,7 @@ class CustomTextEdit(QTextEdit):
                     if not suggestions[0].term == cleaned_word:
                         char_format.setForeground(Qt.red)
                         cursor.mergeCharFormat(char_format)
+                        self.spelling_errors_present = True
 
                     else:
                         if char_format.foreground() == Qt.red:
@@ -731,8 +891,14 @@ class CustomTextEdit(QTextEdit):
 
         self.blockSignals(False)
 
-    def contextMenuEvent(self, e):
+    def contextMenuEvent(self, evt):
+        """
+        @override
+        Alters the standard context menu of this QTextEdit to include a list of spell-check words as well as an option
+        to remove extraneous whitespace from the text.
+        """
         menu = self.createStandardContextMenu()
+        menu.setStyleSheet('QMenu::item:selected { background: white; color: black; }')
 
         clean_whitespace_action = QAction("Remove extra whitespace")
         clean_whitespace_action.triggered.connect(self.clean_whitespace)
@@ -740,12 +906,14 @@ class CustomTextEdit(QTextEdit):
         menu.insertSeparator(menu.actions()[1])
 
         if not self.gui.spd.disable_spell_check:
-            cursor = self.cursorForPosition(e.pos())
+            cursor = self.cursorForPosition(evt.pos())
             cursor.select(QTextCursor.WordUnderCursor)
             word = cursor.selection().toPlainText()
             if len(word) > 0:
                 cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
-                if cursor.selection().toPlainText().endswith('\''): # if there's an apostrophe, check the next two characters for contraction letters
+
+                # if there's an apostrophe, check the next two characters for contraction letters
+                if cursor.selection().toPlainText().endswith('\''):
                     cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
                     if re.search('[a-z]$', cursor.selection().toPlainText()):
                         word = cursor.selection().toPlainText()
@@ -753,15 +921,16 @@ class CustomTextEdit(QTextEdit):
                         if re.search('[a-z]$', cursor.selection().toPlainText()):
                             word = cursor.selection().toPlainText()
 
+                # Check to see if the original word is capitalized so that the replacement can also be capitalized
                 upper = False
                 if word[0].isupper():
                     upper = True
 
                 cleaned_word = self.clean_word(word)
-
                 suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
                                                             include_unknown=True)
 
+                next_menu_index = 1
                 if not suggestions[0].term == cleaned_word:
                     spell_actions = {}
 
@@ -777,16 +946,23 @@ class CustomTextEdit(QTextEdit):
                         spell_actions['action% s' % str(i)].triggered.connect(self.replace_word)
                         menu.insertAction(menu.actions()[i], spell_actions['action% s' % str(i)])
 
-                    menu.insertSeparator(menu.actions()[i + 1])
-                    action = QAction('Add to dictionary')
-                    action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, cleaned_word))
-                    menu.insertAction(menu.actions()[i + 2], action)
-                    menu.insertSeparator(menu.actions()[i + 3])
+                        next_menu_index = i + 1
 
-        menu.exec(e.globalPos())
+                menu.insertSeparator(menu.actions()[next_menu_index])
+                action = QAction('Add to dictionary')
+                action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, cleaned_word))
+                menu.insertAction(menu.actions()[next_menu_index + 2], action)
+                menu.insertSeparator(menu.actions()[next_menu_index + 3])
+
+        menu.exec(evt.globalPos())
         menu.close()
 
     def clean_word(self, word):
+        """
+        Method to strip any non-word characters as well as pluralizing apostrophes out of a word to be spell-checked.
+
+        :param str word: Word to be cleaned.
+        """
         chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_',
                  '\n', '\u2026', '\u201c', '\u201d']
         single_quotes = ['\u2018', '\u2019']
@@ -807,40 +983,48 @@ class CustomTextEdit(QTextEdit):
         if cleaned_word.endswith('\''):
             cleaned_word = cleaned_word[0:len(cleaned_word) - 1]
 
-        # there's a chance that utf-8-sig artifacts will be attatched to the word
+        # there's a chance that utf-8-sig artifacts will be attached to the word
         # encoding to utf-8 then decoding as ascii removes them
         cleaned_word = cleaned_word.encode('utf-8').decode('ascii', errors='ignore')
 
         return cleaned_word
 
     def replace_word(self):
+        """
+        Method to replace a misspelled word if the user chooses a replacement from the context menu.
+        """
         sender = self.sender()
         cursor = sender.data()[0]
         term = sender.data()[1]
 
         self.setTextCursor(cursor)
+        selected_word = self.textCursor().selectedText().strip()
+
+        # check if the original word includes punctuation so that it can be preserved
+        punctuation = ''
+        if not selected_word[len(selected_word) - 1].isalpha():
+            punctuation = selected_word[len(selected_word) - 1]
+
         self.textCursor().removeSelectedText()
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor)
         self.setTextCursor(cursor)
 
-        chars = ['.', ',', ';', ':', '?', '!', '"', '*', '-', '_', '\n', ' ', '\u2026', '\u201c', '\u201d', '\u2018', '\u2019']
-        add_space = True
-        for char in chars:
-            if self.textCursor().selectedText() == char:
-                add_space = False
-
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.PreviousCharacter, QTextCursor.MoveAnchor)
         self.setTextCursor(cursor)
 
-        if add_space:
-            self.textCursor().insertText(term + ' ')
+        if len(punctuation) > 0:
+            self.textCursor().insertText(term + punctuation)
         else:
-            self.textCursor().insertText(term)
-        self.changes()
+            self.textCursor().insertText(term + punctuation + ' ')
+
+        self.gui.changes = True
 
     def clean_whitespace(self):
+        """
+        Method to remove duplicate spaces and tabs from the document.
+        """
         component = self.win.focusWidget()
         if isinstance(component, QTextEdit):
             string = component.toMarkdown()
@@ -848,9 +1032,13 @@ class CustomTextEdit(QTextEdit):
             string = re.sub('\t+', '\t', string)
 
             component.setMarkdown(string)
-        self.changes()
+        self.gui.changes = True
 
 class Win(QMainWindow):
+    """
+    Win customizes QMainWindow in order to differently handle the closeEvent as well as add keyboard shortcut
+    functionality for the user.
+    """
     from PyQt5.QtGui import QCloseEvent
 
     def __init__(self, gui):
@@ -862,10 +1050,24 @@ class Win(QMainWindow):
         self.move(50, 50)
 
     def closeEvent(self, event:QCloseEvent) -> None:
+        """
+        @override
+        Ignore the closeEvent and run GUI's do_exit method instead.
+        """
         event.ignore()
         self.gui.do_exit()
 
-    def keyPressEvent(self, event:QKeyEvent):
+    def keyPressEvent(self, event):
+        """
+        Add keyboard shortcuts for common user tasks:
+            Ctrl-Shift-B: Turn on bullets
+            Ctrl-B: Bold
+            Ctrl-I: Italic
+            Ctrl-U: Underline
+            Ctrl-S: Save
+            Ctrl-P: Print
+            Ctrl-Q: Exit
+        """
         if (event.modifiers() & Qt.ControlModifier) and (event.modifiers() & Qt.ShiftModifier) and event.key() == Qt.Key_B:
             self.gui.top_frame.set_bullet()
             self.gui.top_frame.bullet_button.blockSignals(True)
@@ -907,6 +1109,11 @@ class Win(QMainWindow):
         event.accept()
 
 class ScriptureBox(QWidget):
+    """
+    Creates an independent QWidget that can be added or removed from layouts based on user's input.
+
+    :param str bgcolor: User's chosen background color
+    """
     def __init__(self, bgcolor):
         super().__init__()
         self.setObjectName('text_box')
@@ -928,11 +1135,21 @@ class ScriptureBox(QWidget):
         self.text_edit.clear()
 
 class SearchBox(QWidget):
+    """
+    Creates an independent QWidget to be added to the main tabbed widget when the user performs a search.
+
+    :param GUI gui: The GUI object
+    """
     def __init__(self, gui):
         self.gui = gui
         super().__init__()
 
     def show_results(self, result_list):
+        """
+        Method to build the results widget.
+
+        :param list of str result_list: The list containing each list of results from the search.
+        """
         results_widget_layout = QVBoxLayout()
         self.setLayout(results_widget_layout)
         self.setStyleSheet('''
@@ -947,7 +1164,8 @@ class SearchBox(QWidget):
                             background-color: white;
                             font-family: "Helvetica";
                             font-size: 16px;
-                            padding: 3px;}
+                            padding: 3px;
+                        }
                         ''')
 
         results_header = QWidget()
@@ -958,7 +1176,7 @@ class SearchBox(QWidget):
         header_layout.addWidget(results_label)
 
         close_button = QPushButton()
-        close_button.setIcon(QIcon(self.gui.spd.cwd + 'resources/closeIcon.png'))
+        close_button.setIcon(QIcon(self.gui.spd.cwd + 'resources/svg/spCloseIcon.svg'))
         close_button.setStyleSheet('background-color: ' + self.gui.accent_color)
         close_button.setToolTip('Close the search tab')
         close_button.pressed.connect(self.remove_self)
@@ -967,9 +1185,9 @@ class SearchBox(QWidget):
 
         results_widget_layout.addWidget(results_header)
 
+        # count the number of times the search term(s) was/were found in the record so that they can be sorted
         filtered_results = []
         for line in result_list:
-
             counter = 0
             for item in line[0]:
                 counter += 1
@@ -1024,6 +1242,13 @@ class SearchBox(QWidget):
                 filtered_results)) + ' results found.\nDouble-click a result below to open it.')
 
     def retrieve_selection(self, model, selection):
+        """
+        Method to pull up whichever record the user selects
+
+        :param QStandardItemModel model: The model applied to the results_table_view
+        :param int selection: The row number of the results_table_view that was double-clicked
+        """
+        # be sure to check for changes before pulling up the new record
         goon = True
         if self.gui.changes:
             goon = self.gui.spd.ask_save()
@@ -1038,6 +1263,9 @@ class SearchBox(QWidget):
             self.gui.tabbed_frame.setCurrentWidget(self.gui.tabbed_frame.widget(0))
 
     def remove_self(self):
+        """
+        Method to remove this widget's tab from the GUI's tabbed widget.
+        """
         self.gui.tabbed_frame.removeTab(5)
         self.gui.tabbed_frame.setCurrentWidget(self.gui.tabbed_frame.widget(0))
         self.destroy()
