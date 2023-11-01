@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.7)
+This file is a part of the Sermon Prep Database program (v.4.0.8)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -24,7 +24,8 @@ https://www.ghostscript.com/licensing/index.html for more information.
 """
 
 from PyQt5.QtCore import QSize, Qt, QTimer
-from PyQt5.QtWidgets import QDialog, QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QListWidget
+from PyQt5.QtWidgets import QDialog, QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QListWidget, \
+    QTextEdit
 
 
 def message_box(title, message, bg):
@@ -140,6 +141,7 @@ class RemoveCustomWords:
         :param SermonPrepDatabase spd: The SermonPrepDatabase object
         """
         self.changes = False
+        self.removed_words = []
 
         self.spd = spd
         self.widget = QWidget()
@@ -178,6 +180,7 @@ class RemoveCustomWords:
         Method to acknowledge that changes were made and to remove the word from the word list
         """
         self.changes = True
+        self.removed_words.append(self.word_list.currentItem().text())
         self.word_list.takeItem(self.word_list.currentRow())
 
     def close(self):
@@ -185,6 +188,7 @@ class RemoveCustomWords:
         If changes were made, write to the file. Close the widget.
         """
         if self.changes:
+            print('recording changes')
             lines = []
             file = open(self.spd.app_dir + '/custom_words.txt', 'w')
             try:
@@ -192,6 +196,15 @@ class RemoveCustomWords:
                     lines.append(self.word_list.item(r).text() + '\n')
                 file.writelines(lines)
                 file.close()
+
+                for word in self.removed_words:
+                    print(word)
+                    self.spd.sym_spell.delete_dictionary_entry(word)
+
+                from src.gui import CustomTextEdit
+                for widget in self.spd.gui.tabbed_frame.currentWidget().findChildren(QTextEdit):
+                    print(widget)
+                    widget.check_whole_text()
             except Exception as ex:
-                self.spd.write_to_log(ex, True)
+                self.spd.write_to_log(str(ex), True)
         self.widget.close()

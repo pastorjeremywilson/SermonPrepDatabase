@@ -14,9 +14,15 @@ Added line spacing to database template user settings.
 Added safeguard to check if existing database is in the proper format.
 Removed red words after disabling spell check.
 
+Changed date field font along with the rest.
+Keep 'changes' state the same after font change.
+Modify dictionary and recheck current widget after removing custom words(s).
+
 TO DO
 
 FOR LATER RELEASES
 Improve efficiency of spell checking, maybe by saving positions of misspelled words.
 Switch date recognition to native Python date parsing.
 Switch over to PyQt6
+Separate threading into spd and keep gui QApplication only
+Add Dark Theme

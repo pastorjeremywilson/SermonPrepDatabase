@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.7)
+This file is a part of the Sermon Prep Database program (v.4.0.8)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -56,14 +56,7 @@ class MenuBar:
         self.spd = spd
         menu_bar = self.win.menuBar()
 
-        menu_style = '''
-            QMenu { background: white; } 
-            QMenu:separator:hr { background-color: white; height: 0px; border-top: 1px solid black; margin: 5px } 
-            QMenu::item:unselected { background-color: white; } 
-            QMenu::item:selected { background: ''' + self.gui.background_color + '''; color: black; }'''
-
         file_menu = menu_bar.addMenu('File')
-        file_menu.setStyleSheet(menu_style)
         file_menu.setToolTipsVisible(True)
 
         save_action = file_menu.addAction('Save (Ctrl-S)')
@@ -100,7 +93,6 @@ class MenuBar:
         exit_action.triggered.connect(self.do_exit)
 
         edit_menu = menu_bar.addMenu('Edit')
-        edit_menu.setStyleSheet(menu_style)
         edit_menu.setToolTipsVisible(True)
 
         cut_action = edit_menu.addAction('Cut (Ctrl-X)')
@@ -136,6 +128,9 @@ class MenuBar:
 
         royal_color_action = color_menu.addAction('Royal Theme')
         royal_color_action.triggered.connect(lambda: self.color_change('royal'))
+
+        #dark_color_action = color_menu.addAction('Dark Theme')
+        #dark_color_action.triggered.connect(lambda: self.color_change('dark'))
 
         custom_color_menu = color_menu.addMenu('Custom Colors')
 
@@ -191,7 +186,6 @@ class MenuBar:
         self.disable_spell_check_action.triggered.connect(self.disable_spell_check)
 
         record_menu = menu_bar.addMenu('Record')
-        record_menu.setStyleSheet(menu_style)
         record_menu.setToolTipsVisible(True)
 
         first_rec_action = record_menu.addAction('Jump to First Record')
@@ -215,7 +209,6 @@ class MenuBar:
         del_rec_action.triggered.connect(self.spd.del_rec)
 
         help_menu = menu_bar.addMenu('Help')
-        help_menu.setStyleSheet(menu_style)
 
         help_action = help_menu.addAction('Help Topics')
         help_action.triggered.connect(self.show_help)
@@ -725,21 +718,38 @@ class MenuBar:
         if type == 'red':
             self.gui.accent_color = '#502020'
             self.gui.background_color = '#fff0f0'
+            self.gui.font_color = '#000000'
+            self.gui.text_background = '#ffffff'
         elif type == 'green':
             self.gui.accent_color = '#205020'
             self.gui.background_color = '#f0fff0'
+            self.gui.font_color = '#000000'
+            self.gui.text_background = '#ffffff'
         elif type == 'blue':
             self.gui.accent_color = '#202050'
             self.gui.background_color = '#f0f0ff'
+            self.gui.font_color = '#000000'
+            self.gui.text_background = '#ffffff'
         elif type == 'gold':
             self.gui.accent_color = '#808020'
             self.gui.background_color = '#fffff0'
+            self.gui.font_color = '#000000'
+            self.gui.text_background = '#ffffff'
         elif type == 'surf':
             self.gui.accent_color = '#208080'
             self.gui.background_color = '#f0ffff'
+            self.gui.font_color = '#000000'
+            self.gui.text_background = '#ffffff'
         elif type == 'royal':
             self.gui.accent_color = '#602080'
             self.gui.background_color = '#eff0ff'
+            self.gui.font_color = '#000000'
+            self.gui.text_background = '#ffffff'
+        elif type == 'dark':
+            self.gui.accent_color = 'rgb(0, 0, 0)'
+            self.gui.background_color = 'rgb(50, 50, 50)'
+            self.gui.font_color = 'rgb(200, 200, 200)'
+            self.gui.text_background = 'rgb(20, 20, 20)'
         elif type == 'bg':
             color_chooser = QColorDialog()
             new_color = color_chooser.getColor(QColor(self.gui.accent_color))
@@ -810,7 +820,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.4.0.7')
+        about_label = QLabel('Sermon Prep Database v.4.0.8')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 

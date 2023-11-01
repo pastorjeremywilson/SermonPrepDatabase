@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.7)
+This file is a part of the Sermon Prep Database program (v.4.0.8)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -30,9 +30,9 @@ import sys
 from os.path import exists
 
 from PyQt5.QtCore import Qt, QSize, QDate, QDateTime, pyqtSignal, QObject
-from PyQt5.QtGui import QIcon, QFont, QTextCursor, QStandardItemModel, QStandardItem, QPixmap
+from PyQt5.QtGui import QIcon, QFont, QTextCursor, QStandardItemModel, QStandardItem, QPixmap, QColor, QPalette
 from PyQt5.QtWidgets import QBoxLayout, QWidget, QUndoStack, QMessageBox, QTabWidget, QGridLayout, QLabel, QLineEdit, \
-    QCheckBox, QDateEdit, QTextEdit, QAction, QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QTableView, QLayout
+    QCheckBox, QDateEdit, QTextEdit, QAction, QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QTableView
 from symspellpy import Verbosity
 
 from get_scripture import GetScripture
@@ -83,6 +83,8 @@ class GUI(QObject):
         self.background_color = self.spd.user_settings[2]
         self.font_family = self.spd.user_settings[3]
         self.font_size = self.spd.user_settings[4]
+        self.font_color = self.spd.user_settings[29]
+        self.text_background = self.spd.user_settings[30]
         self.standard_font = QFont(self.font_family, int(self.font_size))
         self.bold_font = QFont(self.font_family, int(self.font_size), QFont.Bold)
         try:
@@ -96,7 +98,6 @@ class GUI(QObject):
 
         self.layout = QBoxLayout(QBoxLayout.TopToBottom)
         self.main_widget = QWidget()
-        self.main_widget.setStyleSheet('background-color: white;')
         self.win.setCentralWidget(self.main_widget)
         self.main_widget.setLayout(self.layout)
 
@@ -104,6 +105,7 @@ class GUI(QObject):
 
         self.menu_bar = MenuBar(self.win, self, self.spd)
         self.top_frame = TopFrame(self.win, self, self.spd)
+        self.top_frame.setObjectName('topFrame')
         self.layout.addWidget(self.top_frame)
 
         self.build_tabbed_frame()
@@ -167,6 +169,7 @@ class GUI(QObject):
         Create a QTabWidget
         """
         self.tabbed_frame = QTabWidget()
+        self.tabbed_frame.setObjectName('tabbedFrame')
         self.tabbed_frame.setTabPosition(QTabWidget.West)
         self.tabbed_frame.setIconSize(QSize(24, 24))
         self.layout.addWidget(self.tabbed_frame)
@@ -178,7 +181,6 @@ class GUI(QObject):
         :param boolean insert: If other tabs already exist, insert tab at position 0.
         """
         self.scripture_frame = QWidget()
-        self.scripture_frame.setStyleSheet('background-color: ' + self.background_color)
         self.scripture_frame_layout = QGridLayout()
         self.scripture_frame_layout.setColumnStretch(0, 1)
         self.scripture_frame_layout.setColumnStretch(1, 1)
@@ -437,6 +439,8 @@ class GUI(QObject):
         to the TopFrame. Customizes the styles with the user's background color, accent color, font family, and font
         size.
         """
+        current_changes_state = self.changes
+
         self.tabbed_frame.setStyleSheet('''
             QTabWidget::pane {
                 border: 50px solid ''' + self.background_color + ''';}
@@ -461,22 +465,34 @@ class GUI(QObject):
 
         standard_style_sheet = ('''
             QWidget {
-                background-color: ''' + self.background_color + ''';}
+                background-color: ''' + self.background_color + ''';
+                color: ''' + self.font_color + ''';}
             QLabel {
                 font-family: "''' + self.font_family + '''";
-                font-size: ''' + str(self.font_size) + '''pt;}
+                font-size: ''' + str(self.font_size) + '''pt;
+                color: ''' + self.font_color + ''';
+                background-color: ''' + self.background_color + ''';}
             QLineEdit {
-                background-color: white;
                 font-family: "''' + self.font_family + '''";
                 font-size: ''' + str(self.font_size) + '''pt;
                 padding: 3px;
-                border: 1px solid ''' + self.accent_color + ''';}
+                border: 1px solid ''' + self.accent_color + ''';
+                color: ''' + self.font_color + ''';
+                background-color: ''' + self.text_background + ''';}
             QTextEdit {
-                background-color: white;
                 font-family: "''' + self.font_family + '''";
                 font-size: ''' + str(self.font_size) + '''pt;
                 padding: 3px;
-                border: 1px solid ''' + self.accent_color + ''';}
+                border: 1px solid ''' + self.accent_color + ''';
+                color: ''' + self.font_color + ''';
+                background-color: ''' + self.text_background + ''';}
+            QDateEdit {
+                font-family: "''' + self.font_family + '''";
+                font-size: "''' + str(self.font_size) + '''";
+                padding: 3px;
+                border: 1px solid ''' + self.accent_color + ''';
+                color: ''' + self.font_color + ''';
+                background-color: ''' + self.text_background + ''';}
             ''')
         # anything larger than 12 is too big for the top frame
         if int(self.font_size) <= 12:
@@ -487,20 +503,56 @@ class GUI(QObject):
         top_frame_style_sheet = ('''
             QLabel {
                 font-family: "''' + self.font_family + '''";
-                font-size: ''' + str(size) + '''pt;}
+                font-size: ''' + str(size) + '''pt;
+                color: ''' + self.font_color + ''';}
             QLineEdit {
-                background-color: white;
                 font-family: "''' + self.font_family + '''";
                 font-size: ''' + str(size) + '''pt;
                 padding: 3px;
-                border: 1px solid ''' + self.accent_color + ''';}
+                border: 1px solid ''' + self.accent_color + ''';
+                color: ''' + self.font_color + ''';
+                background-color: ''' + self.text_background + ''';}
             QComboBox {
-                background-color: white;
                 font-family: "''' + self.font_family + '''";
                 font-size: ''' + str(size) + '''pt;
                 padding: 3px;
-                border: 1px solid ''' + self.accent_color + ''';}
-            ''')
+                border: 1px solid ''' + self.accent_color + ''';
+                background-color: ''' + self.text_background + ''';
+                color: ''' + self.font_color + ''';
+                selection-background-color: ''' + self.background_color + ''';
+                selection-color: ''' + self.font_color + ''';}
+            QPushButton { 
+                padding: 5;
+                border: 0;}
+            QPushButton:pressed {
+                background-color: white;}
+            QPushButton:hover {
+                background-color: ''' + self.background_color + ''';}
+            QPushButton:checked { 
+                background-color: ''' + self.background_color + ''';}
+            QPushButton#text_visible:checked {
+                icon: url(''' + self.spd.cwd + '''resources/svg/spShowTextChecked.svg); 
+                background-color: none;}
+            QPushButton#text_visible:hover {
+                background-color: ''' + self.background_color + ''';}
+        ''')
+
+        menu_style_sheet = '''
+            QMenu { background: ''' + self.text_background + '''; } 
+            QMenu:separator:hr { 
+                background-color: ''' + self.text_background + ''';
+                height: 0px;
+                border-top: 1px solid ''' + self.accent_color + '''; 
+                margin: 5px 
+            } 
+            QMenu::item:unselected { 
+                background-color: ''' + self.text_background + ''';
+                color: ''' + self.font_color + ''';
+            } 
+            QMenu::item:selected {
+                background: ''' + self.background_color + ''';
+                color: ''' + self.font_color + ''';
+            }'''
 
         self.scripture_frame.setStyleSheet(standard_style_sheet)
         self.exegesis_frame.setStyleSheet(standard_style_sheet)
@@ -508,9 +560,33 @@ class GUI(QObject):
         self.research_frame.setStyleSheet(standard_style_sheet)
         self.sermon_frame.setStyleSheet(standard_style_sheet)
         self.top_frame.setStyleSheet(top_frame_style_sheet)
+        self.win.menuBar().setStyleSheet(menu_style_sheet)
+        self.sermon_date_edit.setFont(QFont(self.font_family, int(size)))
+
+        palette = self.main_widget.palette()
+        palette.setColor(QPalette.ColorRole.Window, QColor(self.text_background))
+        palette.setColor(QPalette.ColorRole.WindowText, QColor(self.font_color))
+        self.main_widget.setPalette(palette)
+        self.main_widget.setAutoFillBackground(True)
+
+        palette = self.top_frame.palette()
+        palette.setColor(QPalette.ColorRole.Window, QColor(self.text_background))
+        palette.setColor(QPalette.ColorRole.WindowText, QColor(self.font_color))
+        self.top_frame.setPalette(palette)
+        self.top_frame.setAutoFillBackground(True)
+
+        palette = self.win.menuBar().palette()
+        palette.setColor(QPalette.ColorRole.Window, QColor(self.text_background))
+        palette.setColor(QPalette.ColorRole.WindowText, QColor(self.font_color))
+        self.win.menuBar().setPalette(palette)
+        self.win.menuBar().setAutoFillBackground(True)
 
         for component in self.tabbed_frame.findChildren(CustomTextEdit, 'custom_text_edit'):
             component.document().setDefaultFont(QFont(self.font_family, int(self.font_size)))
+
+        self.spd.app.processEvents()
+
+        self.changes = current_changes_state
 
     def set_style_buttons(self, component):
         """
@@ -1045,7 +1121,6 @@ class Win(QMainWindow):
         QMainWindow.__init__(self)
         self.gui = gui
         self.setWindowTitle('Sermon Prep Database')
-        self.setStyleSheet('background-color: white')
         self.resize(1000, 800)
         self.move(50, 50)
 

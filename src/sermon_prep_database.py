@@ -3,7 +3,7 @@ Author: Jeremy G. Wilson
 
 Copyright: 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.7)
+This file is a part of the Sermon Prep Database program (v.4.0.8)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -332,6 +332,10 @@ class SermonPrepDatabase(QThread):
                + self.gui.accent_color
                + '", fgcolor = "'
                + self.gui.background_color
+               + '", font_color = "'
+               + self.gui.font_color
+               + '", text_background = "'
+               + self.gui.text_background
                + '" WHERE ID = 1;')
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
@@ -839,7 +843,7 @@ class SermonPrepDatabase(QThread):
         :param boolean critical: Designate this as a critical error, showing a QMessageBox to the user.
         """
         if critical:
-            QMessageBox.critical(None, 'Exception Thrown', 'An error has occurred:\n\n' + string)
+            QMessageBox.critical(None, 'Exception Thrown', 'An error has occurred:\n\n' + str(string))
         log_file_loc = self.app_dir + '/log.txt'
 
         # Create the log file if it doesn't yet exist.
