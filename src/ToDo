@@ -10,10 +10,8 @@ Got rid of red after manually correcting a word or typing after a corrected word
 Finished documenting the rest of the scripts.
 Implemented line spacing.
 Added line spacing to database template user settings.
-
 Added safeguard to check if existing database is in the proper format.
 Removed red words after disabling spell check.
-
 Changed date field font along with the rest.
 Keep 'changes' state the same after font change.
 Modify dictionary and recheck current widget after removing custom words(s).

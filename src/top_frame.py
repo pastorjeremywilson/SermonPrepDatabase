@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.8)
+This file is a part of the Sermon Prep Database program (v.4.0.9)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -44,21 +44,21 @@ class TopFrame(QWidget):
         button_frame_layout = QHBoxLayout()
         self.setLayout(button_frame_layout)
 
-        undo_button = QPushButton()
-        undo_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spUndoIcon.svg'))
-        undo_button.setIconSize(icon_size)
-        undo_button.setFocusPolicy(Qt.NoFocus)
-        undo_button.clicked.connect(self.gui.menu_bar.press_ctrl_z)
-        undo_button.setToolTip('Undo')
-        button_frame_layout.addWidget(undo_button)
+        self.undo_button = QPushButton()
+        self.undo_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spUndoIcon.svg'))
+        self.undo_button.setIconSize(icon_size)
+        self.undo_button.setFocusPolicy(Qt.NoFocus)
+        self.undo_button.clicked.connect(self.gui.menu_bar.press_ctrl_z)
+        self.undo_button.setToolTip('Undo')
+        button_frame_layout.addWidget(self.undo_button)
 
-        redo_button = QPushButton()
-        redo_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spRedoIcon.svg'))
-        redo_button.setIconSize(icon_size)
-        redo_button.setFocusPolicy(Qt.NoFocus)
-        redo_button.clicked.connect(self.gui.menu_bar.press_ctrl_y)
-        redo_button.setToolTip('Redo')
-        button_frame_layout.addWidget(redo_button)
+        self.redo_button = QPushButton()
+        self.redo_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spRedoIcon.svg'))
+        self.redo_button.setIconSize(icon_size)
+        self.redo_button.setFocusPolicy(Qt.NoFocus)
+        self.redo_button.clicked.connect(self.gui.menu_bar.press_ctrl_y)
+        self.redo_button.setToolTip('Redo')
+        button_frame_layout.addWidget(self.redo_button)
         button_frame_layout.addSpacing(20)
 
         self.bold_button = QPushButton()
@@ -98,15 +98,15 @@ class TopFrame(QWidget):
         button_frame_layout.addWidget(self.bullet_button)
         button_frame_layout.addSpacing(20)
 
-        text_visible = QPushButton()
-        text_visible.setObjectName('text_visible')
-        text_visible.setCheckable(True)
-        text_visible.setFocusPolicy(Qt.NoFocus)
-        text_visible.setToolTip('Show Sermon Text on All Tabs')
-        text_visible.setIcon(QIcon(self.spd.cwd + 'resources/svg/spShowText.svg'))
-        text_visible.setIconSize(QSize(round(icon_size.width() * 2.5), round(icon_size.height() * 2.5)))
-        text_visible.clicked.connect(lambda: self.keep_text_visible(text_visible.isChecked()))
-        button_frame_layout.addWidget(text_visible)
+        self.text_visible = QPushButton()
+        self.text_visible.setObjectName('text_visible')
+        self.text_visible.setCheckable(True)
+        self.text_visible.setFocusPolicy(Qt.NoFocus)
+        self.text_visible.setToolTip('Show Sermon Text on All Tabs')
+        self.text_visible.setIcon(QIcon(self.spd.cwd + 'resources/svg/spShowText.svg'))
+        self.text_visible.setIconSize(QSize(round(icon_size.width() * 2.5), round(icon_size.height() * 2.5)))
+        self.text_visible.clicked.connect(self.keep_text_visible)
+        button_frame_layout.addWidget(self.text_visible)
 
         button_frame_layout.addStretch(1)
 
@@ -164,38 +164,38 @@ class TopFrame(QWidget):
         self.last_rec_button.setToolTip('Jump to Last Record')
         button_frame_layout.addWidget(self.last_rec_button)
 
-        new_rec_button = QPushButton()
-        new_rec_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spNewIcon.svg'))
-        new_rec_button.clicked.connect(lambda: self.spd.new_rec())
-        new_rec_button.setToolTip('Create a New Record')
-        button_frame_layout.addWidget(new_rec_button)
+        self.new_rec_button = QPushButton()
+        self.new_rec_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spNewIcon.svg'))
+        self.new_rec_button.clicked.connect(lambda: self.spd.new_rec())
+        self.new_rec_button.setToolTip('Create a New Record')
+        button_frame_layout.addWidget(self.new_rec_button)
         button_frame_layout.addSpacing(20)
 
-        save_button = QPushButton()
-        save_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spSaveIcon.svg'))
-        save_button.setIconSize(icon_size)
-        save_button.clicked.connect(lambda: self.spd.save_rec())
-        save_button.setToolTip('Save this Record')
-        button_frame_layout.addWidget(save_button)
+        self.save_button = QPushButton()
+        self.save_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spSaveIcon.svg'))
+        self.save_button.setIconSize(icon_size)
+        self.save_button.clicked.connect(lambda: self.spd.save_rec())
+        self.save_button.setToolTip('Save this Record')
+        button_frame_layout.addWidget(self.save_button)
 
-        print_button = QPushButton()
-        print_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spPrintIcon.svg'))
-        print_button.setIconSize(icon_size)
-        print_button.clicked.connect(self.gui.menu_bar.print_rec)
-        print_button.setToolTip('Print this Record')
-        button_frame_layout.addWidget(print_button)
+        self.print_button = QPushButton()
+        self.print_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spPrintIcon.svg'))
+        self.print_button.setIconSize(icon_size)
+        self.print_button.clicked.connect(self.gui.menu_bar.print_rec)
+        self.print_button.setToolTip('Print this Record')
+        button_frame_layout.addWidget(self.print_button)
 
         self.id_label = QLabel()
         button_frame_layout.addWidget(self.id_label)
 
         self.gui.layout.addWidget(button_frame)
 
-    def keep_text_visible(self, check_state):
+    def keep_text_visible(self):
         """
         Handle the user's toggling of the text_visible button.
-
-        :param boolean check_state: The result of text_visible.isChecked()
         """
+        check_state = self.text_visible.isChecked()
+
         if check_state:
             # add the reference and passage text to each tab's text_box then make it show
             num_tabs = self.gui.tabbed_frame.count()

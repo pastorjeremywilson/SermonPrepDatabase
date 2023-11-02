@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.8)
+This file is a part of the Sermon Prep Database program (v.4.0.9)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -115,7 +115,10 @@ class GUI(QObject):
         self.build_research_tab()
         self.build_sermon_tab()
 
-        self.set_style_sheets()
+        if self.text_background == 'rgb(50, 50, 50)':
+            self.set_style_sheets('dark')
+        else:
+            self.set_style_sheets()
 
         self.win.showMaximized()
 
@@ -433,7 +436,7 @@ class GUI(QObject):
         
         self.tabbed_frame.addTab(self.sermon_frame, QIcon(self.spd.cwd + 'resources/svg/spSermonIcon.svg'), 'Sermon')
 
-    def set_style_sheets(self):
+    def set_style_sheets(self, type=''):
         """
         Applies predetermined style sheets to self.tabbed_frame as well as each tab's QWidget. Also makes font changes
         to the TopFrame. Customizes the styles with the user's background color, accent color, font family, and font
@@ -441,12 +444,19 @@ class GUI(QObject):
         """
         current_changes_state = self.changes
 
+        if self.text_background == 'rgb(50, 50, 50)':
+            selected_color = 'white'
+            tab_color = self.font_color
+        else:
+            selected_color = 'black'
+            tab_color = 'white'
+
         self.tabbed_frame.setStyleSheet('''
             QTabWidget::pane {
                 border: 50px solid ''' + self.background_color + ''';}
             QTabBar::tab {
                 background-color: ''' + self.accent_color + ''';
-                color: white;
+                color: ''' + tab_color + ''';
                 font-family: "''' + self.font_family + '''";
                 font-size: ''' + str(self.font_size) + '''pt;
                 font-weight: bold;
@@ -456,7 +466,7 @@ class GUI(QObject):
                 margin-bottom: 5px;}
             QTabBar::tab:selected {
                 background-color: ''' + self.background_color + ''';
-                color: black;
+                color: ''' + selected_color + ''';
                 font-family: "''' + self.font_family + '''";
                 font-size: 20px;
                 font-weight: bold;
@@ -500,6 +510,13 @@ class GUI(QObject):
         else:
             size = 12
 
+        if type == 'dark':
+            show_text_checked_icon = 'spShowTextCheckedDark.svg'
+            show_text_icon = 'spShowTextDark.svg'
+        else:
+            show_text_checked_icon = 'spShowTextChecked.svg'
+            show_text_icon = 'spShowText.svg'
+
         top_frame_style_sheet = ('''
             QLabel {
                 font-family: "''' + self.font_family + '''";
@@ -530,8 +547,11 @@ class GUI(QObject):
                 background-color: ''' + self.background_color + ''';}
             QPushButton:checked { 
                 background-color: ''' + self.background_color + ''';}
+            QPushButton#text_visible {
+                icon: url(''' + self.spd.cwd + '''/resources/svg/''' + show_text_icon + ''');
+                background-color: none;}
             QPushButton#text_visible:checked {
-                icon: url(''' + self.spd.cwd + '''resources/svg/spShowTextChecked.svg); 
+                icon: url(''' + self.spd.cwd + '''/resources/svg/''' + show_text_checked_icon + '''); 
                 background-color: none;}
             QPushButton#text_visible:hover {
                 background-color: ''' + self.background_color + ''';}
@@ -583,6 +603,37 @@ class GUI(QObject):
 
         for component in self.tabbed_frame.findChildren(CustomTextEdit, 'custom_text_edit'):
             component.document().setDefaultFont(QFont(self.font_family, int(self.font_size)))
+
+        if type == 'dark':
+            self.top_frame.undo_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spUndoIconDark.svg'))
+            self.top_frame.redo_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spRedoIconDark.svg'))
+            self.top_frame.bold_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spBoldIconDark.svg'))
+            self.top_frame.italic_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spItalicIconDark.svg'))
+            self.top_frame.underline_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spUnderlineIconDark.svg'))
+            self.top_frame.bullet_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spBulletIconDark.svg'))
+            self.top_frame.text_visible.setIcon(QIcon(self.spd.cwd + 'resources/svg/spShowTextDark.svg'))
+            self.top_frame.first_rec_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spFirstRecIconDark.svg'))
+            self.top_frame.prev_rec_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spPrevRecIconDark.svg'))
+            self.top_frame.next_rec_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spNextRecIconDark.svg'))
+            self.top_frame.last_rec_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spLastRecIconDark.svg'))
+            self.top_frame.new_rec_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spNewIconDark.svg'))
+            self.top_frame.save_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spSaveIconDark.svg'))
+            self.top_frame.print_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spPrintIconDark.svg'))
+        else:
+            self.top_frame.undo_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spUndoIcon.svg'))
+            self.top_frame.redo_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spRedoIcon.svg'))
+            self.top_frame.bold_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spBoldIcon.svg'))
+            self.top_frame.italic_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spItalicIcon.svg'))
+            self.top_frame.underline_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spUnderlineIcon.svg'))
+            self.top_frame.bullet_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spBulletIcon.svg'))
+            self.top_frame.text_visible.setIcon(QIcon(self.spd.cwd + 'resources/svg/spShowText.svg'))
+            self.top_frame.first_rec_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spFirstRecIcon.svg'))
+            self.top_frame.prev_rec_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spPrevRecIcon.svg'))
+            self.top_frame.next_rec_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spNextRecIcon.svg'))
+            self.top_frame.last_rec_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spLastRecIcon.svg'))
+            self.top_frame.new_rec_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spNewIcon.svg'))
+            self.top_frame.save_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spSaveIcon.svg'))
+            self.top_frame.print_button.setIcon(QIcon(self.spd.cwd + 'resources/svg/spPrintIcon.svg'))
 
         self.spd.app.processEvents()
 
