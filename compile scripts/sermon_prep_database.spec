@@ -8,7 +8,7 @@ a = Analysis(
     ['..\\src\\sermon_prep_database.py'],
     pathex=[],
     binaries=[],
-    datas=[('../resources', 'resources/'), ('../src', './'), ('../src/ghostscript', './ghostscript/')],
+    datas=[('../gpl-3.0.rtf', './'), ('../resources', 'resources/'), ('../src', './'), ('../src/ghostscript', './ghostscript/')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

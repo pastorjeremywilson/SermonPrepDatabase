@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.0.8)
+This file is a part of the Sermon Prep Database program (v.4.1.0)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -129,8 +129,8 @@ class MenuBar:
         royal_color_action = color_menu.addAction('Royal Theme')
         royal_color_action.triggered.connect(lambda: self.color_change('royal'))
 
-        #dark_color_action = color_menu.addAction('Dark Theme')
-        #dark_color_action.triggered.connect(lambda: self.color_change('dark'))
+        dark_color_action = color_menu.addAction('Dark Theme')
+        dark_color_action.triggered.connect(lambda: self.color_change('dark'))
 
         custom_color_menu = color_menu.addMenu('Custom Colors')
 
@@ -747,9 +747,9 @@ class MenuBar:
             self.gui.text_background = '#ffffff'
         elif type == 'dark':
             self.gui.accent_color = 'rgb(0, 0, 0)'
-            self.gui.background_color = 'rgb(50, 50, 50)'
+            self.gui.background_color = 'rgb(80, 80, 80)'
             self.gui.font_color = 'rgb(200, 200, 200)'
-            self.gui.text_background = 'rgb(20, 20, 20)'
+            self.gui.text_background = 'rgb(50, 50, 50)'
         elif type == 'bg':
             color_chooser = QColorDialog()
             new_color = color_chooser.getColor(QColor(self.gui.accent_color))
@@ -760,7 +760,7 @@ class MenuBar:
             new_color = color_chooser.getColor(QColor(self.gui.background_color))
             if not new_color == QColor():
                 self.gui.background_color = new_color.name()
-        self.gui.set_style_sheets()
+        self.gui.set_style_sheets(type)
         self.spd.write_color_changes()
 
     def disable_spell_check(self):
@@ -820,7 +820,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.4.0.8')
+        about_label = QLabel('Sermon Prep Database v.4.1.0')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 
