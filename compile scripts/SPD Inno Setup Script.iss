@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Sermon Prep Database"
-#define MyAppVersion "4.0.9"
+#define MyAppVersion "4.1.0"
 #define MyAppURL "https://sourceforge.net/projects/sermon-prep-database"
 #define MyAppExeName "sermon_prep_database.exe"
 #define OutputLocation "C:\Users\pasto\Nextcloud\Documents\Python Workspace\Sermon Prep Database\compile scripts\pyinstaller_output\sermon_prep_database"

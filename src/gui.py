@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.1.0)
+This file is a part of the Sermon Prep Database program (v.4.1.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -79,18 +79,18 @@ class GUI(QObject):
         self.spd.get_user_settings()
         self.spd.backup_db()
 
-        self.accent_color = self.spd.user_settings[1]
-        self.background_color = self.spd.user_settings[2]
-        self.font_family = self.spd.user_settings[3]
-        self.font_size = self.spd.user_settings[4]
-        self.font_color = self.spd.user_settings[29]
-        self.text_background = self.spd.user_settings[30]
-        self.standard_font = QFont(self.font_family, int(self.font_size))
-        self.bold_font = QFont(self.font_family, int(self.font_size), QFont.Bold)
         try:
+            self.accent_color = self.spd.user_settings[1]
+            self.background_color = self.spd.user_settings[2]
+            self.font_family = self.spd.user_settings[3]
+            self.font_size = self.spd.user_settings[4]
+            self.font_color = self.spd.user_settings[29]
+            self.text_background = self.spd.user_settings[30]
+            self.standard_font = QFont(self.font_family, int(self.font_size))
+            self.bold_font = QFont(self.font_family, int(self.font_size), QFont.Bold)
             self.spd.line_spacing = str(self.spd.user_settings[28])
-        except IndexError:
-            self.spd.line_spacing = '1'
+        except IndexError as ex:
+            self.spd.write_to_log('Error retreiving settings from database:\n\n' + str(ex), True)
 
         self.win = Win(self)
         icon_pixmap = QPixmap(self.spd.cwd + 'resources/svg/spIcon.svg')
@@ -149,12 +149,13 @@ class GUI(QObject):
                 quit(0)
         else:
             # check that the existing database is in the new format
-            result = self.spd.check_line_spacing()
+            result = self.spd.check_for_old_version()
+
             if result == -1:
                 response = QMessageBox.question(
                     None,
                     'Old Database Found',
-                    'It appears that you are upgrading from a previous version of Sermon Prep Database. Your database'
+                    'It appears that you are upgrading from a previous version of Sermon Prep Database. Your database '
                     'file will need to be upgraded before you can continue. Upgrade now?',
                     QMessageBox.Yes | QMessageBox.No
                 )
@@ -164,6 +165,13 @@ class GUI(QObject):
                     ConvertDatabase(self.spd, 'existing')
                 else:
                     quit(0)
+            else:
+                # check that all columns since major update exist
+                self.spd.check_spell_check()
+                self.spd.check_auto_fill()
+                self.spd.check_line_spacing()
+                self.spd.check_font_color()
+                self.spd.check_text_background()
 
         self.spd.write_to_log('checkForDB completed')
     

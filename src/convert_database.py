@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.1.0)
+This file is a part of the Sermon Prep Database program (v.4.1.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -100,9 +100,9 @@ class ConvertDatabase(QDialog):
             )
             return 0
         else:
-            # if the database's user_settings table has the line_spacing column, this database doesn't need to be
+            # if the database's user_settings table has the bgcolor column, this database doesn't need to be
             # converted
-            if not self.spd.check_line_spacing == -1:
+            if not self.spd.check_for_old_version() == -1:
                 shutil.copy(file, self.spd.db_loc)
             else:
                 self.spd.write_to_log('ConvertDatabase.__init__: Converting database from ' + file)

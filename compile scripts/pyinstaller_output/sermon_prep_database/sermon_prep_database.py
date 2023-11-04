@@ -3,7 +3,7 @@ Author: Jeremy G. Wilson
 
 Copyright: 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.1.0)
+This file is a part of the Sermon Prep Database program (v.4.1.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)

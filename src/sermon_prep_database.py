@@ -3,7 +3,7 @@ Author: Jeremy G. Wilson
 
 Copyright: 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.1.0)
+This file is a part of the Sermon Prep Database program (v.4.1.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -92,6 +92,7 @@ class SermonPrepDatabase(QThread):
             if not exists(self.app_dir):
                 os.mkdir(self.app_dir)
 
+            self.write_to_log('application version is v.4.1.1')
             self.write_to_log('platform is ' + self.platform)
             self.write_to_log('current working directory is ' + self.cwd)
             self.write_to_log('application directory is ' + self.app_dir)
@@ -172,7 +173,7 @@ class SermonPrepDatabase(QThread):
 
     def check_line_spacing(self):
         """
-        Attempt to get the auto_fill value from the user's database. Create a auto_fill
+        Attempt to get the line_spacing value from the user's database. Create a line_spacing
         column if OperationalError is thrown.
         """
         try:
@@ -183,6 +184,61 @@ class SermonPrepDatabase(QThread):
 
             return str(result[0])
         except OperationalError:
+            cursor.execute('ALTER TABLE user_settings ADD line_spacing TEXT;')
+            conn.commit()
+            cursor.execute('UPDATE user_settings SET line_spacing=1.0 WHERE ID="1";')
+            conn.commit()
+            conn.close()
+            return False
+
+    def check_font_color(self):
+        """
+        Attempt to get the font_color value from the user's database. Create a font_color
+        column if OperationalError is thrown.
+        """
+        try:
+            conn = sqlite3.connect(self.db_loc)
+            cursor = conn.cursor()
+            result = cursor.execute('SELECT font_color FROM user_settings').fetchone()
+            conn.close()
+
+            return str(result[0])
+        except OperationalError:
+            cursor.execute('ALTER TABLE user_settings ADD font_color TEXT;')
+            conn.commit()
+            cursor.execute('UPDATE user_settings SET font_color="black" WHERE ID="1";')
+            conn.commit()
+            conn.close()
+            return False
+
+    def check_text_background(self):
+        """
+        Attempt to get the text_background value from the user's database. Create a text_background
+        column if OperationalError is thrown.
+        """
+        try:
+            conn = sqlite3.connect(self.db_loc)
+            cursor = conn.cursor()
+            result = cursor.execute('SELECT text_background FROM user_settings').fetchone()
+            conn.close()
+
+            return str(result[0])
+        except OperationalError:
+            cursor.execute('ALTER TABLE user_settings ADD text_background TEXT;')
+            conn.commit()
+            cursor.execute('UPDATE user_settings SET text_background="white" WHERE ID="1";')
+            conn.commit()
+            conn.close()
+            return False
+
+    def check_for_old_version(self):
+        try:
+            conn = sqlite3.connect(self.db_loc)
+            cursor = conn.cursor()
+            result = cursor.execute('SELECT bgcolor FROM user_settings').fetchone()
+            conn.close()
+        except OperationalError:
+            conn.close()
             return -1
 
     def write_spell_check_changes(self):

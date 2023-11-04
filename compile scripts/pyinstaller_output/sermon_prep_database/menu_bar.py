@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.1.0)
+This file is a part of the Sermon Prep Database program (v.4.1.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -820,7 +820,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.4.1.0')
+        about_label = QLabel('Sermon Prep Database v.4.1.1')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 
@@ -1137,19 +1137,29 @@ class ShowHelp(QTabWidget):
             '</strong>, and <strong>Paste</strong> commands. Again, <strong>Ctrl-X</strong>, <strong>Ctrl-C</strong>, '
             'and <strong>Ctrl-V</strong> will also perform these same functions.<br><br>In this menu you will '
             'also find a <strong>Configure</strong> menu. This contains commands to change the colors used in the '
-            'program as well as what the labels say and the font that is used.<br><br>First, you\'ll see commands that '
-            'change the accent and background colors of the program. Changing the accent color will affect the '
-            'background color of the left-side tabs, while changing the background colors will change the color '
-            'surrounding the different boxes where you enter information.<br><br>Next, the Edit menu contains a '
+            'program as well as what the labels say, the font that is used, and the line spacing of the editors.'
+            '<br><br>First, you\'ll see a menu that lets you set the color theme of the program, or to change '
+            'the accent and background colors of the program to anything you\'d like. Changing the accent color will '
+            'affect the background color of the left-side tabs, while changing the background colors will change the '
+            'color surrounding the different boxes where you enter information.<br><br>Under this, there is a command '
+            'to <strong>Change Font</strong>. '
+            'This allows you to choose a custom font and font size for the labels and entry boxes throughout the '
+            'program. You may have a particular font or size that you find easier to read, and you can change to that '
+            'here. Following that, there is a menu where you can set the <strong>Line Spacing</strong> of the editing '
+            'boxes options are \'compact\', \'regular\', and \'wide\'.<br><br>Next, the Edit menu contains a '
             'command to <strong>Rename Labels</strong>. Choosing this will open up a new window where you can '
             'customize the labels that appear above each data entry box. This new window will have two columns, the '
             'first showing the current label, and the second being where you can type in what you would rather have '
             'that label say. For example, if you like to use, "Big Idea of the Text," instead of, "Central Proposition '
             'of the Text," you would click inside the right-hand "Central Proposition of the Text" box and change it '
-            'to read, "Big Idea of the Text."<br><br>Finally, there is a command to <strong>Change Font</strong>. '
-            'This allows you to choose a custom font and font size for the labels and entry boxes throughout the '
-            'program. You may have a particular font or size that you find easier to read, and you can change to that '
-            'here.<br><br><strong>Record</strong><br>In the Record menu are the same navigation controls that appear '
+            'to read, "Big Idea of the Text."<br><br>The last two items in the Edit menu have to do with spell-checking. '
+            'As you work with the program, you may find yourself adding words to the dictionary that spell check thinks '
+            'are wrong (this is done by right-clicking a red, spell-checked word and choosing "Add to Dictionary"). '
+            'should you want to remove any of these added words later, choose <strong>Remove custom words from '
+            'dictionary</strong>. A window will pop up where you can select from the list of added words to remove. '
+            'Following this is an option to <strong>Disable Spell Check</strong>. You may want to do this if you don\'t'
+            'need spell-checking, or if you are on an older computer where performance is an issue.'
+            '<br><br><strong>Record</strong><br>In the Record menu are the same navigation controls that appear '
             'in the upper bar of the window. In addition is a <strong>Delete Record</strong> option. Use this if you '
             'are currently viewing a record you would like to delete; if it\'s a duplicate or unneeded, for example. '
             'Deleting a record cannot be undone, so you will be prompted to make sure you really want to delete the '
