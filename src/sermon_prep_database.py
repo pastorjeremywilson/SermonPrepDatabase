@@ -3,7 +3,7 @@ Author: Jeremy G. Wilson
 
 Copyright: 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.1.1)
+This file is a part of the Sermon Prep Database program (v.4.2.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -25,29 +25,24 @@ https://www.ghostscript.com/licensing/index.html for more information.
 
 import os
 import re
+import shutil
 import sqlite3
 import sys
-import time
-from PyQt5.QtCore import QThread, Qt, pyqtSignal
-from PyQt5.QtGui import QFont, QMovie
-from PyQt5.QtWidgets import QApplication, QLineEdit, QTextEdit, QDateEdit, QLabel, QGridLayout, QDialog, QVBoxLayout, \
-    QMessageBox, QWidget
+from PyQt5.QtCore import Qt, QRunnable, QThreadPool, QThread
+from PyQt5.QtGui import QFont, QTextCursor
+from PyQt5.QtWidgets import QLineEdit, QTextEdit, QDateEdit, QLabel, QDialog, QVBoxLayout, \
+    QMessageBox, QWidget, QApplication
 from datetime import datetime
 from os.path import exists
 from sqlite3 import OperationalError
-from symspellpy import SymSpell
-
-from gui import GUI
+from symspellpy import SymSpell, Verbosity
 
 
-class SermonPrepDatabase(QThread):
+class SermonPrepDatabase:
     """
     The main program class that handles startup methods such as checking for/creating a new database, instantiating
     the gui, and polling the database for data. Also handles any database reading and writing methods.
     """
-    change_text = pyqtSignal(str)
-    finished = pyqtSignal()
-
     gui = None
     ids = []
     dates = []
@@ -65,22 +60,25 @@ class SermonPrepDatabase(QThread):
     cwd = ''
     sym_spell = None
 
-    def run(self):
+    def __init__(self, gui):
         """
         On startup, initialize a QApplication, get the platform, set the app_dir and db_loc, instantiate the GUI
         Use the change_text signal to alter the text on the splash screen
         """
-        time.sleep(1.0)
-        self.change_text.emit('Getting Platform')
-        time.sleep(0.5)
+        super().__init__()
+        self.thread_pool = QThreadPool()
+        self.gui = gui
+        self.app = QApplication(sys.argv)
+
+    def get_system_info(self):
         self.platform = sys.platform
 
         try:
-            self.change_text.emit('Getting Directories')
-            time.sleep(0.5)
+            # get the current data directory and the user's home directory
+            self.cwd = os.path.dirname(os.path.abspath(__file__)).replace('\\\\', '/')
             user_dir = os.path.expanduser('~')
 
-            #set the location of the user files differently depending on if we're on windows or linux
+            # set the location of the user files differently depending on if we're on windows or linux
             if self.platform == 'win32':
                 self.app_dir = user_dir + '/AppData/Roaming/Sermon Prep Database'
             elif self.platform == 'linux':
@@ -92,7 +90,7 @@ class SermonPrepDatabase(QThread):
             if not exists(self.app_dir):
                 os.mkdir(self.app_dir)
 
-            self.write_to_log('application version is v.4.1.1')
+            self.write_to_log('application version is v.4.2.1')
             self.write_to_log('platform is ' + self.platform)
             self.write_to_log('current working directory is ' + self.cwd)
             self.write_to_log('application directory is ' + self.app_dir)
@@ -111,19 +109,66 @@ class SermonPrepDatabase(QThread):
                 self.line_spacing = self.check_line_spacing()
 
                 if not self.disable_spell_check:
-                    self.change_text.emit('Loading Dictionaries')
-                    time.sleep(0.5)
                     self.load_dictionary()
             else:
                 self.disable_spell_check = 1
 
-            self.change_text.emit('Creating GUI')
-            time.sleep(0.5)
-
-            self.finished.emit()
-
         except Exception as ex:
             self.write_to_log(str(ex), True)
+
+    def check_for_db(self):
+        """
+        Check if the database file exists. Prompt to import an existing database or create a new database if not. If
+        it exists, but does not include the line_spacing column in the user_settings table, then it is an old version.
+        """
+        if not exists(self.db_loc):
+            response = QMessageBox.question(
+                None,
+                'Database Not Found',
+                'It looks like this is the first time you\'ve run Sermon Prep Database v3.3.4.\n'
+                'Would you like to import an old database?\n'
+                '(Choose "No" to create a new database)',
+                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
+            )
+
+            if response == QMessageBox.Yes:
+                from convert_database import ConvertDatabase
+                ConvertDatabase(self)
+            elif response == QMessageBox.No:
+                # Create a new database in the user's App Data directory by copying the existing database template
+                shutil.copy(self.cwd + '/resources/database_template.db', self.db_loc)
+                QMessageBox.information(None, 'Database Created', 'A new database has been created.',
+                                        QMessageBox.Ok)
+                self.gui.app.processEvents()
+            else:
+                quit(0)
+        else:
+            # check that the existing database is in the new format
+            result = self.check_for_old_version()
+
+            if result == -1:
+                response = QMessageBox.question(
+                    None,
+                    'Old Database Found',
+                    'It appears that you are upgrading from a previous version of Sermon Prep Database. Your database '
+                    'file will need to be upgraded before you can continue. Upgrade now?',
+                    QMessageBox.Yes | QMessageBox.No
+                )
+
+                if response == QMessageBox.Yes:
+                    from convert_database import ConvertDatabase
+                    ConvertDatabase(self, 'existing')
+                else:
+                    quit(0)
+            else:
+                # check that all columns since major update exist
+                self.check_spell_check()
+                self.check_auto_fill()
+                self.check_line_spacing()
+                self.check_font_color()
+                self.check_text_background()
+
+        self.write_to_log('checkForDB completed')
 
     def check_spell_check(self):
         """
@@ -282,13 +327,13 @@ class SermonPrepDatabase(QThread):
         Method to create a SymSpell object based on the default dictionary and the user's custom words list.
         For SymSpellPy documentation, see https://symspellpy.readthedocs.io/en/latest/index.html
         """
-        if not exists(self.cwd + 'resources/default_dictionary.pkl'):
+        if not exists(self.cwd + '/resources/default_dictionary.pkl'):
             self.sym_spell = SymSpell()
-            self.sym_spell.create_dictionary(self.cwd + 'resources/default_dictionary.txt')
-            self.sym_spell.save_pickle(os.path.normpath(self.cwd + 'resources/default_dictionary.pkl'))
+            self.sym_spell.create_dictionary(self.cwd + '/resources/default_dictionary.txt')
+            self.sym_spell.save_pickle(os.path.normpath(self.cwd + '/resources/default_dictionary.pkl'))
         else:
             self.sym_spell = SymSpell()
-            self.sym_spell.load_pickle(os.path.normpath(self.cwd + 'resources/default_dictionary.pkl'))
+            self.sym_spell.load_pickle(os.path.normpath(self.cwd + '/resources/default_dictionary.pkl'))
 
         with open(self.app_dir + '/custom_words.txt', 'r') as file:
             custom_words = file.readlines()
@@ -1037,7 +1082,7 @@ class SermonPrepDatabase(QThread):
         :param str text: Directory to show.
         """
         self.dir_label.setText(text)
-        app.processEvents()
+        self.gui.app.processEvents()
 
     def change_file(self, text):
         """
@@ -1046,7 +1091,7 @@ class SermonPrepDatabase(QThread):
         :param str text: File name to show.
         """
         self.file_label.setText(text)
-        app.processEvents()
+        self.gui.app.processEvents()
 
     def close_splash(self):
         """
@@ -1055,85 +1100,191 @@ class SermonPrepDatabase(QThread):
         self.widget.deleteLater()
 
 
-class LoadingBox(QDialog):
-    """
-    QDialog class that shows the user the process of starting up the application.
+class SpellCheck:
+    finished = False
 
-    :param QApplication app: The main QApplication for this program.
-    """
-    def __init__(self, app):
-        try:
-            super().__init__()
-            self.spd = SermonPrepDatabase()
-            self.spd.app = app
+    def __init__(self, widget=None, type=None, gui=None):
+        super().__init__()
+        self.widget = widget
+        self.type = type
+        self.gui = gui
 
-            if exists(os.getcwd() + '/_internal'):
-                self.spd.cwd = os.getcwd() + '/_internal/'
-                self.spd.cwd = self.spd.cwd.replace('\\', '/')
+    def do_check(self):
+        if self.type == 'whole':
+            self.check_whole_text()
+        elif self.type == 'previous':
+            self.check_previous_word()
+
+    def check_whole_text(self):
+        """
+        Method to check every word in this QTextEdit for spelling errors.
+        """
+
+        cursor = self.widget.textCursor()
+        cursor.movePosition(QTextCursor.Start)
+
+        while not self.gui.spd.disable_spell_check:
+            last_word = False
+            cursor.select(cursor.WordUnderCursor)
+            word = cursor.selection().toPlainText()
+
+            # if the position doesn't change after moving to the next character, this is the last word
+            pos_before_move = cursor.position()
+            cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+            pos_after_move = cursor.position()
+            if pos_before_move == pos_after_move:
+                last_word = True
+
+            # if there's an apostrophe, check the next two characters for contraction letters
+            if cursor.selection().toPlainText().endswith('\''):
+                cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+                if re.search('[a-z]$', cursor.selection().toPlainText()):
+                    word = cursor.selection().toPlainText()
+                    cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+                    if re.search('[a-z]$', cursor.selection().toPlainText()):
+                        word = cursor.selection().toPlainText()
+
+            cursor.movePosition(QTextCursor.PreviousCharacter, cursor.KeepAnchor)
+
+            cleaned_word = self.clean_word(word)
+
+            suggestions = None
+            if len(cleaned_word) > 0 and not any(c.isnumeric() for c in cleaned_word):
+                if any(h.isalpha() for h in cleaned_word):
+                    suggestions = self.gui.spd.sym_spell.lookup(
+                        cleaned_word, Verbosity.CLOSEST,
+                        max_edit_distance=2,
+                        include_unknown=True
+                    )
+
+                if suggestions:
+                    char_format = cursor.charFormat()
+                    if not suggestions[0].term == cleaned_word:
+                        char_format.setForeground(Qt.red)
+                        cursor.mergeCharFormat(char_format)
+
+                    else:
+                        if char_format.foreground() == Qt.red:
+                            char_format.setForeground(Qt.black)
+                            cursor.mergeCharFormat(char_format)
+
+            cursor.clearSelection()
+            cursor.movePosition(QTextCursor.NextWord)
+
+            if last_word:
+                break
+
+        self.finished = True
+
+    def check_previous_word(self):
+        """
+        Method to spell-check the word previous to the user's cursor. Skips over punctuation if that is the first
+        previous "word" found.
+        """
+        self.widget.blockSignals(True) # we don't want changeevent fired while manipulating for spell check
+        punctuations = [',', '.', '?', '!', ')', ';', ':', '-']
+
+        cursor = self.widget.textCursor()
+        cursor.movePosition(QTextCursor.PreviousWord)
+        cursor.select(cursor.WordUnderCursor)
+
+        word = cursor.selection().toPlainText()
+        for punctuation in punctuations:
+            if word == punctuation:
+                cursor.clearSelection()
+                cursor.movePosition(QTextCursor.PreviousWord)
+                cursor.movePosition(QTextCursor.PreviousWord)
+                cursor.select(cursor.WordUnderCursor)
+                word = cursor.selection().toPlainText()
+                break
+
+        # if there's an apostrophe, check the next two characters for contraction letters
+        if cursor.selection().toPlainText().endswith('\''):
+            cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+            if re.search('[a-z]$', cursor.selection().toPlainText()):
+                word = cursor.selection().toPlainText()
+                cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
+                if re.search('[a-z]$', cursor.selection().toPlainText()):
+                    word = cursor.selection().toPlainText()
+
+        cleaned_word = self.clean_word(word)
+
+        suggestions = None
+        if len(cleaned_word) > 0 and not any(c.isnumeric() for c in cleaned_word):
+            if any(h.isalpha() for h in cleaned_word):
+                suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+                                                            include_unknown=True)
+
+            if suggestions:
+                char_format = cursor.charFormat()
+                # if the first suggestion is the same as the word, then it's not spelled wrong
+                if not suggestions[0].term == cleaned_word:
+                    char_format.setForeground(Qt.red)
+                    cursor.mergeCharFormat(char_format)
+                else:
+                    char_format.setForeground(Qt.black)
+                    cursor.mergeCharFormat(char_format)
+
+        cursor.clearSelection()
+        cursor.movePosition(QTextCursor.NextWord)
+
+        char_format = cursor.charFormat()
+        char_format.setForeground(Qt.black)
+        cursor.mergeCharFormat(char_format)
+        self.widget.setTextCursor(cursor)
+
+        self.widget.blockSignals(False)
+
+    def check_single_word(self, word):
+        cleaned_word = self.clean_word(word)
+
+        suggestions = None
+        if len(cleaned_word) > 0 and not any(c.isnumeric() for c in cleaned_word):
+            if any(h.isalpha() for h in cleaned_word):
+                suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+                                                            include_unknown=True)
+
+            if suggestions:
+                return suggestions
             else:
-                self.spd.cwd = os.getcwd().replace('\\', '/')
+                return -1
 
-            if str(self.spd.cwd).endswith('src'):
-                self.spd.cwd = self.spd.cwd.replace('src', '')
-            else:
-                self.spd.cwd = self.spd.cwd + '/'
-
-            self.spd.finished.connect(self.end)
-            self.spd.change_text.connect(self.change_text)
-            self.spd.start()
-
-            self.setWindowFlag(Qt.FramelessWindowHint)
-            self.setModal(True)
-            self.setAttribute(Qt.WA_TranslucentBackground)
-            self.setStyleSheet('background-color: transparent')
-            self.setMinimumWidth(300)
-
-            layout = QGridLayout()
-            self.setLayout(layout)
-
-            self.working_label = QLabel()
-            self.working_label.setAutoFillBackground(False)
-            movie = QMovie(self.spd.cwd + 'resources/waitIcon.webp')
-            self.working_label.setMovie(movie)
-            layout.addWidget(self.working_label, 0, 0, Qt.AlignHCenter)
-            movie.start()
-
-            self.status_label = QLabel('Starting...')
-            self.status_label.setFont(QFont('Helvetica', 16, QFont.Bold))
-            self.status_label.setStyleSheet('color: #d7d7f4; text-align: center;')
-            layout.addWidget(self.status_label, 1, 0, Qt.AlignHCenter)
-
-            self.show()
-        except Exception as ex:
-            self.spd.write_to_log(str(ex), True)
-
-    def change_text(self, text):
+    def clean_word(self, word):
         """
-        Method to change the text shown on the splash screen.
+        Method to strip any non-word characters as well as pluralizing apostrophes out of a word to be spell-checked.
 
-        :param str text: The text to display.
+        :param str word: Word to be cleaned.
         """
-        self.status_label.setText(text)
-        app.processEvents()
+        chars = ['.', ',', ';', ':', '?', '!', '"', '...', '*', '-', '_',
+                 '\n', '\u2026', '\u201c', '\u201d']
+        single_quotes = ['\u2018', '\u2019']
 
-    def end(self):
-        """
-        Method to instantiate the GUI after all other preload processes have finished, then close the splash screen.
-        """
-        self.spd.gui = GUI(self.spd)
-        self.spd.gui.open_import_splash.connect(self.spd.import_splash)
-        self.spd.gui.change_import_splash_dir.connect(self.spd.change_dir)
-        self.spd.gui.change_import_splash_file.connect(self.spd.change_file)
-        self.spd.gui.close_import_splash.connect(self.spd.close_splash)
+        cleaned_word = word.lower().strip()
 
-        # set the GUI to display the most recent record
-        self.spd.current_rec_index = len(self.spd.ids) - 1
-        self.spd.get_by_index(self.spd.current_rec_index)
-        self.close()
+        for char in chars:
+            cleaned_word = cleaned_word.replace(char, '')
+        for single_quote in single_quotes:
+            cleaned_word = cleaned_word.replace(single_quote, '\'')
+
+        cleaned_word = cleaned_word.replace('\'s', '')
+        cleaned_word = cleaned_word.replace('s\'', 's')
+        cleaned_word = cleaned_word.replace("<[.?*]>", '')
+
+        if cleaned_word.startswith('\''):
+            cleaned_word = cleaned_word[1:len(cleaned_word)]
+        if cleaned_word.endswith('\''):
+            cleaned_word = cleaned_word[0:len(cleaned_word) - 1]
+
+        # there's a chance that utf-8-sig artifacts will be attached to the word
+        # encoding to utf-8 then decoding as ascii removes them
+        cleaned_word = cleaned_word.encode('utf-8').decode('ascii', errors='ignore')
+
+        return cleaned_word
 
 
 # main entry point for the program
 if __name__ == '__main__':
+    from gui import GUI
     app = QApplication(sys.argv)
-    loading_box = LoadingBox(app)
+    gui = GUI()
     app.exec()

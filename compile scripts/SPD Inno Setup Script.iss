@@ -2,11 +2,11 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Sermon Prep Database"
-#define MyAppVersion "4.1.0"
+#define MyAppVersion "4.2.1"
 #define MyAppURL "https://sourceforge.net/projects/sermon-prep-database"
-#define MyAppExeName "sermon_prep_database.exe"
-#define OutputLocation "C:\Users\pasto\Nextcloud\Documents\Python Workspace\Sermon Prep Database\compile scripts\pyinstaller_output\sermon_prep_database"
-#define ResourceLocation "C:\Users\pasto\Nextcloud\Documents\Python Workspace\Sermon Prep Database\resources"
+#define MyAppExeName "SermonPrepDatabase.exe"
+#define OutputLocation "C:\Users\pasto\Desktop\output\SermonPrepDatabase"
+#define ResourceLocation "C:\Users\pasto\Desktop\output\SermonPrepDatabase\_internal\resources"
 
 [Setup]
 ; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
@@ -20,7 +20,7 @@ AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
-LicenseFile={#OutputLocation}\gpl-3.0.rtf
+LicenseFile={#OutputLocation}\_internal\gpl-3.0.rtf
 WizardImageFile={#ResourceLocation}\installImage.bmp
 WizardSmallImageFile = {#ResourceLocation}\installImageSmall.bmp
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
@@ -28,7 +28,7 @@ WizardSmallImageFile = {#ResourceLocation}\installImageSmall.bmp
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir="C:\Users\pasto\Nextcloud\Documents\Python Workspace\Sermon Prep Database\compile scripts"
 OutputBaseFilename=Setup SPD v.{#MyAppVersion}
-SetupIconFile={#OutputLocation}\resources\icons.ico
+SetupIconFile={#ResourceLocation}\icons.ico
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -41,7 +41,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "{#OutputLocation}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "{#OutputLocation}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#OutputLocation}\_internal\*"; DestDir: "{app}\_internal"; Flags: recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]

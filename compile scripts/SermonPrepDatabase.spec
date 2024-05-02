@@ -2,10 +2,10 @@
 
 
 a = Analysis(
-    ['..\\src\\sermon_prep_database.py', 'name=SermonPrepDatabase'],
+    ['..\\src\\sermon_prep_database.py'],
     pathex=[],
     binaries=[],
-    datas=[('../gpl-3.0.rtf', './'), ('../resources', 'resources/'), ('../src', './'), ('../src/ghostscript', './ghostscript/')],
+    datas=[('../gpl-3.0.rtf', './'), ('../src/resources', 'resources/'), ('../src', 'src'), ('../src/ghostscript', './ghostscript/')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -20,7 +20,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='sermon_prep_database',
+    name='SermonPrepDatabase',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -31,7 +31,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['..\\resources\\icons.ico'],
+    icon=['..\\src\\resources\\icons.ico'],
 )
 coll = COLLECT(
     exe,
@@ -40,5 +40,5 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name='sermon_prep_database',
+    name='SermonPrepDatabase',
 )
