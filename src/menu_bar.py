@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.1.1)
+This file is a part of the Sermon Prep Database program (v.4.2.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -44,17 +44,16 @@ class MenuBar:
     """
     Builds the QMainWindow's menuBar and handles the actions performed by the menu.
     """
-    def __init__(self, win, gui, spd):
+    def __init__(self, gui, spd):
         """
         :param QMainWindow win: The program's QMainWindow
         :param GUI gui: The program's GUI Object
         :param SermonPrepDatabase spd: The program's SermonPrepDatabase object
         """
         self.keyboard = Controller()
-        self.win = win
         self.gui = gui
         self.spd = spd
-        menu_bar = self.win.menuBar()
+        menu_bar = self.gui.menuBar()
 
         file_menu = menu_bar.addMenu('File')
         file_menu.setToolTipsVisible(True)
@@ -820,7 +819,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.4.1.1')
+        about_label = QLabel('Sermon Prep Database v.4.2.1')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 
@@ -1099,7 +1098,7 @@ class ShowHelp(QTabWidget):
         menu_label = QLabel('Menu Bar')
         menu_label.setStyleSheet(self.bold_font)
         menu_layout.addWidget(menu_label)
-        menu_pic = QPixmap(self.spd.cwd + 'resources/menuPic.png')
+        menu_pic = QPixmap(self.spd.cwd + '/resources/menuPic.png')
         menu_pic_label = QLabel()
         menu_pic_label.setPixmap(menu_pic)
         menu_layout.addWidget(menu_pic_label)
@@ -1187,15 +1186,15 @@ class ShowHelp(QTabWidget):
         tool_text = QTextEdit()
         tool_text.setHtml(
             'Along the top of the window, you\'ll see a toolbar containing different formatting and navigation tools.'
-            '<br><br><img src="' + self.spd.cwd + 'resources/undoPic.png"><br>'
+            '<br><br><img src="' + self.spd.cwd + '/resources/undoPic.png"><br>'
             'First, you\'ll see Undo and Redo buttons that you can use to undo or redo any editing you perform. Of '
             'course, Ctrl-Z and Ctrl-Y will also perform these functions.<br><br><img src="' + self.spd.cwd +
-            'resources/formatPic.png"><br>Beside those are the buttons you can use to format your text with bold, '
+            '/resources/formatPic.png"><br>Beside those are the buttons you can use to format your text with bold, '
             'italic, underline, and bullet-point options.<br><br><img src="' + self.spd.cwd +
-            'resources/showScripturePic.png"><br>Right beside these is an option to show the sermon text on all tabs. '
+            '/resources/showScripturePic.png"><br>Right beside these is an option to show the sermon text on all tabs. '
             'If you would like to keep your sermon text handy while you are entering, for example, your exegesis notes '
             'or research notes, click this icon. The sermon text will be shown to the right of the Exegesis, Outline, '
-            'Research, and Sermon tabs.<br><br><img src="' + self.spd.cwd + 'resources/searchPic.png"><br>In the '
+            'Research, and Sermon tabs.<br><br><img src="' + self.spd.cwd + '/resources/searchPic.png"><br>In the '
             'middle of this bar are two pull-down menus where you can bring up past sermons by the sermon date '
             'or the sermon\'s scripture. This becomes increasingly useful as you add more and more sermons to the '
             'database, allowing you to see what you\'ve preached on in the past or how you\'ve dealt with particular '
@@ -1205,7 +1204,7 @@ class ShowHelp(QTabWidget):
             'showing any records where your search term(s) appear, and double-clicking any of the results '
             'will bring up that particular sermon\'s record. The search results are sorted with exact matches first,'
             ' followed by results in order of how many search terms were found. This new tab can be closed by pressing '
-            'the "X" icon.<br><br><img src="' + self.spd.cwd + 'resources/navPic.png"><br>To the right of this upper bar are the navigation '
+            'the "X" icon.<br><br><img src="' + self.spd.cwd + '/resources/navPic.png"><br>To the right of this upper bar are the navigation '
             'buttons, as well as the save and print buttons. These '
             'buttons will allow you to navigate to the first or last sermons in your database or switch to the '
             'previous or next sermons. Just to the right of these navigation buttons is the "New Record" button. '

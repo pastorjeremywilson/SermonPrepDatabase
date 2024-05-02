@@ -1,2 +1,2 @@
 @echo off
-pyinstaller --onedir --noconfirm --clean --windowed -i "../resources/icons.ico" --add-data "../gpl-3.0.rtf;./" --add-data "../resources;resources/" --add-data "../src;./" --add-data "../src/ghostscript;./ghostscript/" --distpath "./pyinstaller_output" ../src/sermon_prep_database.py
+"../venv/Scripts/pyinstaller.exe" --noconfirm --clean --windowed -i "../src/resources/icons.ico" --add-data "../gpl-3.0.rtf;./" --add-data "../src/resources;resources/" --add-data "../src;src" --add-data "../src/ghostscript;./ghostscript/" --distpath "/Users/pasto/Desktop/output" --workpath C:\Users\pasto\Desktop\output\work "../src/sermon_prep_database.py" --name="SermonPrepDatabase"

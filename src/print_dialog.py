@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.1.1)
+This file is a part of the Sermon Prep Database program (v.4.2.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -82,7 +82,7 @@ class PrintDialog(QDialog):
         nav_button_widget.setLayout(nav_button_layout)
 
         previous_button = QPushButton()
-        previous_button.setIcon(QIcon(self.gui.spd.cwd + 'resources/spPrevRecIcon'))
+        previous_button.setIcon(QIcon(self.gui.spd.cwd + '/resources/spPrevRecIcon'))
         previous_button.setAutoFillBackground(False)
         previous_button.setStyleSheet('border: none')
         previous_button.pressed.connect(self.previous_page)
@@ -96,7 +96,7 @@ class PrintDialog(QDialog):
         nav_button_layout.addSpacing(20)
 
         next_button = QPushButton()
-        next_button.setIcon(QIcon(self.gui.spd.cwd + 'resources/svg/spNextRecIcon.svg'))
+        next_button.setIcon(QIcon(self.gui.spd.cwd + '/resources/svg/spNextRecIcon.svg'))
         next_button.setAutoFillBackground(False)
         next_button.setStyleSheet('border: none')
         next_button.pressed.connect(self.next_page)
