@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.2.1)
+This file is a part of the Sermon Prep Database program (v.4.2.2)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -36,7 +36,7 @@ from PyQt5.QtWidgets import QBoxLayout, QWidget, QUndoStack, QTabWidget, QGridLa
 from get_scripture import GetScripture
 from menu_bar import MenuBar
 from top_frame import TopFrame
-from sermon_prep_database import SpellCheck
+from runnables import SpellCheck, LoadDictionary
 
 
 class GUI(QMainWindow):
@@ -644,7 +644,7 @@ class GUI(QMainWindow):
                 if record[0][index]:
                     component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     spell_check = SpellCheck(component, 'whole', self)
-                    spell_check.do_check()
+                    self.spd.thread_pool.start(spell_check)
 
                 index += 1
 
@@ -657,7 +657,7 @@ class GUI(QMainWindow):
                 if record[0][index]:
                     component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     spell_check = SpellCheck(component, 'whole', self)
-                    spell_check.do_check()
+                    self.spd.thread_pool.start(spell_check)
 
                 index += 1
 
@@ -670,7 +670,7 @@ class GUI(QMainWindow):
                 if record[0][index]:
                     component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     spell_check = SpellCheck(component, 'whole', self)
-                    spell_check.do_check()
+                    self.spd.thread_pool.start(spell_check)
 
                 index += 1
 
@@ -683,7 +683,7 @@ class GUI(QMainWindow):
                 if record[0][index]:
                     component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     spell_check = SpellCheck(component, 'whole', self)
-                    spell_check.do_check()
+                    self.spd.thread_pool.start(spell_check)
 
                 index += 1
 
@@ -730,7 +730,7 @@ class GUI(QMainWindow):
                 if record[0][index]:
                     component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     spell_check = SpellCheck(component, 'whole', self)
-                    spell_check.do_check()
+                    self.spd.thread_pool.start(spell_check)
 
                 index += 1
 
@@ -854,43 +854,43 @@ class GUI(QMainWindow):
             Ctrl-Q: Exit
         """
         if (event.modifiers() & Qt.ControlModifier) and (event.modifiers() & Qt.ShiftModifier) and event.key() == Qt.Key_B:
-            self.gui.top_frame.set_bullet()
-            self.gui.top_frame.bullet_button.blockSignals(True)
-            if self.gui.top_frame.bullet_button.isChecked():
-                self.gui.top_frame.bullet_button.setChecked(False)
+            self.top_frame.set_bullet()
+            self.top_frame.bullet_button.blockSignals(True)
+            if self.top_frame.bullet_button.isChecked():
+                self.top_frame.bullet_button.setChecked(False)
             else:
-                self.gui.top_frame.bullet_button.setChecked(True)
-            self.gui.top_frame.bold_button.blockSignals(False)
+                self.top_frame.bullet_button.setChecked(True)
+            self.top_frame.bold_button.blockSignals(False)
         elif event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_B:
-            self.gui.top_frame.set_bold()
-            self.gui.top_frame.bold_button.blockSignals(True)
-            if self.gui.top_frame.bold_button.isChecked():
-                self.gui.top_frame.bold_button.setChecked(False)
+            self.top_frame.set_bold()
+            self.top_frame.bold_button.blockSignals(True)
+            if self.top_frame.bold_button.isChecked():
+                self.top_frame.bold_button.setChecked(False)
             else:
-                self.gui.top_frame.bold_button.setChecked(True)
-            self.gui.top_frame.bold_button.blockSignals(False)
+                self.top_frame.bold_button.setChecked(True)
+            self.top_frame.bold_button.blockSignals(False)
         elif event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_I:
-            self.gui.top_frame.set_italic()
-            self.gui.top_frame.italic_button.blockSignals(True)
-            if self.gui.top_frame.italic_button.isChecked():
-                self.gui.top_frame.italic_button.setChecked(False)
+            self.top_frame.set_italic()
+            self.top_frame.italic_button.blockSignals(True)
+            if self.top_frame.italic_button.isChecked():
+                self.top_frame.italic_button.setChecked(False)
             else:
-                self.gui.top_frame.italic_button.setChecked(True)
-            self.gui.top_frame.italic_button.blockSignals(False)
+                self.top_frame.italic_button.setChecked(True)
+            self.top_frame.italic_button.blockSignals(False)
         elif event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_U:
-            self.gui.top_frame.set_underline()
-            self.gui.top_frame.underline_button.blockSignals(True)
-            if self.gui.top_frame.underline_button.isChecked():
-                self.gui.top_frame.underline_button.setChecked(False)
+            self.top_frame.set_underline()
+            self.top_frame.underline_button.blockSignals(True)
+            if self.top_frame.underline_button.isChecked():
+                self.top_frame.underline_button.setChecked(False)
             else:
-                self.gui.top_frame.underline_button.setChecked(True)
-            self.gui.top_frame.underline_button.blockSignals(False)
+                self.top_frame.underline_button.setChecked(True)
+            self.top_frame.underline_button.blockSignals(False)
         elif event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_S:
-            self.gui.spd.save_rec()
+            self.spd.save_rec()
         elif event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_P:
-            self.gui.menu_bar.print_rec()
+            self.menu_bar.print_rec()
         elif event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_Q:
-            self.gui.do_exit()
+            self.do_exit()
         event.accept()
 
 
@@ -931,7 +931,8 @@ class InitialStartup(QRunnable):
         self.gui.spd.backup_db()
 
         self.startup_splash.update_text.emit('Loading Dictionaries')
-        self.gui.spd.load_dictionary()
+        ld = LoadDictionary(self.gui.spd)
+        self.gui.spd.thread_pool.start(ld)
 
         self.startup_splash.update_text.emit('Finishing Up')
         self.gui.create_main_gui.emit()
@@ -1024,7 +1025,7 @@ class CustomTextEdit(QTextEdit):
                 or evt.key() == Qt.Key_Enter)
                 and self.spell_check == 0):
             spell_check = SpellCheck(self, 'previous', self.gui)
-            spell_check.do_check()
+            self.spd.thread_pool.start(spell_check)
 
     def contextMenuEvent(self, evt):
         """
