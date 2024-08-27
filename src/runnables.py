@@ -2,8 +2,9 @@ import os
 import re
 from os.path import exists
 
-from PyQt5.QtCore import QRunnable, Qt
+from PyQt5.QtCore import QRunnable, Qt, QThreadPool
 from PyQt5.QtGui import QTextCursor
+from PyQt5.QtWidgets import QApplication
 from symspellpy import Verbosity, SymSpell
 
 
@@ -15,6 +16,7 @@ class SpellCheck(QRunnable):
         self.widget = widget
         self.type = type
         self.gui = gui
+        self.setAutoDelete(True)
 
     def run(self):
         if self.type == 'whole':
@@ -26,7 +28,6 @@ class SpellCheck(QRunnable):
         """
         Method to check every word in this QTextEdit for spelling errors.
         """
-
         cursor = self.widget.textCursor()
         cursor.movePosition(QTextCursor.Start)
 
@@ -67,8 +68,8 @@ class SpellCheck(QRunnable):
                 if suggestions:
                     char_format = cursor.charFormat()
                     if not suggestions[0].term == cleaned_word:
-                        char_format.setForeground(Qt.red)
-                        cursor.mergeCharFormat(char_format)
+                            char_format.setForeground(Qt.red)
+                            cursor.mergeCharFormat(char_format)
 
                     else:
                         if char_format.foreground() == Qt.red:
@@ -79,16 +80,14 @@ class SpellCheck(QRunnable):
             cursor.movePosition(QTextCursor.NextWord)
 
             if last_word:
-                break
-
-        self.finished = True
+                self.gui.clear_changes_signal.emit()
+                return
 
     def check_previous_word(self):
         """
         Method to spell-check the word previous to the user's cursor. Skips over punctuation if that is the first
         previous "word" found.
         """
-        self.widget.blockSignals(True) # we don't want changeevent fired while manipulating for spell check
         punctuations = [',', '.', '?', '!', ')', ';', ':', '-']
 
         cursor = self.widget.textCursor()
@@ -139,8 +138,6 @@ class SpellCheck(QRunnable):
         char_format.setForeground(Qt.black)
         cursor.mergeCharFormat(char_format)
         self.widget.setTextCursor(cursor)
-
-        self.widget.blockSignals(False)
 
     def check_single_word(self, word):
         cleaned_word = self.clean_word(word)

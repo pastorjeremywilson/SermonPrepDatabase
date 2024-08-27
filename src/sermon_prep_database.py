@@ -66,7 +66,8 @@ class SermonPrepDatabase:
         Use the change_text signal to alter the text on the splash screen
         """
         super().__init__()
-        self.thread_pool = QThreadPool()
+        self.spell_check_thread_pool = QThreadPool()
+        self.load_dictionary_thread_pool = QThreadPool()
         self.gui = gui
         self.app = QApplication(sys.argv)
 
@@ -289,7 +290,7 @@ class SermonPrepDatabase:
         """
         conn = sqlite3.connect(self.db_loc)
         cursor = conn.cursor()
-        if self.disable_spell_check:
+        if str(self.gui.spell_check) == '1':
             cursor.execute('UPDATE user_settings SET disable_spell_check=1 WHERE ID="1";')
         else:
             cursor.execute('UPDATE user_settings SET disable_spell_check=0 WHERE ID="1";')
@@ -501,8 +502,6 @@ class SermonPrepDatabase:
             record = results.fetchall()
             conn.close()
 
-            self.gui.fill_values(record)
-
             if index == 0:
                 self.gui.top_frame.first_rec_button.setEnabled(False)
                 self.gui.top_frame.prev_rec_button.setEnabled(False)
@@ -518,6 +517,8 @@ class SermonPrepDatabase:
                 self.gui.top_frame.prev_rec_button.setEnabled(True)
                 self.gui.top_frame.next_rec_button.setEnabled(True)
                 self.gui.top_frame.last_rec_button.setEnabled(True)
+
+            self.gui.fill_values(record)
         else:
             self.new_rec()
 

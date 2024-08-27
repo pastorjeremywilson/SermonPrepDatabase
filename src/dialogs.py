@@ -188,7 +188,6 @@ class RemoveCustomWords:
         If changes were made, write to the file. Close the widget.
         """
         if self.changes:
-            print('recording changes')
             lines = []
             file = open(self.spd.app_dir + '/custom_words.txt', 'w')
             try:
@@ -198,12 +197,10 @@ class RemoveCustomWords:
                 file.close()
 
                 for word in self.removed_words:
-                    print(word)
                     self.spd.sym_spell.delete_dictionary_entry(word)
 
-                from src.gui import CustomTextEdit
-                for widget in self.spd.gui.tabbed_frame.currentWidget().findChildren(QTextEdit):
-                    print(widget)
+                from gui import CustomTextEdit
+                for widget in self.spd.gui.tabbed_frame.currentWidget().findChildren(CustomTextEdit):
                     widget.check_whole_text()
             except Exception as ex:
                 self.spd.write_to_log(str(ex), True)

@@ -24,9 +24,10 @@ https://www.ghostscript.com/licensing/index.html for more information.
 """
 import os
 import re
+import time
 from os.path import exists
 
-from PyQt5.QtCore import Qt, QSize, QDate, QDateTime, QObject, QRunnable, pyqtSignal
+from PyQt5.QtCore import Qt, QSize, QDate, QDateTime, QObject, QRunnable, pyqtSignal, QThreadPool
 from PyQt5.QtGui import QIcon, QFont, QTextCursor, QStandardItemModel, QStandardItem, QPixmap, QColor, QPalette, QMovie, \
     QCloseEvent
 from PyQt5.QtWidgets import QBoxLayout, QWidget, QUndoStack, QTabWidget, QGridLayout, QLabel, QLineEdit, \
@@ -54,6 +55,7 @@ class GUI(QMainWindow):
     font_size = None
     gs = None
     create_main_gui = pyqtSignal()
+    clear_changes_signal = pyqtSignal()
     spell_check = None
     
     def __init__(self):
@@ -63,12 +65,13 @@ class GUI(QMainWindow):
 
         super().__init__()
         self.create_main_gui.connect(self.create_gui)
+        self.clear_changes_signal.connect(self.clear_changes)
 
         from sermon_prep_database import SermonPrepDatabase
         self.spd = SermonPrepDatabase(self)
 
         initial_startup = InitialStartup(self)
-        self.spd.thread_pool.start(initial_startup)
+        self.spd.spell_check_thread_pool.start(initial_startup)
 
     def create_gui(self):
         """
@@ -390,6 +393,9 @@ class GUI(QMainWindow):
         
         self.tabbed_frame.addTab(self.sermon_frame, QIcon(self.spd.cwd + '/resources/svg/spSermonIcon.svg'), 'Sermon')
 
+    def clear_changes(self):
+        self.changes = False
+
     def set_style_sheets(self, type=''):
         """
         Applies predetermined style sheets to self.tabbed_frame as well as each tab's QWidget. Also makes font changes
@@ -625,6 +631,11 @@ class GUI(QMainWindow):
 
         :param list of str record: a list whose first element is a list of values in their proper order.
         """
+        self.spd.load_dictionary_thread_pool.waitForDone()
+        self.spd.spell_check_thread_pool.waitForDone()
+        self.spd.spell_check_thread_pool.deleteLater()
+        QApplication.processEvents()
+        self.spd.spell_check_thread_pool = QThreadPool()
         index = 1
         self.setWindowTitle('Sermon Prep Database - ' + str(record[0][17]) + ' - ' + str(record[0][3]))
 
@@ -644,7 +655,7 @@ class GUI(QMainWindow):
                 if record[0][index]:
                     component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     spell_check = SpellCheck(component, 'whole', self)
-                    self.spd.thread_pool.start(spell_check)
+                    self.spd.spell_check_thread_pool.start(spell_check)
 
                 index += 1
 
@@ -657,7 +668,7 @@ class GUI(QMainWindow):
                 if record[0][index]:
                     component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     spell_check = SpellCheck(component, 'whole', self)
-                    self.spd.thread_pool.start(spell_check)
+                    self.spd.spell_check_thread_pool.start(spell_check)
 
                 index += 1
 
@@ -670,7 +681,7 @@ class GUI(QMainWindow):
                 if record[0][index]:
                     component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     spell_check = SpellCheck(component, 'whole', self)
-                    self.spd.thread_pool.start(spell_check)
+                    self.spd.spell_check_thread_pool.start(spell_check)
 
                 index += 1
 
@@ -683,7 +694,7 @@ class GUI(QMainWindow):
                 if record[0][index]:
                     component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     spell_check = SpellCheck(component, 'whole', self)
-                    self.spd.thread_pool.start(spell_check)
+                    self.spd.spell_check_thread_pool.start(spell_check)
 
                 index += 1
 
@@ -730,7 +741,7 @@ class GUI(QMainWindow):
                 if record[0][index]:
                     component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
                     spell_check = SpellCheck(component, 'whole', self)
-                    self.spd.thread_pool.start(spell_check)
+                    self.spd.spell_check_thread_pool.start(spell_check)
 
                 index += 1
 
@@ -750,7 +761,7 @@ class GUI(QMainWindow):
 
         self.top_frame.id_label.setText('ID: ' + str(record[0][0]))
 
-        self.changes = False
+        self.spd.spell_check_thread_pool.waitForDone()
 
     def changes_detected(self):
         """
@@ -830,7 +841,6 @@ class GUI(QMainWindow):
         if self.changes:
             goon = self.spd.ask_save()
         if goon:
-            self.spd.thread_pool.waitForDone()
             self.deleteLater()
             evt.accept()
 
@@ -924,15 +934,15 @@ class InitialStartup(QRunnable):
 
         self.gui.spell_check = self.gui.spd.user_settings[26]
 
+        self.startup_splash.update_text.emit('Loading Dictionaries')
+        ld = LoadDictionary(self.gui.spd)
+        self.gui.spd.load_dictionary_thread_pool.start(ld)
+
         self.startup_splash.update_text.emit('Getting Indices')
         self.gui.spd.get_ids()
         self.gui.spd.get_date_list()
         self.gui.spd.get_scripture_list()
         self.gui.spd.backup_db()
-
-        self.startup_splash.update_text.emit('Loading Dictionaries')
-        ld = LoadDictionary(self.gui.spd)
-        self.gui.spd.thread_pool.start(ld)
 
         self.startup_splash.update_text.emit('Finishing Up')
         self.gui.create_main_gui.emit()
@@ -1017,15 +1027,14 @@ class CustomTextEdit(QTextEdit):
         self.win = win
         self.gui = gui
         self.textChanged.connect(self.text_changed)
-        self.spell_check = None
 
     def keyReleaseEvent(self, evt):
         if ((evt.key() == Qt.Key_Space
                 or evt.key() == Qt.Key_Return
                 or evt.key() == Qt.Key_Enter)
-                and self.spell_check == 0):
+                and str(self.gui.spell_check) == '0'):
             spell_check = SpellCheck(self, 'previous', self.gui)
-            self.spd.thread_pool.start(spell_check)
+            self.gui.spd.spell_check_thread_pool.start(spell_check)
 
     def contextMenuEvent(self, evt):
         """
@@ -1053,6 +1062,7 @@ class CustomTextEdit(QTextEdit):
             spell_check = SpellCheck(None, None, self.gui)
             suggestions = spell_check.check_single_word(word)
 
+            next_menu_index = 0
             if not suggestions[0].term == spell_check.clean_word(word):
                 spell_actions = {}
 
