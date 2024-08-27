@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Sermon Prep Database"
-#define MyAppVersion "4.2.1"
+#define MyAppVersion "v.4.2.2"
 #define MyAppURL "https://sourceforge.net/projects/sermon-prep-database"
 #define MyAppExeName "SermonPrepDatabase.exe"
 #define OutputLocation "C:\Users\pasto\Desktop\output\SermonPrepDatabase"
@@ -26,8 +26,8 @@ WizardSmallImageFile = {#ResourceLocation}\installImageSmall.bmp
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-OutputDir="C:\Users\pasto\Nextcloud\Documents\Python Workspace\Sermon Prep Database\compile scripts"
-OutputBaseFilename=Setup SPD v.{#MyAppVersion}
+OutputDir="C:\Users\pasto\Desktop\output\Sermon Prep Database"
+OutputBaseFilename=Setup_SPD_{#MyAppVersion}
 SetupIconFile={#ResourceLocation}\icons.ico
 Compression=lzma
 SolidCompression=yes

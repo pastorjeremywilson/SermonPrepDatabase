@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.2.1)
+This file is a part of the Sermon Prep Database program (v.4.2.2)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -36,6 +36,7 @@ from PyQt5.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableVie
     QTabWidget, QHBoxLayout, QComboBox, QTextBrowser, QDialog, QLineEdit, QTextEdit, QDateEdit, QMessageBox
 from pynput.keyboard import Key, Controller
 
+from runnables import LoadDictionary, SpellCheck
 from top_frame import TopFrame
 from print_dialog import PrintDialog
 
@@ -763,12 +764,11 @@ class MenuBar:
         self.spd.write_color_changes()
 
     def disable_spell_check(self):
-        from src.gui import CustomTextEdit
         """
         Method to turn on or off the spell checking capabilities of the CustomTextEdit.
         """
         if self.disable_spell_check_action.isChecked():
-            self.spd.disable_spell_check = True
+            self.gui.spell_check = 1
             self.spd.write_spell_check_changes()
 
             # remove any red formatting created by spell check
@@ -789,16 +789,16 @@ class MenuBar:
 
         else:
             # if spell check is enabled after having been disabled at startup, the dictionary will need to be loaded
-            self.spd.disable_spell_check = False
+            self.gui.spell_check = 0
             if not self.spd.sym_spell:
-                self.spd.load_dictionary()
+                ld = LoadDictionary(self.spd)
+                self.spd.load_dictionary_thread_pool.start(ld)
             self.spd.write_spell_check_changes()
 
             # run spell check on all CustomTextEdits
             for widget in self.gui.tabbed_frame.findChildren(QTextEdit, 'custom_text_edit'):
-                widget.blockSignals(True)
-                widget.check_whole_text()
-                widget.blockSignals(False)
+                spell_check = SpellCheck(widget, 'whole', self.gui)
+                self.gui.spd.spell_check_thread_pool.start(spell_check)
 
     def show_help(self):
         """
@@ -819,7 +819,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.4.2.1')
+        about_label = QLabel('Sermon Prep Database v.4.2.2')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 

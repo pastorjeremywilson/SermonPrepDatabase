@@ -1,28 +1,9 @@
 DONE
-Implemented in v.4.2.1:
-    Fixed font problem in research_text_edit.
-    Changed fonts in TopFrame to user's fonts.
-    Switched all icons to svg.
-    Fixed "-" at end of text when bullet list left uncompleted.
-    Fixed crash on choosing spell corrected word
-    Fixed highlighted font color in right-click menu
-    Made "add to dictionary" show even if no suggestions are available
-    Got rid of red after manually correcting a word or typing after a corrected word
-    Finished documenting the rest of the scripts.
-    Implemented line spacing.
-    Added line spacing to database template user settings.
-    Added safeguard to check if existing database is in the proper format.
-    Removed red words after disabling spell check.
-    Changed date field font along with the rest.
-    Keep 'changes' state the same after font change.
-    Modify dictionary and recheck current widget after removing custom words(s).
-    Added Dark Theme
-
-Make GUI QApplication only (no threading and with signals from threads)
-
-TO DO
     Perform spell checking in a QRunnable
     Load dictionary in a QRunnable
-    Switch over to PyQt6
+
+
+TO DO
+    Fix changes detected while browsing entries.
     Switch date recognition to native Python date parsing.
     Stop selecting text when mouse leaves CustomTextEdit
