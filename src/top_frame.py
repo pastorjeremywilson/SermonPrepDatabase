@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.2.1)
+This file is a part of the Sermon Prep Database program (v.4.2.2)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -257,7 +257,7 @@ class TopFrame(QWidget):
         """
         Method to toggle the bold state of the text at the user's cursor or selection.
         """
-        component = self.win.focusWidget()
+        component = self.gui.focusWidget()
         if isinstance(component, QTextEdit):
             cursor = component.textCursor()
             # handle this differently if the user has a section of text selected
@@ -288,7 +288,7 @@ class TopFrame(QWidget):
         """
         Method to toggle the italic state of the text at the user's cursor or selection.
         """
-        component = self.win.focusWidget()
+        component = self.gui.focusWidget()
         if isinstance(component, QTextEdit):
             cursor = component.textCursor()
             if cursor.hasSelection():
@@ -314,7 +314,7 @@ class TopFrame(QWidget):
         """
         Method to toggle the underline state of the text at the user's cursor or selection.
         """
-        component = self.win.focusWidget()
+        component = self.gui.focusWidget()
         if isinstance(component, QTextEdit):
             cursor = component.textCursor()
             if cursor.hasSelection():
@@ -340,7 +340,7 @@ class TopFrame(QWidget):
         """
         Method to toggle the bulleted list state of the text at the user's cursor or selection.
         """
-        component = self.win.focusWidget()
+        component = self.gui.focusWidget()
         if isinstance(component, QTextEdit):
             cursor = component.textCursor()
             text_list = cursor.currentList()

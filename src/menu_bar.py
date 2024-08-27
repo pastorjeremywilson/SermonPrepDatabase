@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.2.1)
+This file is a part of the Sermon Prep Database program (v.4.2.2)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -36,6 +36,7 @@ from PyQt5.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableVie
     QTabWidget, QHBoxLayout, QComboBox, QTextBrowser, QDialog, QLineEdit, QTextEdit, QDateEdit, QMessageBox
 from pynput.keyboard import Key, Controller
 
+from runnables import LoadDictionary
 from top_frame import TopFrame
 from print_dialog import PrintDialog
 
@@ -791,7 +792,8 @@ class MenuBar:
             # if spell check is enabled after having been disabled at startup, the dictionary will need to be loaded
             self.spd.disable_spell_check = False
             if not self.spd.sym_spell:
-                self.spd.load_dictionary()
+                ld = LoadDictionary(self.spd)
+                self.spd.thread_pool.start(ld)
             self.spd.write_spell_check_changes()
 
             # run spell check on all CustomTextEdits
@@ -819,7 +821,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.4.2.1')
+        about_label = QLabel('Sermon Prep Database v.4.2.2')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 
