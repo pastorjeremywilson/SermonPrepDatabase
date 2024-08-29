@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.2.2)
+This file is a part of the Sermon Prep Database program (v.4.2.3)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -130,6 +130,7 @@ class GetScripture:
             if self.root:
                 reference_split = reference.split(' ')
                 reference_ok = False
+                passage_split = []
                 # only attempt to retrieve a passage if something more than the book has been provided
                 if len(reference_split) > 1:
                     # some book names will be a number followed by a string (i.e. 1 Kings or 1st Corinthians)
