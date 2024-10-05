@@ -16,7 +16,7 @@ When preparing a sermon for your congregation, you probably find yourself in the
 # Installation
 
 Currently, Sermon Prep Database is available for the Microsoft Windows operating
-system only. Download the current SPD installer (v.4.2.3) and run
+system only. Download the current SPD installer (v.4.2.4) and run
 it on your computer.
 <p>&nbsp;</p>
 
