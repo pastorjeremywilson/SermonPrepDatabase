@@ -3,7 +3,7 @@
 
 Copyright 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.2.3)
+This file is a part of the Sermon Prep Database program (v.4.2.4)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -1055,16 +1055,19 @@ class CustomTextEdit(QTextEdit):
             cursor.select(QTextCursor.WordUnderCursor)
             word = cursor.selection().toPlainText()
 
-            upper = False
-            if word[0].isupper():
-                upper = True
+            if len(word) == 0:
+                next_menu_index = 0
+            else:
+                upper = False
+                if word[0].isupper():
+                    upper = True
 
-            spell_check = SpellCheck(None, None, self.gui)
-            suggestions = spell_check.check_single_word(word)
+                spell_check = SpellCheck(None, None, self.gui)
+                suggestions = spell_check.check_single_word(word)
 
-            next_menu_index = 0
-            if not suggestions[0].term == spell_check.clean_word(word):
-                spell_actions = {}
+                next_menu_index = 0
+                if not suggestions[0].term == spell_check.clean_word(word):
+                    spell_actions = {}
 
                 number_of_suggestions = len(suggestions)
                 if number_of_suggestions > 10: number_of_suggestions = 11
@@ -1080,11 +1083,11 @@ class CustomTextEdit(QTextEdit):
 
                     next_menu_index = i + 1
 
-            menu.insertSeparator(menu.actions()[next_menu_index])
-            action = QAction('Add to dictionary')
-            action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, spell_check.clean_word(word)))
-            menu.insertAction(menu.actions()[next_menu_index + 2], action)
-            menu.insertSeparator(menu.actions()[next_menu_index + 3])
+                menu.insertSeparator(menu.actions()[next_menu_index])
+                action = QAction('Add to dictionary')
+                action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, spell_check.clean_word(word)))
+                menu.insertAction(menu.actions()[next_menu_index + 2], action)
+                menu.insertSeparator(menu.actions()[next_menu_index + 3])
 
             menu.exec(evt.globalPos())
             menu.close()

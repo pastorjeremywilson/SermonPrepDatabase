@@ -3,7 +3,7 @@ Author: Jeremy G. Wilson
 
 Copyright: 2023 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.2.3)
+This file is a part of the Sermon Prep Database program (v.4.2.4)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -91,7 +91,7 @@ class SermonPrepDatabase:
             if not exists(self.app_dir):
                 os.mkdir(self.app_dir)
 
-            self.write_to_log('application version is v.4.2.3')
+            self.write_to_log('application version is v.4.2.4')
             self.write_to_log('platform is ' + self.platform)
             self.write_to_log('current working directory is ' + self.cwd)
             self.write_to_log('application directory is ' + self.app_dir)

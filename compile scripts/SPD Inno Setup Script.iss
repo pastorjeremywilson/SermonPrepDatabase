@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Sermon Prep Database"
-#define MyAppVersion "v.4.2.3"
+#define MyAppVersion "v.4.2.4"
 #define MyAppURL "https://sourceforge.net/projects/sermon-prep-database"
 #define MyAppExeName "SermonPrepDatabase.exe"
 #define OutputLocation "C:\Users\pasto\Desktop\output\SermonPrepDatabase"
@@ -42,6 +42,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: "{#OutputLocation}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#OutputLocation}\_internal\*"; DestDir: "{app}\_internal"; Flags: recursesubdirs createallsubdirs
+Source: "C:\Users\pasto\Desktop\output\SermonPrepDatabase\_internal\README.html"; DestDir: "{app}\_internal"; Flags: isreadme
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
