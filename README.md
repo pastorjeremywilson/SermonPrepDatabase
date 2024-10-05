@@ -6,25 +6,24 @@
 # What Am I?
 
 Sermon Prep Database is a program to organize - and store for easy retrieval - your thoughts and research when preparing a sermon.
-<p>&nbsp;</p>
+
+# What's New in v.4.2.4?
+Minor bug fix - Fixed crash when right-clicking inside an empty text edit area.
 
 # Why Sermon Prep Database?
 
 When preparing a sermon for your congregation, you probably find yourself in the habit of performing certain tasks: doing research from commentaries, jotting down outlines, following an exegesis plan, etc. This program gives you areas to record all of these things and then saves them into a database where you can retrieve them any time.
-<p>&nbsp;</p>
 
 # Installation
 
 Currently, Sermon Prep Database is available for the Microsoft Windows operating
 system only. Download the current SPD installer (v.4.2.4) and run
 it on your computer.
-<p>&nbsp;</p>
 
 # Using Sermon Prep Database
 
 *This information will get you started, but for more in-depth information*
 *on using Sermon Prep Database, please click “Help” and “Help Topics” in the menu.*
-<p>&nbsp;</p>
 
 ### Screen Layout
 
@@ -49,7 +48,6 @@ The Outline tab is where you can store outlines for the scripture, our sermon, a
 The Research tab is where you can write down any important points you've discovered during your research.
 
 Finally, the Sermon tab is where you can store the text of the sermon itself, as well as any important details regarding the sermon, such as the Date, Title, and Hymn of Response.
-<p>&nbsp;</p>
 
 ### Settings
 
@@ -81,7 +79,6 @@ For example, a sermon preached on May 20th, 2011 on Mark 3:1-12, saved as a Micr
 The import will work fine if you haven't named your files in this way, only the program will not be able to fill in such areas as the sermon date and text reference.
 
 You also have the ability to import an **XML Bible**. Importing a bible will allow you to have the program auto-fill the Sermon Text area of the scripture tab simply by typing or copying a reference into the Sermon Text Reference box.
-<p>&nbsp;</p>
 
 ### Shortcut Keys
 
@@ -129,13 +126,10 @@ There are a few Shortcut Keys that can be used when using the program:
 </tbody>
 </table>
 
-<p>&nbsp;</p>
-
 # Known Issues
 
 # Technologies and Credits
 
-<br>
 <div>
     <img src='https://github.com/pastorjeremywilson/public/blob/main/python-logo-only.svg?raw=true' width=40px align='right' />
     Sermon Prep Database is written primarily in <a href="https://www.python.org" target="_blank">Python</a>, compiled through <a href="https://www.pyinstaller.org" target="_blank">PyInstaller</a>,
@@ -162,10 +156,8 @@ There are a few Shortcut Keys that can be used when using the program:
 </div>
 <br>
 All trademarks (c) their respective owners.
-<p>&nbsp;</p>
 
 # Licensing
-<br>
 
 <img src='https://github.com/pastorjeremywilson/public/blob/main/gnu-4.svg?raw=true' height=120px align='left' />
 ProjectOn is licensed under the GNU General Public License (GNU GPL)
