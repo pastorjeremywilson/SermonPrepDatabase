@@ -48,7 +48,6 @@ class MenuBar:
     """
     def __init__(self, gui, spd):
         """
-        :param QMainWindow win: The program's QMainWindow
         :param GUI gui: The program's GUI Object
         :param SermonPrepDatabase spd: The program's SermonPrepDatabase object
         """
@@ -740,7 +739,6 @@ class MenuBar:
         Method to provide a font choosing widget to the user by obtaining a list of all the fonts available to
         the system.
         """
-        fonts = QFontDatabase()
         current_font = self.gui.font_family
         current_size = self.gui.font_size
 
@@ -756,7 +754,7 @@ class MenuBar:
         font_layout.addWidget(top_panel)
 
         family_combo_box = QComboBox()
-        family_combo_box.addItems(fonts.families())
+        family_combo_box.addItems(QFontDatabase.families())
         family_combo_box.currentIndexChanged.connect(
             lambda: self.apply_font(font_chooser, family_combo_box.currentText(), self.gui.font_size, False))
         top_layout.addWidget(family_combo_box)

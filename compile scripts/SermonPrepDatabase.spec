@@ -2,10 +2,10 @@
 
 
 a = Analysis(
-    ['..\\src\\sermon_prep_database.py'],
+    ['..\\main.py'],
     pathex=[],
     binaries=[],
-    datas=[('../gpl-3.0.rtf', './'), ('../src/resources', 'resources/'), ('../src', 'src'), ('../src/ghostscript', './ghostscript/'), ('../README.html', './'), ('../README.md', './')],
+    datas=[('../resources', 'resources/'), ('../README.html', './'), ('../README.md', './'), ('../*.py', './src')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -32,7 +32,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['..\\src\\resources\\icons.ico'],
+    icon=['..\\resources\\icons.ico'],
 )
 coll = COLLECT(
     exe,
