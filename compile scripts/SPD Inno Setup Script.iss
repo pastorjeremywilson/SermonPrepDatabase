@@ -20,7 +20,7 @@ AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
-LicenseFile={#OutputLocation}\_internal\gpl-3.0.rtf
+LicenseFile={#OutputLocation}\_internal\resources\gpl-3.0.rtf
 WizardImageFile={#ResourceLocation}\installImage.bmp
 WizardSmallImageFile = {#ResourceLocation}\installImageSmall.bmp
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
