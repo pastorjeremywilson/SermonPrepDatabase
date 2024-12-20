@@ -1,9 +1,9 @@
 """
 @author Jeremy G. Wilson
 
-Copyright 2023 Jeremy G. Wilson
+Copyright 2024 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.4.2.4)
+This file is a part of the Sermon Prep Database program (v.5.0.0)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -693,7 +693,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.4.2.4')
+        about_label = QLabel('Sermon Prep Database v.5.0.0')
         about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
         about_layout.addWidget(about_label)
 
@@ -997,7 +997,7 @@ class ShowHelp(QTabWidget):
             'should start with the date in <strong>YYYY-MM-DD</strong> format folowed by a period. After the period, '
             'the scripture reference follows in the format book.chapter.verse-verse. Finally is the proper suffix '
             'for your file type (.docx, .odt, or .txt).<br><br>For example, a sermon preached on Sunday, March 19th, '
-            '2023 on Mark 9:1-12, saved as a Microsoft Word document would have the file name <strong>2023-03-19.mark.'
+            '2024 on Mark 9:1-12, saved as a Microsoft Word document would have the file name <strong>2024-03-19.mark.'
             '9.1-12.docx</strong>. If the file names aren\'t renamed in this way, the program can still import your '
             'sermons, it just won\'t be able to automatically save the corresponding date and reference information '
             'as well<br><br>Next, if you have your favorite bible downloaded as a Zefaniah XML file '
