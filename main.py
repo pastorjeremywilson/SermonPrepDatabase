@@ -28,14 +28,16 @@ import re
 import shutil
 import sqlite3
 import sys
-from PyQt5.QtCore import Qt, QRunnable, QThreadPool, QThread
-from PyQt5.QtGui import QFont, QTextCursor
-from PyQt5.QtWidgets import QLineEdit, QTextEdit, QDateEdit, QLabel, QDialog, QVBoxLayout, \
+import time
+import traceback
+
+from PyQt6.QtCore import Qt, QThreadPool
+from PyQt6.QtGui import QFont
+from PyQt6.QtWidgets import QLineEdit, QTextEdit, QDateEdit, QLabel, QDialog, QVBoxLayout, \
     QMessageBox, QWidget, QApplication
 from datetime import datetime
 from os.path import exists
 from sqlite3 import OperationalError
-from symspellpy import SymSpell, Verbosity
 
 
 class SermonPrepDatabase:
@@ -65,10 +67,11 @@ class SermonPrepDatabase:
         On startup, initialize a QApplication, get the platform, set the app_dir and db_loc, instantiate the GUI
         Use the change_text signal to alter the text on the splash screen
         """
-        super().__init__()
-        self.spell_check_thread_pool = QThreadPool()
-        self.load_dictionary_thread_pool = QThreadPool()
+        os.chdir(os.path.dirname(__file__))
         self.gui = gui
+        self.spell_check_thread_pool = QThreadPool()
+        self.spell_check_thread_pool.setStackSize(256000000)
+        self.load_dictionary_thread_pool = QThreadPool()
         self.app = QApplication(sys.argv)
 
     def get_system_info(self):
@@ -126,17 +129,17 @@ class SermonPrepDatabase:
                 'It looks like this is the first time you\'ve run Sermon Prep Database v3.3.4.\n'
                 'Would you like to import an old database?\n'
                 '(Choose "No" to create a new database)',
-                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
             )
 
-            if response == QMessageBox.Yes:
+            if response == QMessageBox.StandardButton.Yes:
                 from convert_database import ConvertDatabase
                 ConvertDatabase(self)
-            elif response == QMessageBox.No:
+            elif response == QMessageBox.StandardButton.No:
                 # Create a new database in the user's App Data directory by copying the existing database template
                 shutil.copy(self.cwd + '/resources/database_template.db', self.db_loc)
                 QMessageBox.information(None, 'Database Created', 'A new database has been created.',
-                                        QMessageBox.Ok)
+                                        QMessageBox.StandardButton.Ok)
                 self.gui.app.processEvents()
             else:
                 quit(0)
@@ -150,10 +153,10 @@ class SermonPrepDatabase:
                     'Old Database Found',
                     'It appears that you are upgrading from a previous version of Sermon Prep Database. Your database '
                     'file will need to be upgraded before you can continue. Upgrade now?',
-                    QMessageBox.Yes | QMessageBox.No
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
                 )
 
-                if response == QMessageBox.Yes:
+                if response == QMessageBox.StandardButton.Yes:
                     from convert_database import ConvertDatabase
                     ConvertDatabase(self, 'existing')
                 else:
@@ -349,7 +352,6 @@ class SermonPrepDatabase:
         for item in results:
             self.ids.append(item[0])
 
-    # retrieve the list of dates from the database
     def get_date_list(self):
         """
         Method to retrieve all dates from the user's database.
@@ -442,7 +444,6 @@ class SermonPrepDatabase:
 
         self.get_user_settings()
 
-    # save user's label changes to the database
     def write_label_changes(self, new_labels):
         """
         Save the header label changes based on user input.
@@ -542,40 +543,40 @@ class SermonPrepDatabase:
             for i in range(self.gui.scripture_frame_layout.count()):
                 component = self.gui.scripture_frame_layout.itemAt(i).widget()
                 if isinstance(component, QLineEdit):
-                    sql += '"' + columns[index] + '" = "' + component.text().replace('"', '&quot') + '",'
+                    sql += '"' + columns[index] + '" = "' + component.text().replace('"', '&quot;') + '",'
                     index += 1
                 elif isinstance(component, QTextEdit):
-                    string = self.reformat_string_for_save(component.toMarkdown())
+                    string = component.toSimplifiedHtml()
                     sql += '"' + columns[index] + '" = "' + string + '",'
                     index += 1
             for i in range(self.gui.exegesis_frame_layout.count()):
                 component = self.gui.exegesis_frame_layout.itemAt(i).widget()
                 if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                    string = self.reformat_string_for_save(component.toMarkdown())
+                    string = component.toSimplifiedHtml()
                     sql += '"' + columns[index] + '" = "' + string + '",'
                     index += 1
             for i in range(self.gui.outline_frame_layout.count()):
                 component = self.gui.outline_frame_layout.itemAt(i).widget()
                 if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                    string = self.reformat_string_for_save(component.toMarkdown())
+                    string = component.toSimplifiedHtml()
                     sql += '"' + columns[index] + '" = "' + string + '",'
                     index += 1
             for i in range(self.gui.research_frame_layout.count()):
                 component = self.gui.research_frame_layout.itemAt(i).widget()
                 if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                    string = self.reformat_string_for_save(component.toMarkdown())
+                    string = component.toSimplifiedHtml()
                     sql += '"' + columns[index] + '" = "' + string + '",'
                     index += 1
             for i in range(self.gui.sermon_frame_layout.count()):
                 component = self.gui.sermon_frame_layout.itemAt(i).widget()
                 if isinstance(component, QLineEdit) or isinstance(component, QDateEdit):
                     if isinstance(component, QLineEdit):
-                        sql += '"' + columns[index] + '" = "' + component.text().replace('"', '&quot') + '",'
+                        sql += '"' + columns[index] + '" = "' + component.text().replace('"', '&quot;') + '",'
                     else:
                         sql += '"' + columns[index] + '" = "' + component.date().toString('yyyy-MM-dd') + '",'
                     index += 1
                 elif isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                    string = self.reformat_string_for_save(component.toMarkdown())
+                    string = component.toSimplifiedHtml()
                     sql += '"' + columns[index] + '" = "' + string + '" WHERE ID = "' + str(rec_id) + '"'
 
             conn = sqlite3.connect(self.db_loc)
@@ -592,92 +593,20 @@ class SermonPrepDatabase:
         except Exception as ex:
             self.write_to_log(str(ex), True)
 
-    # QTextEdit borks up the formatting when reloading markdown characters, so convert them to
-    # HTML tags instead
-    def reformat_string_for_save(self, string):
-        """
-        Method to handle the formatting of markdown characters, converting them to HTML for saving.
-
-        :param str string: The string to reformat.
-        """
-        string = string.replace('"', '&quot') # also handle quotes for the sake of SQL
-
-        slice = re.findall('_.*?_', string)
-        for item in slice:
-            if '***' in item:
-                new_string = item.replace('*', '')
-                new_string = new_string.replace('_', '')
-                new_string = '<u><i><strong>' + new_string + '</strong></i></u>'
-                string = string.replace(item,  new_string)
-            elif '**' in item:
-                new_string = item.replace('*', '')
-                new_string = new_string.replace('_', '')
-                new_string = '<u><strong>' + new_string + '</strong></u>'
-                string = string.replace(item, new_string)
-            elif '*' in item:
-                new_string = item.replace('*', '')
-                new_string = new_string.replace('_', '')
-                new_string = '<u><i>' + new_string + '</i></u>'
-                string = string.replace(item, new_string)
-            else:
-                new_string = item.replace('_', '')
-                new_string = '<u>' + new_string + '</u>'
-                string = string.replace(item, new_string)
-
-        slice = re.findall('\*\*\*.*?\*\*\*', string)
-        for item in slice:
-            new_string = item.replace('*', '')
-            new_string = '<i><strong>' + new_string + '</strong></i>'
-            string = string.replace(item, new_string)
-
-        slice = re.findall('\*\*.*?\*\*', string)
-        for item in slice:
-            new_string = item.replace('*', '')
-            new_string = new_string.replace('_', '')
-            new_string = '<strong>' + new_string + '</strong>'
-            string = string.replace(item, new_string)
-
-        slice = re.findall('\*.*?\*', string)
-        for item in slice:
-            new_string = item.replace('*', '')
-            new_string = new_string.replace('_', '')
-            new_string = '<i>' + new_string + '</i>'
-            string = string.replace(item, new_string)
-
-        string = string.replace('*', '')
-        return string
-
-    # change the &quot string back to '"', which was changed to facilitate easier SQL commands
     def reformat_string_for_load(self, string):
         """
-        Method to handle the formatting of a database string for insertion into a QTextEdit. Only quotes, leading/
-        trailing spaces, and errant markdown bulletting need to be handled as HTML tags will be handled by the
-        QTextEdit.
+        Method to handle the formatting of an older-style database string for insertion into a QTextEdit. Only those
+        strings missing paragraph markers as well as old-style &quots need to be handled.
 
         :param str string: The string to reformat.
         """
         string = string.strip()
-        if string.endswith('-'):
-            string = string[0:len(string) - 1].strip()
-        string = string.replace('&quot', '"')
-
-        #break into paragraphs and set line spacing
-        paragraphs = string.split('\n\n')
-        string = ''
-        bullets = False
-        for i in range(len(paragraphs)):
-            if not paragraphs[i].startswith('-'):
-                #since bullets in markdown can't be encased in a proper paragraph, add a paragraph before the next one
-                #if a bullet came before
-                if bullets:
-                    paragraphs[i] = '<p>&nbsp;</p><p style="line-height: ' + self.line_spacing + ';">' + paragraphs[i] + '</p>'
-                else:
-                    paragraphs[i] = '<p style="line-height: ' + self.line_spacing + ';">' + paragraphs[i] + '</p>'
-                bullets = False
-            else:
-                paragraphs[i] = '\n\n' + paragraphs[i] + '\n\n'
-                bullets = True
-            string = string + paragraphs[i]
+        if '<p>' not in string:
+            string_split = string.split('\n\n')
+            string = '<p>' + '</p>\n<p>'.join(string_split) + '</p>'
+        # replace any antiquated &quots without the semicolon
+        string = re.sub(r'&amp;quot(?!;)', '"', string)
+        string = re.sub(r'&quot(?!;)', '"', string)
         return string
 
     def get_search_results(self, search_text):
@@ -868,10 +797,10 @@ class SermonPrepDatabase:
             self.gui.win,
             'Really Delete?',
             'Really delete the current record?\nThis action cannot be undone',
-            QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
         )
 
-        if response == QMessageBox.Yes:
+        if response == QMessageBox.StandardButton.Yes:
             self.gui.changes = False
             sql = 'DELETE FROM sermon_prep_database WHERE ID = "' + str(self.ids[self.current_rec_index]) + '";'
             conn = sqlite3.connect(self.db_loc)
@@ -904,14 +833,14 @@ class SermonPrepDatabase:
             self.gui.win,
             'Save Changes?',
             'Changes have been made. Save changes?',
-            QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
         )
 
         self.write_to_log('askSave response: ' + str(response))
-        if response == QMessageBox.Yes:
+        if response == QMessageBox.StandardButton.Yes:
             self.save_rec()
             return True
-        elif response == QMessageBox.No:
+        elif response == QMessageBox.StandardButton.No:
             return True
         else:
             return False
@@ -958,7 +887,7 @@ class SermonPrepDatabase:
                 highest_num += 1
                 date = sermon[0]
                 reference = sermon[1]
-                text = self.reformat_string_for_save(sermon[2])
+                text = sermon[2]
                 title = sermon[3]
                 sql = 'INSERT INTO sermon_prep_database (ID, date, sermon_reference, manuscript, sermon_title) VALUES("'\
                     + str(highest_num) + '", "' + date + '", "' + reference + '", "' + text + '", "' + title + '");'
@@ -992,9 +921,9 @@ class SermonPrepDatabase:
                     self.gui.win,
                     'Import Complete',
                     message,
-                    QMessageBox.Yes | QMessageBox.No)
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
                 
-                if result == QMessageBox.Yes:
+                if result == QMessageBox.StandardButton.Yes:
                     error_text = ''
                     for error in errors:
                         error_text += error[0] + ': ' + error[1] + '\n'
@@ -1005,7 +934,7 @@ class SermonPrepDatabase:
                     dialog.setLayout(layout)
 
                     label = QLabel('Errors:')
-                    label.setFont(QFont(self.user_settings[3], int(self.user_settings[4]), QFont.Bold))
+                    label.setFont(QFont(self.user_settings[3], int(self.user_settings[4]), QFont.Weight.Bold))
                     layout.addWidget(label)
 
                     text_edit = QTextEdit()
@@ -1017,12 +946,12 @@ class SermonPrepDatabase:
                     layout.addWidget(text_edit)
                     dialog.exec()
             else:
-                QMessageBox.information(None, 'Import Complete', message, QMessageBox.Ok)
+                QMessageBox.information(None, 'Import Complete', message, QMessageBox.StandardButton.Ok)
         except Exception as ex:
             QMessageBox.critical(
                 self.gui.win,
                 'Error Occurred', 'An error occurred while importing:\n\n' + str(ex),
-                QMessageBox.Ok
+                QMessageBox.StandardButton.Ok
             )
             self.write_to_log(
                 'From SermonPrepDatabase.insert_imports: ' + str(ex) + '\nMost recent sql statement: ' + text)
@@ -1038,7 +967,7 @@ class SermonPrepDatabase:
 
         importing_label = QLabel('Importing...')
         importing_label.setStyleSheet('border: none;')
-        importing_label.setFont(QFont(self.gui.font_family, int(self.gui.font_size), QFont.Bold))
+        importing_label.setFont(QFont(self.gui.font_family, int(self.gui.font_size), QFont.Weight.Bold))
         layout.addWidget(importing_label)
         layout.addSpacing(50)
 
@@ -1052,8 +981,8 @@ class SermonPrepDatabase:
         self.file_label.setFont(QFont(self.gui.font_family, int(self.gui.font_size)))
         layout.addWidget(self.file_label)
 
-        self.widget.setWindowModality(Qt.WindowModal)
-        self.widget.setWindowFlag(Qt.FramelessWindowHint)
+        self.widget.setWindowModality(Qt.WindowModality.WindowModal)
+        self.widget.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.widget.show()
 
     def change_dir(self, text):
@@ -1080,8 +1009,56 @@ class SermonPrepDatabase:
         self.widget.deleteLater()
 
 
+def log_unhandled_exception(exc_type, exc_value, exc_traceback):
+    """
+    Provides a method for handling exceptions that aren't handled elsewhere in the program.
+    :param exc_type:
+    :param exc_value:
+    :param exc_traceback:
+    :return:
+    """
+    if issubclass(exc_type, KeyboardInterrupt):
+        # Will call default excepthook
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+
+    exc_type = str(exc_type).replace('<class ', '')
+    exc_type = exc_type.replace('>', '')
+    full_traceback = str(traceback.StackSummary.extract(traceback.walk_tb(exc_traceback)))
+    full_traceback = full_traceback.replace('[', '').replace(']', '')
+    full_traceback = full_traceback.replace('<FrameSummary ', '')
+    full_traceback = full_traceback.replace('>', '')
+    full_traceback_split = full_traceback.split(',')
+    formatted_traceback = ''
+    for i in range(len(full_traceback_split)):
+        if i == 0:
+            formatted_traceback += full_traceback_split[i] + '\n'
+        else:
+            formatted_traceback += '    ' + full_traceback_split[i] + '\n'
+
+    date_time = time.ctime(time.time())
+    log_text = (f'\n{date_time}:\n'
+                f'    UNHANDLED EXCEPTION\n'
+                f'    {exc_type}\n'
+                f'    {exc_value}\n'
+                f'    {full_traceback}')
+    with open(os.path.expanduser('~/AppData/Roaming/Sermon Prep Database/') + './error.log', 'a') as file:
+        file.write(log_text)
+
+    message_box = QMessageBox()
+    message_box.setWindowTitle('Unhandled Exception')
+    message_box.setText(
+        '<strong>Well, that wasn\'t supposed to happen!</strong><br><br>An unhandled exception occurred:<br>'
+        f'{exc_type}<br>'
+        f'{exc_value}<br>'
+        f'{full_traceback}')
+    message_box.setStandardButtons(QMessageBox.StandardButton.Close)
+    message_box.exec()
+
+
 # main entry point for the program
 if __name__ == '__main__':
+    sys.excepthook = log_unhandled_exception
     from gui import GUI
     app = QApplication(sys.argv)
     gui = GUI()

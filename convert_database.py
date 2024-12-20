@@ -30,7 +30,7 @@ import shutil
 import sqlite3
 from os.path import exists
 
-from PyQt5.QtWidgets import QFileDialog, QDialog, QGridLayout, QLabel, QProgressBar, QPushButton, QMessageBox
+from PyQt6.QtWidgets import QFileDialog, QDialog, QGridLayout, QLabel, QProgressBar, QPushButton, QMessageBox
 
 
 class ConvertDatabase(QDialog):
@@ -96,7 +96,7 @@ class ConvertDatabase(QDialog):
                 None,
                 'Database Created',
                 'A new database has been created.',
-                QMessageBox.Ok
+                QMessageBox.StandardButton.Ok
             )
             return 0
         else:
@@ -219,7 +219,7 @@ class ConvertDatabase(QDialog):
                 None,
                 'Invalid Database',
                 'Import failed. Please restart the program and try again.\n\nError:\n' + str(err),
-                QMessageBox.Ok
+                QMessageBox.StandardButton.Ok
             )
 
             os.remove(self.spd.db_loc)

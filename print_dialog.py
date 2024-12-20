@@ -25,10 +25,13 @@ https://www.ghostscript.com/licensing/index.html for more information.
 
 import subprocess
 
+import win32print
 import wmi as wmi
-from PyQt5.QtGui import QImage, QPixmap, QIcon
-from PyQt5.QtWidgets import QWidget, QGridLayout, QLabel, QPushButton, QHBoxLayout, QComboBox, QDialog
-from fitz import fitz
+from PyQt6.QtCore import QRectF, Qt
+from PyQt6.QtGui import QImage, QPixmap, QIcon, QPainter
+from PyQt6.QtPrintSupport import QPrinter
+from PyQt6.QtWidgets import QWidget, QGridLayout, QLabel, QPushButton, QHBoxLayout, QComboBox, QDialog
+import fitz
 
 
 class PrintDialog(QDialog):
@@ -184,6 +187,44 @@ class PrintDialog(QDialog):
         """
         Method to create the print job
         """
+        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+        printer.setDocName('Sermon Prep Record')
+        printer.setPageMargins(0.25, 0.25, 0.25, 0.25, QPrinter.Unit.Inch)
+
+        page_rect_inch = printer.pageRect(QPrinter.Unit.Inch)
+        dpi_x = printer.physicalDpiX()
+        dpi_y = printer.physicalDpiY()
+
+        painter = QPainter(printer)
+        painter.begin(printer)
+        do_new_page = False
+        for page in self.pages:
+            if do_new_page:
+                printer.newPage()
+
+            image_width = int(page_rect_inch.width() * dpi_x)
+            scale_ratio = image_width / page.width()
+            image_height = int(page.height() * scale_ratio)
+
+            page_rect = QRectF(
+                page_rect_inch.x() * dpi_x,
+                page_rect_inch.y() * dpi_y,
+                image_width,
+                image_height
+            )
+
+            page = page.scaled(
+                image_width,
+                image_height,
+                Qt.AspectRatioMode.IgnoreAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+
+            painter.drawPixmap(page_rect, page, QRectF(0, 0, image_width, image_height))
+            do_new_page = True
+        painter.end()
+        return
+
         print('Opening print subprocess')
         CREATE_NO_WINDOW = 0x08000000
         if self.landscape:

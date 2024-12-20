@@ -1,4 +1,7 @@
-PyQt5~=5.15.9
-symspellpy~=6.7.7
-pynput~=1.7.6
+PyQt6~=6.8.0
+symspellpy~=6.7.8
+pynput~=1.7.7
 WMI~=1.5.1
+pywin32~=308
+PyMuPDF~=1.25.1
+

@@ -23,9 +23,8 @@ licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
 """
 
-from PyQt5.QtCore import QSize, Qt, QTimer
-from PyQt5.QtWidgets import QDialog, QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QListWidget, \
-    QTextEdit
+from PyQt6.QtCore import QSize, Qt, QTimer
+from PyQt6.QtWidgets import QDialog, QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QListWidget
 
 
 def message_box(title, message, bg):
@@ -114,7 +113,7 @@ def timed_popup(message, millis, bg):
     :param str bg: The background color of the message
     """
     dialog = QDialog()
-    dialog.setWindowFlag(Qt.FramelessWindowHint)
+    dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
     dialog.setWindowOpacity(0.75)
     dialog.setBaseSize(QSize(200, 75))
     dialog.setStyleSheet('background-color: ' + bg)

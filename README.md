@@ -146,7 +146,7 @@ There are a few Shortcut Keys that can be used when using the program:
 
 <div>
     <img src='https://github.com/pastorjeremywilson/public/blob/main/Qt-logo-neon.png?raw=true' height=40px align='right' />
-    Sermon Prep Database uses <a href="https://www.qt.io/product/framework" target="_blank">Qt</a> (PyQt5) for the user interface.
+    Sermon Prep Database uses <a href="https://www.qt.io/product/framework" target="_blank">Qt</a> (PyQt6) for the user interface.
 </div>
 <br>
 

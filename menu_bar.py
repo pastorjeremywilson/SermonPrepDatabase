@@ -30,15 +30,16 @@ import shutil
 import sys
 from os.path import exists
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap, QTextCursor
-from PyQt5.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableView, QPushButton, QColorDialog, \
-    QTabWidget, QHBoxLayout, QComboBox, QTextBrowser, QDialog, QLineEdit, QTextEdit, QDateEdit, QMessageBox
+import wmi
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap, QTextCursor
+from PyQt6.QtPrintSupport import QPrinter
+from PyQt6.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableView, QPushButton, QColorDialog, \
+    QTabWidget, QHBoxLayout, QComboBox, QTextBrowser, QLineEdit, QTextEdit, QDateEdit, QMessageBox
 from pynput.keyboard import Key, Controller
 
 from runnables import LoadDictionary, SpellCheck
 from top_frame import TopFrame
-from print_dialog import PrintDialog
 
 
 class MenuBar:
@@ -217,249 +218,122 @@ class MenuBar:
         about_action.triggered.connect(self.show_about)
 
     def print_rec(self):
-        """
-        Method for sending to user's printer the currently shown record
-        """
-        from reportlab.lib.pagesizes import letter
-        from reportlab.lib.styles import ParagraphStyle
-        from reportlab.platypus import BaseDocTemplate, Frame, PageTemplate, Paragraph
-
         # get all text values from the GUI
-        text = []
+        print('print_rec')
+        all_data = []
         for i in range(self.gui.scripture_frame_layout.count()):
             component = self.gui.scripture_frame_layout.itemAt(i).widget()
 
             if isinstance(component, QLineEdit):
-                text.append(component.text())
+                all_data.append(component.text())
             elif isinstance(component, QTextEdit):
-                text.append(self.format_paragraph(component.toHtml()))
+                all_data.append(component.toSimplifiedHtml())
 
         for i in range(self.gui.exegesis_frame_layout.count()):
             component = self.gui.exegesis_frame_layout.itemAt(i).widget()
 
             if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                text.append(self.format_paragraph(component.toHtml()))
+                all_data.append(component.toSimplifiedHtml())
 
         for i in range(self.gui.outline_frame_layout.count()):
             component = self.gui.outline_frame_layout.itemAt(i).widget()
 
             if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                text.append(self.format_paragraph(component.toHtml()))
+                all_data.append(component.toSimplifiedHtml())
 
         for i in range(self.gui.research_frame_layout.count()):
             component = self.gui.research_frame_layout.itemAt(i).widget()
 
             if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                text.append(self.format_paragraph(component.toHtml()))
+                all_data.append(component.toSimplifiedHtml())
 
         for i in range(self.gui.sermon_frame_layout.count()):
             component = self.gui.sermon_frame_layout.itemAt(i).widget()
 
             if isinstance(component, QLineEdit) or isinstance(component, QDateEdit):
                 if isinstance(component, QLineEdit):
-                    text.append(component.text())
+                    all_data.append(component.text())
                 else:
-                    text.append(component.date().toString('yyyy-MM-dd'))
+                    all_data.append(component.date().toString('yyyy-MM-dd'))
             elif isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                text.append(self.format_paragraph(component.toHtml()))
+                all_data.append(component.toSimplifiedHtml())
 
-        print_file_loc = self.spd.app_dir + '/print.pdf'
+        text_with_headers = []
+        standard_style = 'font-family: times; font-size: 12pt;'
+        for i in range(len(all_data)):
+            if '<p>' not in all_data[i]:
+                all_data[i] = f'<p style="{standard_style}">{all_data[i]}</p>'
+            all_data[i] = all_data[i].replace('<p>', f'<p style="{standard_style}">')
+            all_data[i] = all_data[i].replace('<li>', f'<li style="{standard_style}">')
 
-        # create a ParagraphStyle for the different types of formatting that will be used on the printout
-        normal = ParagraphStyle(
-            name='Normal',
-            fontName='Helvetica',
-            fontSize=11,
-            firstLineIndent=18,
-            leading=16,
-            spaceBefore=3,
-            spaceAfter=6
-        )
+            has_contents = False
+            this_string = re.sub('<.*?>', '', all_data[i]).strip()
+            if len(this_string) > 0:
+                has_contents = True
 
-        bullet = ParagraphStyle(
-            name='Normal',
-            fontName='Helvetica',
-            fontSize=11,
-            leading=16,
-            bulletIndent=20,
-            leftIndent=30
-        )
+            if has_contents:
+                text_with_headers.append(
+                    f'<header>'
+                    f'<p style="font-weight: bold; {standard_style}">'
+                    f'<u>{self.spd.user_settings[i + 5]}</u>'
+                    f'</p>'
+                )
+                text_with_headers.append(all_data[i])
 
-        heading = ParagraphStyle(
-            name='Heading',
-            fontName='Helvetica-Bold',
-            fontSize=11,
-            spaceBefore=6,
-            spaceAfter=3
-        )
+        html = '\n'.join(text_with_headers)
 
-        doc = BaseDocTemplate(print_file_loc, pagesize=letter)
-        frame = Frame(
-            doc.leftMargin,
-            doc.bottomMargin,
-            doc.width,
-            doc.height,
-            0, 0, 0, 0,
-            id='normal')
-        template = PageTemplate(id='test', frames=frame)
-        doc.addPageTemplates([template])
+        self.print_widget = QWidget()
+        self.print_widget.setWindowFlag(Qt.WindowType.Window)
+        print_layout = QHBoxLayout(self.print_widget)
 
-        doc_text = []
-        for i in range(0, len(text)):
-            paragraph_text = text[i]
-            if isinstance(paragraph_text, str)\
-                    and any(c.isalpha() for c in paragraph_text)\
-                    or 'date' in self.spd.user_settings[i + 5].lower():
-                t = re.sub('<.*?>', '', paragraph_text)
-                if any(c.isalpha for c in t):
-                    doc_text.append(Paragraph(self.spd.user_settings[i + 5], heading))
-                    if '<bullet>' in paragraph_text:
-                        doc_text.append(Paragraph(paragraph_text, bullet))
-                    else:
-                        doc_text.append(Paragraph(paragraph_text, normal))
-            else:
-                has_contents = False
-                for paragraph in paragraph_text:
-                    t = re.sub('<.*?>', '', paragraph)
-                    if any(c.isalpha() for c in t):
-                        has_contents = True
+        text_edit = QTextEdit()
+        text_edit.setHtml(html)
+        print_layout.addWidget(text_edit)
 
-                if has_contents:
-                    doc_text.append(Paragraph(self.spd.user_settings[i + 5], heading))
+        options_box = QWidget()
+        options_layout = QVBoxLayout(options_box)
+        print_layout.addWidget(options_box)
 
-                    for paragraph in paragraph_text:
-                        if any(c.isalpha() for c in paragraph):
-                            if '<bullet>' in paragraph:
-                                doc_text.append(Paragraph(paragraph, bullet))
-                            else:
-                                doc_text.append(Paragraph(paragraph, normal))
-        doc.build(doc_text)
+        print_to_label = QLabel('Print to:')
+        print_to_label.setFont(self.gui.bold_font)
+        options_layout.addWidget(print_to_label)
 
-        from subprocess import Popen, PIPE
-        self.spd.write_to_log('Opening print subprocess')
+        win_management = wmi.WMI()
+        printers = win_management.Win32_Printer()
+        printer_combobox = QComboBox()
+        printer_combobox.setFont(self.gui.standard_font)
+        default = ''
+        for printer in printers:
+            if not printer.Hidden:
+                printer_combobox.addItem(printer.Name)
+            if printer.Default:
+                default = printer.Name
+        printer_combobox.setCurrentText(default)
+        options_layout.addWidget(printer_combobox)
 
-        # For the Windows platform, use print_dialog.py to handle printing
-        if sys.platform == 'win32':
-            self.print_dialog = PrintDialog(print_file_loc, self.gui)
-            self.print_dialog.exec()
+        button_box = QWidget()
+        button_layout = QHBoxLayout(button_box)
+        options_layout.addWidget(button_box)
 
-        elif sys.platform == 'linux':
-            # get the list of printers from the OS and ask user to choose
-            p = Popen(['/usr/bin/lpstat', '-a'], stdin = PIPE, stdout = PIPE, stderr = PIPE)
-            stdout, stderr = p.communicate()
-            stdout = str(stdout).replace('b\'', '')
-            stdout = stdout.replace('\'', '')
-            lines = stdout.split('\\n')
+        ok_button = QPushButton('Ok')
+        ok_button.pressed.connect(lambda: self.do_print(printer_combobox.currentText(), text_edit))
+        ok_button.setFont(self.gui.standard_font)
+        button_layout.addWidget(ok_button)
 
-            printers = []
-            for line in lines:
-                printers.append(line.split(' ')[0].replace('_', ' '))
+        cancel_button = QPushButton('Cancel')
+        cancel_button.pressed.connect(self.print_widget.close)
+        cancel_button.setFont(self.gui.standard_font)
+        button_layout.addWidget(cancel_button)
 
-            print_dialog = QDialog(self.gui.main_widget)
-            layout = QVBoxLayout()
-            print_dialog.setLayout(layout)
+        options_layout.addStretch()
+        self.print_widget.show()
 
-            label = QLabel('Choose Printer:')
-            layout.addWidget(label)
-
-            printer_combobox = QComboBox()
-            for printer in printers:
-                printer_combobox.addItem(printer)
-            layout.addWidget(printer_combobox)
-
-            button_widget = QWidget()
-            button_layout = QHBoxLayout()
-            button_widget.setLayout(button_layout)
-
-            ok_button = QPushButton('OK')
-            ok_button.pressed.connect(
-                lambda: self.linux_print(print_dialog, printer_combobox.currentText(), print_file_loc))
-            button_layout.addWidget(ok_button)
-
-            cancel_button = QPushButton('Cancel')
-            cancel_button.pressed.connect(print_dialog.destroy)
-            button_layout.addWidget(cancel_button)
-
-            layout.addWidget(button_widget)
-
-            print_dialog.show()
-
-    def format_paragraph(self, comp_text):
-        """
-        format_paragraph takes the getHtml() string from a QTextEdit and reformats the tags into ones that reportlab
-        likes.
-
-        :param str comp_text: the HTML string from a QTextEdit
-        """
-        comp_text = re.sub('<p.*?>', '', comp_text, flags=re.DOTALL)
-        comp_text = re.sub('</p>', '<br><br>', comp_text)
-
-        slice = re.findall('<span.*?span>', comp_text)
-        for item in slice:
-            addition = ['', '']
-            if 'font-weight' in item:
-                addition[0] = '<strong>' + addition[0]
-                addition[1] = addition[1] + '</strong>'
-            if 'text-decoration' in item:
-                addition[0] = '<u>' + addition[0]
-                addition[1] = addition[1] + '</u>'
-            if 'font-style' in item:
-                addition[0] = '<i>' + addition[0]
-                addition[1] = addition[1] + '</i>'
-
-            new_string = re.sub('<span.*?>', addition[0], item)
-            new_string = re.sub('</span>', addition[1], new_string)
-            comp_text = comp_text.replace(item, new_string)
-
-        slice = re.findall('<li.*?</li>', comp_text)
-        for item in slice:
-            new_string = re.sub('<li.*?>', '<bullet>&bull;</bullet>', item)
-            new_string = re.sub('</li>', '<br><br>', new_string)
-            comp_text = comp_text.replace(item, new_string)
-
-        comp_text = re.sub('<span.*?>', '', comp_text)
-        comp_text = re.sub('</span>', '', comp_text)
-        comp_text = re.sub('<style?(.*?)style>', '', comp_text, flags=re.DOTALL)
-
-        text_split = comp_text.split('<br><br>')
-
-        return text_split
-
-    def linux_print(self, print_dialog, item_text, printFileLoc):
-        """
-        Method for performing a print operation in the Linux platform.
-
-        :param QDialog print_dialog: The print dialog from which this method was called
-        :param str item_text: The string representation of the user's chosen printer
-        :param printFileLoc: The location where the print file will be written
-        """
-        print_dialog.destroy()
-        item_text = item_text.replace(' ', '_')
-
-        from subprocess import Popen, PIPE
-        import os
-
-        try:
-            p = Popen(
-                [
-                    'lpr',
-                    '-P',
-                    item_text,
-                    printFileLoc
-                ],
-                stdin = PIPE,
-                stdout = PIPE,
-                stderr = PIPE
-            )
-
-            self.spd.write_to_log('Capturing print subprocess sdtout & stderr')
-            stdout, stderr = p.communicate()
-            self.spd.write_to_log('stdout:' + str(stdout))
-            self.spd.write_to_log('stderr:' + str(stderr))
-
-            os.remove(printFileLoc)
-        except Exception as err:
-            self.spd.write_to_log('MenuBar.linux_print: ' + str(err), True)
+    def do_print(self, printer_name, text_edit):
+        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+        printer.setDocName('Sermon Prep Database')
+        printer.setPrinterName(printer_name)
+        text_edit.print(printer)
+        self.print_widget.close()
 
     def do_backup(self):
         """
@@ -479,7 +353,7 @@ class MenuBar:
                 None,
                 'Backup Created',
                 'Backup successfully created as ' + fileName[0],
-                QMessageBox.Ok
+                QMessageBox.StandardButton.Ok
             )
         # make this more precise you lazy turd
         except Exception as ex:
@@ -509,7 +383,7 @@ class MenuBar:
                 None,
                 'Attempting Restore',
                 'The program will now attempt to restore the data from your backup.',
-                QMessageBox.Ok
+                QMessageBox.StandardButton.Ok
             )
 
             try:
@@ -530,7 +404,7 @@ class MenuBar:
                     'Error Loading Database Data',
                     'There was a problem loading the data from your backup. Your prior database has not been changed.  '
                     'The error is as follows:\r\n' + str(err),
-                    QMessageBox.Ok
+                    QMessageBox.StandardButton.Ok
                 )
 
                 self.spd.get_ids()
@@ -547,7 +421,7 @@ class MenuBar:
                     'Backup Restored',
                     'Backup successfully restored.\n\nA copy of your prior database has been saved as ' + self.spd.app_dir
                     + '/active-database-backup.db',
-                    QMessageBox.Ok
+                    QMessageBox.StandardButton.Ok
                 )
 
     def import_from_files(self):
@@ -562,7 +436,7 @@ class MenuBar:
             'YYYY-MM-DD.book.chapter.verse-verse\n\n'
             'For example, a sermon preached on May 20th, 2011 on Mark 3:1-12, saved as a Microsoft Word document,'
             'would be named:\n\n'
-            '2011-05-11.mark.3.1-12.docx', QMessageBox.Ok)
+            '2011-05-11.mark.3.1-12.docx', QMessageBox.StandardButton.Ok)
         from get_from_docx import GetFromDocx
         GetFromDocx(self.gui)
 
@@ -592,7 +466,7 @@ class MenuBar:
                         'Bad Format',
                         'There is a problem with your XML bible: ' + file[0] + '. Try downloading it again or ensuring '
                         'that it is formatted according to Zefania standards.',
-                        QMessageBox.Ok
+                        QMessageBox.StandardButton.Ok
                     )
 
                     # we're just not going to worry about the option to have multiple bibles
@@ -603,7 +477,7 @@ class MenuBar:
                         self.gui.win,
                         'Import Complete',
                         'Bible file has been successfully imported',
-                        QMessageBox.Ok
+                        QMessageBox.StandardButton.Ok
                     )
                     try:
                         self.gui.tabbed_frame.removeTab(0)
@@ -621,7 +495,7 @@ class MenuBar:
                 self.gui.win,
                 'Import Error',
                 'An error occurred while importing the file ' + file[0] + ':\n\n' + str(ex),
-                QMessageBox.Ok
+                QMessageBox.StandardButton.Ok
             )
 
             if exists(self.spd.app_dir + '/my_bible.xml'):
@@ -633,7 +507,7 @@ class MenuBar:
         or 'Fallen Condition Focus of the Text'.
         """
         self.rename_widget = QWidget()
-        self.rename_widget.setWindowFlag(Qt.Window)
+        self.rename_widget.setWindowFlag(Qt.WindowType.Window)
         self.rename_widget.resize(920, 400)
         rename_widget_layout = QVBoxLayout()
         self.rename_widget.setLayout(rename_widget_layout)
@@ -666,8 +540,8 @@ class MenuBar:
                 model.setItem(i - 5, 0, item)
                 item2 = QStandardItem(self.spd.user_settings[i])
                 model.setItem(i - 5, 1, item2)
-        model.setHeaderData(0, Qt.Horizontal, 'Current Label')
-        model.setHeaderData(1, Qt.Horizontal, 'New Label')
+        model.setHeaderData(0, Qt.Orientation.Horizontal, 'Current Label')
+        model.setHeaderData(1, Qt.Orientation.Horizontal, 'New Label')
 
         rename_table_view = QTableView()
         rename_table_view.setModel(model)
@@ -776,10 +650,10 @@ class MenuBar:
                 widget.blockSignals(True)
 
                 cursor = widget.textCursor()
-                cursor.select(QTextCursor.Document)
+                cursor.select(QTextCursor.SelectionType.Document)
 
                 char_format = cursor.charFormat()
-                char_format.setForeground(Qt.black)
+                char_format.setForeground(Qt.GlobalColor.black)
                 cursor.mergeCharFormat(char_format)
                 cursor.clearSelection()
 

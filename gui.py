@@ -22,17 +22,15 @@ The Sermon Prep Database program includes Artifex Software's GhostScript,
 licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
 """
-import os
 import re
-import time
 from os.path import exists
 
-from PyQt5.QtCore import Qt, QSize, QDate, QDateTime, QObject, QRunnable, pyqtSignal, QThreadPool
-from PyQt5.QtGui import QIcon, QFont, QTextCursor, QStandardItemModel, QStandardItem, QPixmap, QColor, QPalette, QMovie, \
-    QCloseEvent
-from PyQt5.QtWidgets import QBoxLayout, QWidget, QUndoStack, QTabWidget, QGridLayout, QLabel, QLineEdit, \
+from PyQt6.QtCore import Qt, QSize, QDate, QDateTime, QObject, QRunnable, pyqtSignal
+from PyQt6.QtGui import QIcon, QFont, QStandardItemModel, QStandardItem, QPixmap, QColor, QPalette, \
+    QCloseEvent, QAction, QUndoStack, QTextCursor
+from PyQt6.QtWidgets import QBoxLayout, QWidget, QTabWidget, QGridLayout, QLabel, QLineEdit, \
     QCheckBox, QDateEdit, QTextEdit, QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QTableView, QDialog, \
-    QApplication, QProgressBar, QAction
+    QApplication, QProgressBar
 
 from get_scripture import GetScripture
 from menu_bar import MenuBar
@@ -56,6 +54,9 @@ class GUI(QMainWindow):
     gs = None
     create_main_gui = pyqtSignal()
     clear_changes_signal = pyqtSignal()
+    set_text_cursor_signal = pyqtSignal(QWidget, QTextCursor)
+    set_text_color_signal = pyqtSignal(QTextEdit, list, QColor)
+    reset_cursor_color_signal = pyqtSignal(QTextEdit)
     spell_check = None
     
     def __init__(self):
@@ -66,8 +67,11 @@ class GUI(QMainWindow):
         super().__init__()
         self.create_main_gui.connect(self.create_gui)
         self.clear_changes_signal.connect(self.clear_changes)
+        self.set_text_cursor_signal.connect(self.set_text_cursor)
+        self.set_text_color_signal.connect(self.set_text_color)
+        self.reset_cursor_color_signal.connect(self.reset_cursor_color)
 
-        from sermon_prep_database import SermonPrepDatabase
+        from main import SermonPrepDatabase
         self.spd = SermonPrepDatabase(self)
 
         initial_startup = InitialStartup(self)
@@ -87,7 +91,7 @@ class GUI(QMainWindow):
             self.font_color = self.spd.user_settings[29]
             self.text_background = self.spd.user_settings[30]
             self.standard_font = QFont(self.font_family, int(self.font_size))
-            self.bold_font = QFont(self.font_family, int(self.font_size), QFont.Bold)
+            self.bold_font = QFont(self.font_family, int(self.font_size), QFont.Weight.Bold)
             self.spd.line_spacing = str(self.spd.user_settings[28])
         except IndexError as ex:
             self.spd.write_to_log('Error retreiving settings from database:\n\n' + str(ex), True)
@@ -95,7 +99,7 @@ class GUI(QMainWindow):
         icon_pixmap = QPixmap(self.spd.cwd + '/resources/svg/spIcon.svg')
         self.setWindowIcon(QIcon(icon_pixmap))
 
-        self.layout = QBoxLayout(QBoxLayout.TopToBottom)
+        self.layout = QBoxLayout(QBoxLayout.Direction.TopToBottom)
         self.main_widget = QWidget()
         self.setCentralWidget(self.main_widget)
         self.main_widget.setLayout(self.layout)
@@ -119,10 +123,10 @@ class GUI(QMainWindow):
         else:
             self.set_style_sheets()
 
+        self.showMaximized()
+
         self.spd.current_rec_index = len(self.spd.ids) - 1
         self.spd.get_by_index(self.spd.current_rec_index)
-
-        self.showMaximized()
     
     def build_tabbed_frame(self):
         """
@@ -130,7 +134,7 @@ class GUI(QMainWindow):
         """
         self.tabbed_frame = QTabWidget()
         self.tabbed_frame.setObjectName('tabbedFrame')
-        self.tabbed_frame.setTabPosition(QTabWidget.West)
+        self.tabbed_frame.setTabPosition(QTabWidget.TabPosition.West)
         self.tabbed_frame.setIconSize(QSize(24, 24))
         self.layout.addWidget(self.tabbed_frame)
         
@@ -606,7 +610,7 @@ class GUI(QMainWindow):
         """
         cursor = component.textCursor()
         font = cursor.charFormat().font()
-        if font.weight() == QFont.Normal:
+        if font.weight() == QFont.Weight.Normal:
             self.top_frame.bold_button.setChecked(False)
         else:
             self.top_frame.bold_button.setChecked(True)
@@ -631,11 +635,6 @@ class GUI(QMainWindow):
 
         :param list of str record: a list whose first element is a list of values in their proper order.
         """
-        self.spd.load_dictionary_thread_pool.waitForDone()
-        self.spd.spell_check_thread_pool.waitForDone()
-        self.spd.spell_check_thread_pool.deleteLater()
-        QApplication.processEvents()
-        self.spd.spell_check_thread_pool = QThreadPool()
         index = 1
         self.setWindowTitle('Sermon Prep Database - ' + str(record[0][17]) + ' - ' + str(record[0][3]))
 
@@ -644,18 +643,19 @@ class GUI(QMainWindow):
 
             if isinstance(component, QLineEdit):
                 if record[0][index]:
-                    component.setText(str(record[0][index].replace('&quot', '"')).strip())
+                    component.setText(str(record[0][index].replace('&quot;', '"')).strip())
                 else:
                     component.clear()
                 index += 1
 
             elif isinstance(component, CustomTextEdit):
                 component.clear()
+                component.full_spell_check_done = False
 
                 if record[0][index]:
-                    component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
-                    spell_check = SpellCheck(component, 'whole', self)
-                    self.spd.spell_check_thread_pool.start(spell_check)
+                    component.setHtml(self.spd.reformat_string_for_load(record[0][index]))
+                    """spell_check = SpellCheck(component, 'whole', self)
+                    self.spd.spell_check_thread_pool.start(spell_check)"""
 
                 index += 1
 
@@ -664,11 +664,12 @@ class GUI(QMainWindow):
 
             if isinstance(component, CustomTextEdit) and not component.objectName() == 'text_box':
                 component.clear()
+                component.full_spell_check_done = False
 
                 if record[0][index]:
-                    component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
-                    spell_check = SpellCheck(component, 'whole', self)
-                    self.spd.spell_check_thread_pool.start(spell_check)
+                    component.setHtml(self.spd.reformat_string_for_load(record[0][index]))
+                    """spell_check = SpellCheck(component, 'whole', self)
+                    self.spd.spell_check_thread_pool.start(spell_check)"""
 
                 index += 1
 
@@ -677,11 +678,12 @@ class GUI(QMainWindow):
 
             if isinstance(component, CustomTextEdit) and not component.objectName() == 'text_box':
                 component.clear()
+                component.full_spell_check_done = False
 
                 if record[0][index]:
-                    component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
-                    spell_check = SpellCheck(component, 'whole', self)
-                    self.spd.spell_check_thread_pool.start(spell_check)
+                    component.setHtml(self.spd.reformat_string_for_load(record[0][index]))
+                    """spell_check = SpellCheck(component, 'whole', self)
+                    self.spd.spell_check_thread_pool.start(spell_check)"""
 
                 index += 1
 
@@ -690,11 +692,12 @@ class GUI(QMainWindow):
 
             if isinstance(component, CustomTextEdit):
                 component.clear()
+                component.full_spell_check_done = False
 
                 if record[0][index]:
-                    component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
-                    spell_check = SpellCheck(component, 'whole', self)
-                    self.spd.spell_check_thread_pool.start(spell_check)
+                    component.setHtml(self.spd.reformat_string_for_load(record[0][index]))
+                    """spell_check = SpellCheck(component, 'whole', self)
+                    self.spd.spell_check_thread_pool.start(spell_check)"""
 
                 index += 1
 
@@ -703,7 +706,7 @@ class GUI(QMainWindow):
 
             if isinstance(component, QLineEdit):
                 if record[0][index]:
-                    component.setText(record[0][index].replace('&quot', '"'))
+                    component.setText(record[0][index].replace('&quot;', '"'))
                 else:
                     component.clear()
                 index += 1
@@ -737,11 +740,12 @@ class GUI(QMainWindow):
 
             if isinstance(component, CustomTextEdit):
                 component.clear()
+                component.full_spell_check_done = False
 
                 if record[0][index]:
-                    component.setMarkdown(self.spd.reformat_string_for_load(record[0][index]))
-                    spell_check = SpellCheck(component, 'whole', self)
-                    self.spd.spell_check_thread_pool.start(spell_check)
+                    component.setHtml(self.spd.reformat_string_for_load(record[0][index]))
+                    """spell_check = SpellCheck(component, 'whole', self)
+                    self.spd.spell_check_thread_pool.start(spell_check)"""
 
                 index += 1
 
@@ -761,7 +765,7 @@ class GUI(QMainWindow):
 
         self.top_frame.id_label.setText('ID: ' + str(record[0][0]))
 
-        self.spd.spell_check_thread_pool.waitForDone()
+        self.changes = False
 
     def changes_detected(self):
         """
@@ -833,6 +837,30 @@ class GUI(QMainWindow):
             'Sermon Prep Database - ' + self.sermon_date_edit.text() + ' - ' + self.sermon_reference_field.text())
         self.changes = True
 
+    def set_text_cursor(self, widget, cursor):
+        widget.setTextCursor(cursor)
+
+    def set_text_color(self, widget, indices, color):
+        try:
+            for index in indices:
+                cursor = widget.textCursor()
+                cursor.setPosition(index, QTextCursor.MoveMode.MoveAnchor)
+                cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+                char_format = cursor.charFormat()
+                char_format.setForeground(color)
+                cursor.mergeCharFormat(char_format)
+                cursor.clearSelection()
+                char_format.setForeground(Qt.GlobalColor.black)
+                cursor.mergeCharFormat(char_format)
+        except Exception as ex:
+            print(str(ex))
+
+    def reset_cursor_color(self, widget):
+        cursor = widget.textCursor()
+        char_format = cursor.charFormat()
+        char_format.setForeground(Qt.GlobalColor.black)
+        widget.mergeCurrentCharFormat(char_format)
+
     def do_exit(self, evt):
         """
         Method to ask if changes are to be saved before exiting the program.
@@ -863,7 +891,9 @@ class GUI(QMainWindow):
             Ctrl-P: Print
             Ctrl-Q: Exit
         """
-        if (event.modifiers() & Qt.ControlModifier) and (event.modifiers() & Qt.ShiftModifier) and event.key() == Qt.Key_B:
+        if ((event.modifiers() & Qt.KeyboardModifier.ControlModifier)
+                and (event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+                and event.key() == Qt.Key.Key_B):
             self.top_frame.set_bullet()
             self.top_frame.bullet_button.blockSignals(True)
             if self.top_frame.bullet_button.isChecked():
@@ -871,7 +901,7 @@ class GUI(QMainWindow):
             else:
                 self.top_frame.bullet_button.setChecked(True)
             self.top_frame.bold_button.blockSignals(False)
-        elif event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_B:
+        elif event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_B:
             self.top_frame.set_bold()
             self.top_frame.bold_button.blockSignals(True)
             if self.top_frame.bold_button.isChecked():
@@ -879,7 +909,7 @@ class GUI(QMainWindow):
             else:
                 self.top_frame.bold_button.setChecked(True)
             self.top_frame.bold_button.blockSignals(False)
-        elif event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_I:
+        elif event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_I:
             self.top_frame.set_italic()
             self.top_frame.italic_button.blockSignals(True)
             if self.top_frame.italic_button.isChecked():
@@ -887,7 +917,7 @@ class GUI(QMainWindow):
             else:
                 self.top_frame.italic_button.setChecked(True)
             self.top_frame.italic_button.blockSignals(False)
-        elif event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_U:
+        elif event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_U:
             self.top_frame.set_underline()
             self.top_frame.underline_button.blockSignals(True)
             if self.top_frame.underline_button.isChecked():
@@ -895,11 +925,11 @@ class GUI(QMainWindow):
             else:
                 self.top_frame.underline_button.setChecked(True)
             self.top_frame.underline_button.blockSignals(False)
-        elif event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_S:
+        elif event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_S:
             self.spd.save_rec()
-        elif event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_P:
+        elif event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_P:
             self.menu_bar.print_rec()
-        elif event.modifiers() & Qt.ControlModifier and event.key() == Qt.Key_Q:
+        elif event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_Q:
             self.do_exit()
         event.accept()
 
@@ -961,9 +991,9 @@ class StartupSplash(QDialog):
         self.update_text.connect(self.change_text)
         self.end.connect(lambda: self.done(0))
 
-        self.setWindowFlag(Qt.FramelessWindowHint)
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.setModal(True)
-        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setStyleSheet('background-color: transparent')
         self.setMinimumWidth(300)
 
@@ -972,16 +1002,17 @@ class StartupSplash(QDialog):
 
         self.working_label = QLabel()
         self.working_label.setAutoFillBackground(False)
-        movie = QMovie(os.path.dirname(os.path.abspath(__file__)).replace('\\\\', '/') + '/resources/waitIcon.webp')
-        self.working_label.setMovie(movie)
-        layout.addWidget(self.working_label, 0, 0, Qt.AlignHCenter)
-        movie.start()
+        self.working_label.setPixmap(QPixmap('resources/icon.png'))
+        #movie = QMovie('resources/waitIcon.webp')
+        #self.working_label.setMovie(movie)
+        layout.addWidget(self.working_label, 0, 0, Qt.AlignmentFlag.AlignHCenter)
+        #movie.start()
 
         self.status_label = QLabel('Starting...')
-        self.status_label.setFont(QFont('Helvetica', 16, QFont.Bold))
+        self.status_label.setFont(QFont('Helvetica', 16, QFont.Weight.Bold))
         self.status_label.setStyleSheet('color: #d7d7f4; text-align: center;')
-        self.status_label.setAlignment(Qt.AlignCenter)
-        layout.addWidget(self.status_label, 1, 0, Qt.AlignCenter)
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.status_label, 1, 0, Qt.AlignmentFlag.AlignCenter)
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(1, progress_end)
@@ -1026,15 +1057,17 @@ class CustomTextEdit(QTextEdit):
         self.setObjectName('custom_text_edit')
         self.win = win
         self.gui = gui
+        self.full_spell_check_done = False
         self.textChanged.connect(self.text_changed)
+        self.word_spell_check = SpellCheck(self, 'previous', self.gui)
+        self.word_spell_check.setAutoDelete(False)
 
     def keyReleaseEvent(self, evt):
-        if ((evt.key() == Qt.Key_Space
-                or evt.key() == Qt.Key_Return
-                or evt.key() == Qt.Key_Enter)
+        if ((evt.key() == Qt.Key.Key_Space
+                or evt.key() == Qt.Key.Key_Return
+                or evt.key() == Qt.Key.Key_Enter)
                 and str(self.gui.spell_check) == '0'):
-            spell_check = SpellCheck(self, 'previous', self.gui)
-            self.gui.spd.spell_check_thread_pool.start(spell_check)
+            self.gui.spd.spell_check_thread_pool.start(self.word_spell_check)
 
     def contextMenuEvent(self, evt):
         """
@@ -1052,7 +1085,7 @@ class CustomTextEdit(QTextEdit):
 
         if not self.gui.spd.disable_spell_check:
             cursor = self.cursorForPosition(evt.pos())
-            cursor.select(QTextCursor.WordUnderCursor)
+            cursor.select(QTextCursor.SelectionType.WordUnderCursor)
             word = cursor.selection().toPlainText()
 
             if len(word) == 0:
@@ -1066,8 +1099,7 @@ class CustomTextEdit(QTextEdit):
                 suggestions = spell_check.check_single_word(word)
 
                 next_menu_index = 0
-                if not suggestions[0].term == spell_check.clean_word(word):
-                    spell_actions = {}
+                spell_actions = {}
 
                 number_of_suggestions = len(suggestions)
                 if number_of_suggestions > 10: number_of_suggestions = 11
@@ -1092,6 +1124,59 @@ class CustomTextEdit(QTextEdit):
             menu.exec(evt.globalPos())
             menu.close()
 
+    def toSimplifiedHtml(self):
+        """
+        Method to strip unneeded html tags and convert others to simpler tags
+
+        :param str string: The string to reformat.
+        """
+        string = self.toHtml()
+
+        string = re.split('<body.*?>', string)[1]
+
+        # preserve any desired tags from getting removed during the wholesale <.*?> removal
+        string = re.sub('<p.*?>', '{p}', string)
+        string = re.sub('</p>', '{/p}', string)
+        string = re.sub('<ul.*?>', '{ul}', string)
+        string = re.sub('</ul>', '{/ul}', string)
+        string = re.sub('<li.*?>', '{li}', string)
+        string = re.sub('</li>', '{/li}', string)
+
+        bold_texts = re.findall('<span.*?font-weight.*?</span>', string)
+        for text in bold_texts:
+            new_text = re.sub('<.*?>', '', text)
+            new_text = '{b}' + new_text + '{/b}'
+            string = string.replace(text, new_text)
+
+        italic_texts = re.findall('<span.*?font-style.*?</span>', string)
+        for text in italic_texts:
+            new_text = re.sub('<.*?>', '', text)
+            new_text = '{i}' + new_text + '{/i}'
+            string = string.replace(text, new_text)
+
+        underline_texts = re.findall('<span.*?text-decoration.*?</span>', string)
+        for text in underline_texts:
+            new_text = re.sub('<.*?>', '', text)
+            new_text = '{u}' + new_text + '{/u}'
+            string = string.replace(text, new_text)
+
+        # convert preserved tags back to their original form
+        string = re.sub('<.*?>', '', string)
+        string = string.replace('{p}', '<p>')
+        string = string.replace('{/p}', '</p>\n')
+        string = string.replace('{ul}', '<ul>')
+        string = string.replace('{/ul}', '</ul>')
+        string = string.replace('{li}', '<li>')
+        string = string.replace('{/li}', '</li>\n')
+        string = string.replace('{b}', '<b>')
+        string = string.replace('{/b}', '</b>')
+        string = string.replace('{i}', '<i>')
+        string = string.replace('{/i}', '</i>')
+        string = string.replace('{u}', '<u>')
+        string = string.replace('{/u}', '</u>')
+
+        return string.strip()
+
     def text_changed(self):
         self.gui.changes = True
 
@@ -1113,11 +1198,11 @@ class CustomTextEdit(QTextEdit):
 
         self.textCursor().removeSelectedText()
         cursor = self.textCursor()
-        cursor.movePosition(QTextCursor.NextCharacter, QTextCursor.KeepAnchor)
+        cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor)
         self.setTextCursor(cursor)
 
         cursor = self.textCursor()
-        cursor.movePosition(QTextCursor.PreviousCharacter, QTextCursor.MoveAnchor)
+        cursor.movePosition(QTextCursor.MoveOperation.PreviousCharacter, QTextCursor.MoveMode.MoveAnchor)
         self.setTextCursor(cursor)
 
         if len(punctuation) > 0:
@@ -1133,12 +1218,19 @@ class CustomTextEdit(QTextEdit):
         """
         component = self.win.focusWidget()
         if isinstance(component, QTextEdit):
-            string = component.toMarkdown()
+            string = component.toHtml()
             string = re.sub(' +', ' ', string)
             string = re.sub('\t+', '\t', string)
 
-            component.setMarkdown(string)
+            component.setHtml(string)
         self.gui.changes = True
+
+    def paintEvent(self, evt):
+        if not self.full_spell_check_done:
+            spell_check = SpellCheck(self, 'whole', self.gui)
+            self.gui.spd.spell_check_thread_pool.start(spell_check)
+            self.full_spell_check_done = True
+        super().paintEvent(evt)
 
 
 class ScriptureBox(QWidget):
@@ -1245,13 +1337,13 @@ class SearchBox(QWidget):
                 item = QStandardItem(filtered_results[i][n])
                 item.setEditable(False)
                 model.setItem(i, n, item)
-        model.setHeaderData(0, Qt.Horizontal, 'ID')
-        model.setHeaderData(1, Qt.Horizontal, '# of\r\nMatches')
-        model.setHeaderData(2, Qt.Horizontal, 'Word(s) Found')
-        model.setHeaderData(3, Qt.Horizontal, 'Sermon Text')
-        model.setHeaderData(4, Qt.Horizontal, 'Sermon Title')
-        model.setHeaderData(5, Qt.Horizontal, 'Sermon Date')
-        model.setHeaderData(6, Qt.Horizontal, 'Sermon Snippet')
+        model.setHeaderData(0, Qt.Orientation.Horizontal, 'ID')
+        model.setHeaderData(1, Qt.Orientation.Horizontal, '# of\r\nMatches')
+        model.setHeaderData(2, Qt.Orientation.Horizontal, 'Word(s) Found')
+        model.setHeaderData(3, Qt.Orientation.Horizontal, 'Sermon Text')
+        model.setHeaderData(4, Qt.Orientation.Horizontal, 'Sermon Title')
+        model.setHeaderData(5, Qt.Orientation.Horizontal, 'Sermon Date')
+        model.setHeaderData(6, Qt.Orientation.Horizontal, 'Sermon Snippet')
 
         results_table_view = QTableView()
         results_table_view.setModel(model)

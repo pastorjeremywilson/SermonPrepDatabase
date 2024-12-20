@@ -30,7 +30,7 @@ import zipfile
 from os.path import exists
 from xml.etree import ElementTree
 
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PyQt6.QtWidgets import QFileDialog, QMessageBox
 
 
 class GetFromDocx:
@@ -107,12 +107,12 @@ class GetFromDocx:
                 self.gui.win,
                 'Search Subdirectories',
                 'Also search subdirectories of this folder?\n(Choose "No" to only import files from this folder)',
-                QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
             )
 
-            if response == QMessageBox.Yes:
+            if response == QMessageBox.StandardButton.Yes:
                 self.parse_files(folder, True)
-            elif response == QMessageBox.No:
+            elif response == QMessageBox.StandardButton.No:
                 self.parse_files(folder, False)
 
     def get_folder(self):

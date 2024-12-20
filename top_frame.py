@@ -23,9 +23,9 @@ licensed under the GNU Affero General Public License (GNU AGPL). See
 https://www.ghostscript.com/licensing/index.html for more information.
 """
 
-from PyQt5.QtCore import QSize, Qt
-from PyQt5.QtGui import QTextCharFormat, QFont, QTextListFormat, QTextCursor, QIcon
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel, QComboBox, QLineEdit, QTextEdit, QMessageBox
+from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtGui import QTextCharFormat, QFont, QTextListFormat, QTextCursor, QIcon
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel, QComboBox, QLineEdit, QTextEdit, QMessageBox
 
 
 class TopFrame(QWidget):
@@ -46,7 +46,7 @@ class TopFrame(QWidget):
         self.undo_button = QPushButton()
         self.undo_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spUndoIcon.svg'))
         self.undo_button.setIconSize(icon_size)
-        self.undo_button.setFocusPolicy(Qt.NoFocus)
+        self.undo_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.undo_button.clicked.connect(self.gui.menu_bar.press_ctrl_z)
         self.undo_button.setToolTip('Undo')
         button_frame_layout.addWidget(self.undo_button)
@@ -54,7 +54,7 @@ class TopFrame(QWidget):
         self.redo_button = QPushButton()
         self.redo_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spRedoIcon.svg'))
         self.redo_button.setIconSize(icon_size)
-        self.redo_button.setFocusPolicy(Qt.NoFocus)
+        self.redo_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.redo_button.clicked.connect(self.gui.menu_bar.press_ctrl_y)
         self.redo_button.setToolTip('Redo')
         button_frame_layout.addWidget(self.redo_button)
@@ -62,7 +62,7 @@ class TopFrame(QWidget):
 
         self.bold_button = QPushButton()
         self.bold_button.setCheckable(True)
-        self.bold_button.setFocusPolicy(Qt.NoFocus)
+        self.bold_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.bold_button.clicked.connect(self.set_bold)
         self.bold_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spBoldIcon.svg'))
         self.bold_button.setIconSize(icon_size)
@@ -71,7 +71,7 @@ class TopFrame(QWidget):
 
         self.italic_button = QPushButton()
         self.italic_button.setCheckable(True)
-        self.italic_button.setFocusPolicy(Qt.NoFocus)
+        self.italic_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.italic_button.clicked.connect(self.set_italic)
         self.italic_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spItalicIcon.svg'))
         self.italic_button.setIconSize(icon_size)
@@ -80,7 +80,7 @@ class TopFrame(QWidget):
 
         self.underline_button = QPushButton()
         self.underline_button.setCheckable(True)
-        self.underline_button.setFocusPolicy(Qt.NoFocus)
+        self.underline_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.underline_button.clicked.connect(self.set_underline)
         self.underline_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spUnderlineIcon.svg'))
         self.underline_button.setIconSize(icon_size)
@@ -89,7 +89,7 @@ class TopFrame(QWidget):
 
         self.bullet_button = QPushButton()
         self.bullet_button.setCheckable(True)
-        self.bullet_button.setFocusPolicy(Qt.NoFocus)
+        self.bullet_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.bullet_button.clicked.connect(self.set_bullet)
         self.bullet_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spBulletIcon.svg'))
         self.bullet_button.setIconSize(icon_size)
@@ -100,7 +100,7 @@ class TopFrame(QWidget):
         self.text_visible = QPushButton()
         self.text_visible.setObjectName('text_visible')
         self.text_visible.setCheckable(True)
-        self.text_visible.setFocusPolicy(Qt.NoFocus)
+        self.text_visible.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.text_visible.setToolTip('Show Sermon Text on All Tabs')
         self.text_visible.setIcon(QIcon(self.spd.cwd + '/resources/svg/spShowText.svg'))
         self.text_visible.setIconSize(QSize(round(icon_size.width() * 2.5), round(icon_size.height() * 2.5)))
@@ -244,7 +244,7 @@ class TopFrame(QWidget):
                 None,
                 'No Results',
                 'No results were found. Please try your search again.',
-                QMessageBox.Ok
+                QMessageBox.StandardButton.Ok
             )
         else:
             from gui import SearchBox
@@ -268,18 +268,18 @@ class TopFrame(QWidget):
                 cursor.setPosition(selection_end, QTextCursor.MoveMode.KeepAnchor)
                 char_format = cursor.charFormat()
                 if char_format.font().bold():
-                    char_format.setFontWeight(QFont.Normal)
+                    char_format.setFontWeight(QFont.Weight.Normal)
                     cursor.mergeCharFormat(char_format)
                 else:
-                    char_format.setFontWeight(QFont.Bold)
+                    char_format.setFontWeight(QFont.Weight.Bold)
                     cursor.mergeCharFormat(char_format)
             else:
                 font = cursor.charFormat().font()
-                if font.weight() == QFont.Normal:
-                    font.setWeight(QFont.Bold)
+                if font.weight() == QFont.Weight.Normal:
+                    font.setWeight(QFont.Weight.Bold)
                     component.setCurrentFont(font)
                 else:
-                    font.setWeight(QFont.Normal)
+                    font.setWeight(QFont.Weight.Normal)
                     component.setCurrentFont(font)
         else:
             self.bold_button.setChecked(False)

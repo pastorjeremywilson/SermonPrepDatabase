@@ -2,9 +2,8 @@ import os
 import re
 from os.path import exists
 
-from PyQt5.QtCore import QRunnable, Qt, QThreadPool
-from PyQt5.QtGui import QTextCursor
-from PyQt5.QtWidgets import QApplication
+from PyQt6.QtCore import QRunnable, Qt
+from PyQt6.QtGui import QTextCursor
 from symspellpy import Verbosity, SymSpell
 
 
@@ -17,8 +16,13 @@ class SpellCheck(QRunnable):
         self.type = type
         self.gui = gui
         self.setAutoDelete(True)
+        if self.widget:
+            self.cursor = self.widget.textCursor()
 
     def run(self):
+        # don't run a spell check if the widget is devoid of text
+        if len(self.widget.toPlainText().strip()) == 0:
+            return
         if self.type == 'whole':
             self.check_whole_text()
         elif self.type == 'previous':
@@ -28,31 +32,32 @@ class SpellCheck(QRunnable):
         """
         Method to check every word in this QTextEdit for spelling errors.
         """
-        cursor = self.widget.textCursor()
-        cursor.movePosition(QTextCursor.Start)
+        self.cursor = self.widget.textCursor()
+        self.cursor.movePosition(QTextCursor.MoveOperation.Start)
 
+        marked_word_indices = []
         while not self.gui.spd.disable_spell_check:
-            last_word = False
-            cursor.select(cursor.WordUnderCursor)
-            word = cursor.selection().toPlainText()
+            self.cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+            word = self.cursor.selection().toPlainText()
 
             # if the position doesn't change after moving to the next character, this is the last word
-            pos_before_move = cursor.position()
-            cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
-            pos_after_move = cursor.position()
+            pos_before_move = self.cursor.position()
+            self.cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor)
+            pos_after_move = self.cursor.position()
             if pos_before_move == pos_after_move:
-                last_word = True
+                self.gui.clear_changes_signal.emit()
+                break
 
             # if there's an apostrophe, check the next two characters for contraction letters
-            if cursor.selection().toPlainText().endswith('\''):
-                cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
-                if re.search('[a-z]$', cursor.selection().toPlainText()):
-                    word = cursor.selection().toPlainText()
-                    cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
-                    if re.search('[a-z]$', cursor.selection().toPlainText()):
-                        word = cursor.selection().toPlainText()
+            if self.cursor.selection().toPlainText().endswith('\''):
+                self.cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor)
+                if re.search('[a-z]$', self.cursor.selection().toPlainText()):
+                    word = self.cursor.selection().toPlainText()
+                    self.cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor)
+                    if re.search('[a-z]$', self.cursor.selection().toPlainText()):
+                        word = self.cursor.selection().toPlainText()
 
-            cursor.movePosition(QTextCursor.PreviousCharacter, cursor.KeepAnchor)
+            self.cursor.movePosition(QTextCursor.MoveOperation.PreviousCharacter, QTextCursor.MoveMode.KeepAnchor)
 
             cleaned_word = self.clean_word(word)
 
@@ -66,22 +71,16 @@ class SpellCheck(QRunnable):
                     )
 
                 if suggestions:
-                    char_format = cursor.charFormat()
+                    selection_start = self.cursor.selectionStart()
+                    # if the first suggestion is the same as the word, then it's not spelled wrong
                     if not suggestions[0].term == cleaned_word:
-                            char_format.setForeground(Qt.red)
-                            cursor.mergeCharFormat(char_format)
+                        marked_word_indices.append(selection_start)
 
-                    else:
-                        if char_format.foreground() == Qt.red:
-                            char_format.setForeground(Qt.black)
-                            cursor.mergeCharFormat(char_format)
+            self.cursor.clearSelection()
+            self.cursor.movePosition(QTextCursor.MoveOperation.NextWord)
 
-            cursor.clearSelection()
-            cursor.movePosition(QTextCursor.NextWord)
-
-            if last_word:
-                self.gui.clear_changes_signal.emit()
-                return
+        self.gui.set_text_color_signal.emit(self.widget, marked_word_indices, Qt.GlobalColor.red)
+        self.gui.clear_changes_signal.emit()
 
     def check_previous_word(self):
         """
@@ -90,28 +89,27 @@ class SpellCheck(QRunnable):
         """
         punctuations = [',', '.', '?', '!', ')', ';', ':', '-']
 
-        cursor = self.widget.textCursor()
-        cursor.movePosition(QTextCursor.PreviousWord)
-        cursor.select(cursor.WordUnderCursor)
+        self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord)
+        self.cursor.select(QTextCursor.SelectionType.WordUnderCursor)
 
-        word = cursor.selection().toPlainText()
+        word = self.cursor.selection().toPlainText()
         for punctuation in punctuations:
             if word == punctuation:
-                cursor.clearSelection()
-                cursor.movePosition(QTextCursor.PreviousWord)
-                cursor.movePosition(QTextCursor.PreviousWord)
-                cursor.select(cursor.WordUnderCursor)
-                word = cursor.selection().toPlainText()
+                self.cursor.clearSelection()
+                self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord)
+                self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord)
+                self.cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+                word = self.cursor.selection().toPlainText()
                 break
 
         # if there's an apostrophe, check the next two characters for contraction letters
-        if cursor.selection().toPlainText().endswith('\''):
-            cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
-            if re.search('[a-z]$', cursor.selection().toPlainText()):
-                word = cursor.selection().toPlainText()
-                cursor.movePosition(QTextCursor.NextCharacter, cursor.KeepAnchor)
-                if re.search('[a-z]$', cursor.selection().toPlainText()):
-                    word = cursor.selection().toPlainText()
+        if self.cursor.selection().toPlainText().endswith('\''):
+            self.cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor)
+            if re.search('[a-z]$', self.cursor.selection().toPlainText()):
+                word = self.cursor.selection().toPlainText()
+                self.cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor)
+                if re.search('[a-z]$', self.cursor.selection().toPlainText()):
+                    word = self.cursor.selection().toPlainText()
 
         cleaned_word = self.clean_word(word)
 
@@ -122,22 +120,20 @@ class SpellCheck(QRunnable):
                                                             include_unknown=True)
 
             if suggestions:
-                char_format = cursor.charFormat()
+                word_index = [self.cursor.selectionStart()]
                 # if the first suggestion is the same as the word, then it's not spelled wrong
                 if not suggestions[0].term == cleaned_word:
-                    char_format.setForeground(Qt.red)
-                    cursor.mergeCharFormat(char_format)
+                    self.gui.set_text_color_signal.emit(self.widget, word_index, Qt.GlobalColor.red)
                 else:
-                    char_format.setForeground(Qt.black)
-                    cursor.mergeCharFormat(char_format)
+                    # TODO: Windows fatal exception: access violation thrown here
+                    # Probably has to do with working with widgets and cursors outside of the QApplication loop
+                    # Change to signals and slots so see if this fixes the problem
+                    # self.cursor.mergeCharFormat(char_format)
+                    self.gui.set_text_color_signal.emit(self.widget, word_index, Qt.GlobalColor.black)
 
-        cursor.clearSelection()
-        cursor.movePosition(QTextCursor.NextWord)
-
-        char_format = cursor.charFormat()
-        char_format.setForeground(Qt.black)
-        cursor.mergeCharFormat(char_format)
-        self.widget.setTextCursor(cursor)
+        self.cursor.clearSelection()
+        self.cursor.movePosition(QTextCursor.MoveOperation.NextWord)
+        self.gui.reset_cursor_color_signal.emit(self.widget)
 
     def check_single_word(self, word):
         cleaned_word = self.clean_word(word)
