@@ -1,0 +1,187 @@
+/*-------------------- Green Stylesheet for Sermon Prep Database --------------------
+Note: Qt default background for widgets is #f0f0f0 or 240, 240, 240
+
+General Theme Colors:
+    accent color: #503565
+    background color: #efeaf5
+    font color: #000000
+    text background: #ffffff
+*/
+
+QWidget [objectName="tab_container"] {
+    border-top: 2px solid #ffffff;
+}
+
+QWidget [objectName="text_box"] {
+    background-color: #efeaf5;
+    border: 1px solid #503565;
+}
+
+QWidget [objectName="text_box_text_edit"] {
+    background-color: #efeaf5;
+}
+
+QMainWindow {
+    background-color: #efeaf5;
+}
+
+/*-------------------- QMenuBar --------------------*/
+QMenuBar {
+    background: #efeaf5;
+    color: #000000;
+    border-bottom: 2px solid #ffffff;
+    margin-right: 10px;
+    margin-left: 10px;
+    margin-top: 0px;
+    margin-bottom: 0px;
+    padding: 0px;
+}
+QMenuBar::item {
+    background: #efeaf5;
+    color: #000000;
+    margin: 0px;
+    padding-top: 5px;
+    padding-right: 10px;
+    padding-bottom: 5px;
+    padding-left: 10px;
+}
+QMenuBar::item:selected {
+    background: #ffffff;
+}
+QMenuBar::item:pressed {
+    background: #efeaf5;
+}
+
+/*-------------------- QMenu --------------------*/
+QMenu {
+    background: #efeaf5;
+    color: #000000;
+    border: 1px solid #d0d0d0;
+}
+QMenu::item {
+    background: #efeaf5;
+    color: #000000;
+}
+QMenu::item:selected {
+    background: #ffffff;
+}
+QMenu::item:pressed {
+    background: #efeaf5;
+}
+
+/*-------------------- tab_widget --------------------*/
+QTabWidget {
+    background-color: #efeaf5;
+}
+QTabWidget::pane {
+    padding: 20px;
+    background-color: #efeaf5;
+    border: none;
+}
+QTabBar::tab {
+    background-color: #503565;
+    color: #efeaf5;
+    font-weight: normal;
+    width: 50px;
+    height: 120px;
+    padding: 10px;
+    border-bottom: 2px solid #efeaf5;
+}
+QTabBar::tab:selected {
+    color: #000000;
+    background-color: #efeaf5;
+    font-weight: bold;
+    width: 50px;
+}
+QTabBar::tab:last {
+    border-bottom: none;
+}
+
+/*-------------------- QPushButton --------------------*/
+QPushButton {
+	background: #efeaf5;
+	color: #000000;
+	padding-left: 10px;
+	padding-right: 10px;
+	padding-top: 5px;
+	padding-bottom: 5px;
+	border-style: outset;
+}
+QPushButton:hover {
+	background: #503565;
+}
+QPushButton:pressed {
+	background: #aaaaaa;
+}
+QPushButton:disabled {
+    background: #a0a0a0;
+    color: grey;
+}
+QPushButton:checked {
+    border-bottom: 2px solid #503565;
+    padding-bottom: 3px;
+}
+QPushButton:unchecked {
+    border-bottom: none;
+}
+
+/*-------------------- QComboBox --------------------*/
+QComboBox {
+    background: #ffffff;
+    color: #000000;
+    selection-background-color: #efeaf5;
+    selection-color: #000000;
+    border: 1px solid #000000;
+}
+QComboBox::item {
+    background: #ffffff;
+    color: #000000;
+}
+QComboBox::item:hover {
+    background: #efeaf5;
+}
+
+/*-------------------- QScrollBar --------------------*/
+QScrollBar {
+	background : #efeaf5;
+	color: #000000;
+}
+
+/*-------------------- QLabel --------------------*/
+QLabel {
+    background: transparent;
+    color: #000000
+}
+
+/*-------------------- QLineEdit --------------------*/
+QLineEdit, QDateEdit, QComboBox {
+    background: #ffffff;
+    color: #000000;
+    border: 1px solid #503565;
+    min-height: 24px;
+}
+QLineEdit:focus, QDateEdit:focus {
+    border-bottom: 3px solid #503565;
+}
+
+/*-------------------- QTextEdit --------------------*/
+QTextEdit {
+    background: #ffffff;
+    color: #000000;
+    border: 1px solid #503565;
+}
+QTextEdit:focus {
+    border-bottom: 3px solid #503565;
+}
+
+/*-------------------- QMessageBox --------------------*/
+QMessageBox {
+    background: #efeaf5;
+    color: #000000;
+}
+
+/*-------------------- QDialog --------------------*/
+QDialog {
+    background: #efeaf5;
+    color: #000000;
+}

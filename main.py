@@ -3,7 +3,7 @@ Author: Jeremy G. Wilson
 
 Copyright: 2024 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.5.0.0)
+This file is a part of the Sermon Prep Database program (v.5.0.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -32,7 +32,7 @@ import time
 import traceback
 
 from PyQt6.QtCore import Qt, QThreadPool
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QPixmap
 from PyQt6.QtWidgets import QLineEdit, QTextEdit, QDateEdit, QLabel, QDialog, QVBoxLayout, \
     QMessageBox, QWidget, QApplication
 from datetime import datetime
@@ -79,7 +79,6 @@ class SermonPrepDatabase:
 
         try:
             # get the current data directory and the user's home directory
-            self.cwd = os.path.dirname(__file__)
             user_dir = os.path.expanduser('~')
 
             # set the location of the user files differently depending on if we're on windows or linux
@@ -94,9 +93,9 @@ class SermonPrepDatabase:
             if not exists(self.app_dir):
                 os.mkdir(self.app_dir)
 
-            self.write_to_log('application version is v.5.0.0')
+            self.write_to_log('application version is v.5.0.1')
             self.write_to_log('platform is ' + self.platform)
-            self.write_to_log('current working directory is ' + self.cwd)
+            self.write_to_log('current working directory is ' + os.path.dirname(__file__))
             self.write_to_log('application directory is ' + self.app_dir)
             self.write_to_log('database location is ' + self.db_loc)
 
@@ -137,7 +136,7 @@ class SermonPrepDatabase:
                 ConvertDatabase(self)
             elif response == QMessageBox.StandardButton.No:
                 # Create a new database in the user's App Data directory by copying the existing database template
-                shutil.copy(self.cwd + '/resources/database_template.db', self.db_loc)
+                shutil.copy('resources/database_template.db', self.db_loc)
                 QMessageBox.information(None, 'Database Created', 'A new database has been created.',
                                         QMessageBox.StandardButton.Ok)
                 self.gui.app.processEvents()
@@ -407,19 +406,11 @@ class SermonPrepDatabase:
         shutil.copy(self.db_loc, backup_file)
         self.write_to_log('New backup file created at ' + backup_file)
 
-    def write_color_changes(self):
+    def write_color_changes(self, type):
         """
         Method to save the user's color changes to the database.
         """
-        sql = ('UPDATE user_settings SET bgcolor = "'
-               + self.gui.accent_color
-               + '", fgcolor = "'
-               + self.gui.background_color
-               + '", font_color = "'
-               + self.gui.font_color
-               + '", text_background = "'
-               + self.gui.text_background
-               + '" WHERE ID = 1;')
+        sql = ('UPDATE user_settings SET bgcolor = "' + type + '" WHERE ID = 1;')
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
         cur.execute(sql)
@@ -490,12 +481,12 @@ class SermonPrepDatabase:
                     break
                 counter += 1
 
-            self.gui.top_frame.dates_cb.blockSignals(True)
-            self.gui.top_frame.references_cb.blockSignals(True)
-            self.gui.top_frame.dates_cb.setCurrentIndex(index)
-            self.gui.top_frame.references_cb.setCurrentIndex(counter)
-            self.gui.top_frame.dates_cb.blockSignals(False)
-            self.gui.top_frame.references_cb.blockSignals(False)
+            self.gui.toolbar.dates_cb.blockSignals(True)
+            self.gui.toolbar.references_cb.blockSignals(True)
+            self.gui.toolbar.dates_cb.setCurrentIndex(index)
+            self.gui.toolbar.references_cb.setCurrentIndex(counter)
+            self.gui.toolbar.dates_cb.blockSignals(False)
+            self.gui.toolbar.references_cb.blockSignals(False)
 
             conn = sqlite3.connect(self.db_loc)
             cur = conn.cursor()
@@ -504,20 +495,20 @@ class SermonPrepDatabase:
             conn.close()
 
             if index == 0:
-                self.gui.top_frame.first_rec_button.setEnabled(False)
-                self.gui.top_frame.prev_rec_button.setEnabled(False)
-                self.gui.top_frame.next_rec_button.setEnabled(True)
-                self.gui.top_frame.last_rec_button.setEnabled(True)
+                self.gui.toolbar.first_rec_button.setEnabled(False)
+                self.gui.toolbar.prev_rec_button.setEnabled(False)
+                self.gui.toolbar.next_rec_button.setEnabled(True)
+                self.gui.toolbar.last_rec_button.setEnabled(True)
             elif index == len(self.ids) - 1:
-                self.gui.top_frame.first_rec_button.setEnabled(True)
-                self.gui.top_frame.prev_rec_button.setEnabled(True)
-                self.gui.top_frame.next_rec_button.setEnabled(False)
-                self.gui.top_frame.last_rec_button.setEnabled(False)
+                self.gui.toolbar.first_rec_button.setEnabled(True)
+                self.gui.toolbar.prev_rec_button.setEnabled(True)
+                self.gui.toolbar.next_rec_button.setEnabled(False)
+                self.gui.toolbar.last_rec_button.setEnabled(False)
             else:
-                self.gui.top_frame.first_rec_button.setEnabled(True)
-                self.gui.top_frame.prev_rec_button.setEnabled(True)
-                self.gui.top_frame.next_rec_button.setEnabled(True)
-                self.gui.top_frame.last_rec_button.setEnabled(True)
+                self.gui.toolbar.first_rec_button.setEnabled(True)
+                self.gui.toolbar.prev_rec_button.setEnabled(True)
+                self.gui.toolbar.next_rec_button.setEnabled(True)
+                self.gui.toolbar.last_rec_button.setEnabled(True)
 
             self.gui.fill_values(record)
         else:
@@ -776,15 +767,15 @@ class SermonPrepDatabase:
             self.get_date_list()
             self.get_scripture_list()
 
-            self.gui.top_frame.dates_cb.blockSignals(True)
-            self.gui.top_frame.references_cb.blockSignals(True)
-            self.gui.top_frame.references_cb.clear()
+            self.gui.toolbar.dates_cb.blockSignals(True)
+            self.gui.toolbar.references_cb.blockSignals(True)
+            self.gui.toolbar.references_cb.clear()
             for item in self.references:
-                self.gui.top_frame.references_cb.addItem(item[0])
-            self.gui.top_frame.dates_cb.clear()
-            self.gui.top_frame.dates_cb.addItems(self.dates)
-            self.gui.top_frame.dates_cb.blockSignals(False)
-            self.gui.top_frame.references_cb.blockSignals(False)
+                self.gui.toolbar.references_cb.addItem(item[0])
+            self.gui.toolbar.dates_cb.clear()
+            self.gui.toolbar.dates_cb.addItems(self.dates)
+            self.gui.toolbar.dates_cb.blockSignals(False)
+            self.gui.toolbar.references_cb.blockSignals(False)
 
             self.last_rec()
 
@@ -813,15 +804,15 @@ class SermonPrepDatabase:
             self.get_date_list()
             self.get_scripture_list()
 
-            self.gui.top_frame.dates_cb.blockSignals(True)
-            self.gui.top_frame.references_cb.blockSignals(True)
-            self.gui.top_frame.references_cb.clear()
+            self.gui.toolbar.dates_cb.blockSignals(True)
+            self.gui.toolbar.references_cb.blockSignals(True)
+            self.gui.toolbar.references_cb.clear()
             for item in self.references:
-                self.gui.top_frame.references_cb.addItem(item[0])
-            self.gui.top_frame.dates_cb.clear()
-            self.gui.top_frame.dates_cb.addItems(self.dates)
-            self.gui.top_frame.dates_cb.blockSignals(False)
-            self.gui.top_frame.references_cb.blockSignals(False)
+                self.gui.toolbar.references_cb.addItem(item[0])
+            self.gui.toolbar.dates_cb.clear()
+            self.gui.toolbar.dates_cb.addItems(self.dates)
+            self.gui.toolbar.dates_cb.blockSignals(False)
+            self.gui.toolbar.references_cb.blockSignals(False)
 
             self.last_rec()
 
@@ -902,15 +893,15 @@ class SermonPrepDatabase:
             self.get_date_list()
             self.get_scripture_list()
 
-            self.gui.top_frame.dates_cb.blockSignals(True)
-            self.gui.top_frame.references_cb.blockSignals(True)
-            self.gui.top_frame.references_cb.clear()
+            self.gui.toolbar.dates_cb.blockSignals(True)
+            self.gui.toolbar.references_cb.blockSignals(True)
+            self.gui.toolbar.references_cb.clear()
             for item in self.references:
-                self.gui.top_frame.references_cb.addItem(item[0])
-            self.gui.top_frame.dates_cb.clear()
-            self.gui.top_frame.dates_cb.addItems(self.dates)
-            self.gui.top_frame.dates_cb.blockSignals(False)
-            self.gui.top_frame.references_cb.blockSignals(False)
+                self.gui.toolbar.references_cb.addItem(item[0])
+            self.gui.toolbar.dates_cb.clear()
+            self.gui.toolbar.dates_cb.addItems(self.dates)
+            self.gui.toolbar.dates_cb.blockSignals(False)
+            self.gui.toolbar.references_cb.blockSignals(False)
 
             self.last_rec()
 
@@ -961,23 +952,19 @@ class SermonPrepDatabase:
         Method to apprise user of work being done while importing sermons.
         """
         self.widget = QWidget()
-        self.widget.setStyleSheet('border: 3px solid black; background-color: ' + self.gui.background_color + ';')
         layout = QVBoxLayout()
         self.widget.setLayout(layout)
 
         importing_label = QLabel('Importing...')
-        importing_label.setStyleSheet('border: none;')
         importing_label.setFont(QFont(self.gui.font_family, int(self.gui.font_size), QFont.Weight.Bold))
         layout.addWidget(importing_label)
         layout.addSpacing(50)
 
         self.dir_label = QLabel('Looking in...')
-        self.dir_label.setStyleSheet('border: none;')
         self.dir_label.setFont(QFont(self.gui.font_family, int(self.gui.font_size)))
         layout.addWidget(self.dir_label)
 
         self.file_label = QLabel('Examining...')
-        self.file_label.setStyleSheet('border: none;')
         self.file_label.setFont(QFont(self.gui.font_family, int(self.gui.font_size)))
         layout.addWidget(self.file_label)
 
@@ -1047,6 +1034,7 @@ def log_unhandled_exception(exc_type, exc_value, exc_traceback):
 
     message_box = QMessageBox()
     message_box.setWindowTitle('Unhandled Exception')
+    message_box.setIconPixmap(QPixmap('resources/svg/div-zero-bug.svg'))
     message_box.setText(
         '<strong>Well, that wasn\'t supposed to happen!</strong><br><br>An unhandled exception occurred:<br>'
         f'{exc_type}<br>'

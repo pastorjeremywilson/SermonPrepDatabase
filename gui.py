@@ -3,7 +3,7 @@
 
 Copyright 2024 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.5.0.0)
+This file is a part of the Sermon Prep Database program (v.5.0.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -28,13 +28,13 @@ from os.path import exists
 from PyQt6.QtCore import Qt, QSize, QDate, QDateTime, QObject, QRunnable, pyqtSignal
 from PyQt6.QtGui import QIcon, QFont, QStandardItemModel, QStandardItem, QPixmap, QColor, QPalette, \
     QCloseEvent, QAction, QUndoStack, QTextCursor
-from PyQt6.QtWidgets import QBoxLayout, QWidget, QTabWidget, QGridLayout, QLabel, QLineEdit, \
+from PyQt6.QtWidgets import QWidget, QTabWidget, QGridLayout, QLabel, QLineEdit, \
     QCheckBox, QDateEdit, QTextEdit, QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QTableView, QDialog, \
-    QApplication, QProgressBar
+    QApplication, QProgressBar, QTabBar
 
 from get_scripture import GetScripture
 from menu_bar import MenuBar
-from top_frame import TopFrame
+from toolbar import Toolbar
 from runnables import SpellCheck, LoadDictionary
 
 
@@ -52,7 +52,7 @@ class GUI(QMainWindow):
     font_family = None
     font_size = None
     gs = None
-    create_main_gui = pyqtSignal()
+    create_main_gui = pyqtSignal(str)
     clear_changes_signal = pyqtSignal()
     set_text_cursor_signal = pyqtSignal(QWidget, QTextCursor)
     set_text_color_signal = pyqtSignal(QTextEdit, list, QColor)
@@ -77,9 +77,9 @@ class GUI(QMainWindow):
         initial_startup = InitialStartup(self)
         self.spd.spell_check_thread_pool.start(initial_startup)
 
-    def create_gui(self):
+    def create_gui(self, theme):
         """
-        Builds the QT GUI, also using elements from menu_bar.py, top_frame.py, and print_dialog.py
+        Builds the QT GUI, also using elements from menu_bar.py, toolbar.py, and print_dialog.py
         """
         self.setWindowTitle('Sermon Prep Database')
 
@@ -96,20 +96,18 @@ class GUI(QMainWindow):
         except IndexError as ex:
             self.spd.write_to_log('Error retreiving settings from database:\n\n' + str(ex), True)
 
-        icon_pixmap = QPixmap(self.spd.cwd + '/resources/svg/spIcon.svg')
+        icon_pixmap = QPixmap('resources/svg/spIcon.svg')
         self.setWindowIcon(QIcon(icon_pixmap))
 
-        self.layout = QBoxLayout(QBoxLayout.Direction.TopToBottom)
         self.main_widget = QWidget()
         self.setCentralWidget(self.main_widget)
-        self.main_widget.setLayout(self.layout)
+        self.layout = QVBoxLayout(self.main_widget)
 
         self.undo_stack = QUndoStack(self.main_widget)
 
         self.menu_bar = MenuBar(self, self.spd)
-        self.top_frame = TopFrame(self, self.spd)
-        self.top_frame.setObjectName('topFrame')
-        self.layout.addWidget(self.top_frame)
+        self.toolbar = Toolbar(self, self.spd)
+        self.layout.addWidget(self.toolbar)
 
         self.build_tabbed_frame()
         self.build_scripture_tab()
@@ -118,10 +116,8 @@ class GUI(QMainWindow):
         self.build_research_tab()
         self.build_sermon_tab()
 
-        if self.text_background == 'rgb(50, 50, 50)':
-            self.set_style_sheets('dark')
-        else:
-            self.set_style_sheets()
+        self.apply_font(self.font_family, self.font_size)
+        self.menu_bar.color_change(theme)
 
         self.showMaximized()
 
@@ -132,11 +128,17 @@ class GUI(QMainWindow):
         """
         Create a QTabWidget
         """
+        tab_container = QWidget()
+        tab_container.setObjectName('tab_container')
+        tab_container_layout = QVBoxLayout(tab_container)
+        tab_container_layout.setContentsMargins(0, 2, 0, 0)
+        self.layout.addWidget(tab_container)
+
         self.tabbed_frame = QTabWidget()
         self.tabbed_frame.setObjectName('tabbedFrame')
         self.tabbed_frame.setTabPosition(QTabWidget.TabPosition.West)
         self.tabbed_frame.setIconSize(QSize(24, 24))
-        self.layout.addWidget(self.tabbed_frame)
+        tab_container_layout.addWidget(self.tabbed_frame)
         
     def build_scripture_tab(self, insert=False):
         """
@@ -161,7 +163,7 @@ class GUI(QMainWindow):
         pericope_text_label = QLabel(self.spd.user_settings[6])
         self.scripture_frame_layout.addWidget(pericope_text_label, 2, 0)
 
-        pericope_text_edit = CustomTextEdit(self.win, self)
+        pericope_text_edit = CustomTextEdit(self)
         pericope_text_edit.cursorPositionChanged.connect(lambda: self.set_style_buttons(pericope_text_edit))
         self.scripture_frame_layout.addWidget(pericope_text_edit, 3, 0)
         
@@ -187,7 +189,7 @@ class GUI(QMainWindow):
         sermon_text_label = QLabel(self.spd.user_settings[8])
         self.scripture_frame_layout.addWidget(sermon_text_label, 2, 1, 1, 2)
         
-        self.sermon_text_edit = CustomTextEdit(self.win, self)
+        self.sermon_text_edit = CustomTextEdit(self)
         self.sermon_text_edit.cursorPositionChanged.connect(lambda: self.set_style_buttons(self.sermon_text_edit))
         self.scripture_frame_layout.addWidget(self.sermon_text_edit, 3, 1, 1, 2)
 
@@ -198,13 +200,13 @@ class GUI(QMainWindow):
             self.tabbed_frame.insertTab(
                 0,
                 self.scripture_frame,
-                QIcon(self.spd.cwd + '/resources/svg/spScriptureIcon.svg'),
+                QIcon('resources/svg/spScriptureIcon.svg'),
                 'Scripture'
             )
         else:
             self.tabbed_frame.addTab(
                 self.scripture_frame,
-                QIcon(self.spd.cwd + '/resources/svg/spScriptureIcon.svg'),
+                QIcon('resources/svg/spScriptureIcon.svg'),
                 'Scripture'
             )
         
@@ -225,56 +227,56 @@ class GUI(QMainWindow):
         fcft_label = QLabel(self.spd.user_settings[9])
         self.exegesis_frame_layout.addWidget(fcft_label, 0, 0)
         
-        fcft_text = CustomTextEdit(self.win, self)
+        fcft_text = CustomTextEdit(self)
         fcft_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(fcft_text))
         self.exegesis_frame_layout.addWidget(fcft_text, 1, 0)
         
         gat_label = QLabel(self.spd.user_settings[10])
         self.exegesis_frame_layout.addWidget(gat_label, 3, 0)
         
-        gat_text = CustomTextEdit(self.win, self)
+        gat_text = CustomTextEdit(self)
         gat_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(gat_text))
         self.exegesis_frame_layout.addWidget(gat_text, 4, 0)
         
         cpt_label = QLabel(self.spd.user_settings[11])
         self.exegesis_frame_layout.addWidget(cpt_label, 6, 0)
         
-        cpt_text = CustomTextEdit(self.win, self)
+        cpt_text = CustomTextEdit(self)
         cpt_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(cpt_text))
         self.exegesis_frame_layout.addWidget(cpt_text, 7, 0)
         
         pb_label = QLabel(self.spd.user_settings[12])
         self.exegesis_frame_layout.addWidget(pb_label, 3, 2)
         
-        pb_text = CustomTextEdit(self.win, self)
+        pb_text = CustomTextEdit(self)
         pb_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(pb_text))
         self.exegesis_frame_layout.addWidget(pb_text, 4, 2)
         
         fcfs_label = QLabel(self.spd.user_settings[13])
         self.exegesis_frame_layout.addWidget(fcfs_label, 0, 4)
         
-        fcfs_text = CustomTextEdit(self.win, self)
+        fcfs_text = CustomTextEdit(self)
         fcfs_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(fcfs_text))
         self.exegesis_frame_layout.addWidget(fcfs_text, 1, 4)
         
         gas_label = QLabel(self.spd.user_settings[14])
         self.exegesis_frame_layout.addWidget(gas_label, 3, 4)
         
-        gas_text = CustomTextEdit(self.win, self)
+        gas_text = CustomTextEdit(self)
         gas_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(gas_text))
         self.exegesis_frame_layout.addWidget(gas_text, 4, 4)
         
         cps_label = QLabel(self.spd.user_settings[15])
         self.exegesis_frame_layout.addWidget(cps_label, 6, 4)
         
-        cps_text = CustomTextEdit(self.win, self)
+        cps_text = CustomTextEdit(self)
         cps_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(cps_text))
         self.exegesis_frame_layout.addWidget(cps_text, 7, 4)
 
         scripture_box = ScriptureBox(self.background_color)
         self.exegesis_frame_layout.addWidget(scripture_box, 0, 6, 8, 1)
         
-        self.tabbed_frame.addTab(self.exegesis_frame, QIcon(self.spd.cwd + '/resources/svg/spExegIcon.svg'), 'Exegesis')
+        self.tabbed_frame.addTab(self.exegesis_frame, QIcon('resources/svg/spExegIcon.svg'), 'Exegesis')
         
     def build_outline_tab(self):
         """
@@ -290,28 +292,28 @@ class GUI(QMainWindow):
         scripture_outline_label = QLabel(self.spd.user_settings[16])
         self.outline_frame_layout.addWidget(scripture_outline_label, 0, 0)
         
-        scripture_outline_text = CustomTextEdit(self.win, self)
+        scripture_outline_text = CustomTextEdit(self)
         scripture_outline_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(scripture_outline_text))
         self.outline_frame_layout.addWidget(scripture_outline_text, 1, 0)
         
         sermon_outline_label = QLabel(self.spd.user_settings[17])
         self.outline_frame_layout.addWidget(sermon_outline_label, 0, 2)
         
-        sermon_outline_text = CustomTextEdit(self.win, self)
+        sermon_outline_text = CustomTextEdit(self)
         sermon_outline_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(sermon_outline_text))
         self.outline_frame_layout.addWidget(sermon_outline_text, 1, 2)
         
         illustration_label = QLabel(self.spd.user_settings[18])
         self.outline_frame_layout.addWidget(illustration_label, 0, 4)
         
-        illustration_text = CustomTextEdit(self.win, self)
+        illustration_text = CustomTextEdit(self)
         illustration_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(illustration_text))
         self.outline_frame_layout.addWidget(illustration_text, 1, 4)
 
         scripture_box = ScriptureBox(self.background_color)
         self.outline_frame_layout.addWidget(scripture_box, 0, 6, 5, 1)
 
-        self.tabbed_frame.addTab(self.outline_frame, QIcon(self.spd.cwd + '/resources/svg/spOutlineIcon.svg'), 'Outlines')
+        self.tabbed_frame.addTab(self.outline_frame, QIcon('resources/svg/spOutlineIcon.svg'), 'Outlines')
         
     def build_research_tab(self):
         """
@@ -325,7 +327,7 @@ class GUI(QMainWindow):
         research_label = QLabel(self.spd.user_settings[19])
         self.research_frame_layout.addWidget(research_label, 0, 0)
         
-        research_text = CustomTextEdit(self.win, self)
+        research_text = CustomTextEdit(self)
         research_text.setObjectName('custom_text_edit')
         research_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(research_text))
         self.research_frame_layout.addWidget(research_text, 1, 0)
@@ -333,7 +335,7 @@ class GUI(QMainWindow):
         scripture_box = ScriptureBox(self.background_color)
         self.research_frame_layout.addWidget(scripture_box, 0, 2, 2, 1)
         
-        self.tabbed_frame.addTab(self.research_frame, QIcon(self.spd.cwd + '/resources/svg/spResearchIcon.svg'), 'Research')
+        self.tabbed_frame.addTab(self.research_frame, QIcon('resources/svg/spResearchIcon.svg'), 'Research')
         
     def build_sermon_tab(self):
         """
@@ -388,218 +390,40 @@ class GUI(QMainWindow):
         sermon_label = QLabel(self.spd.user_settings[25])
         self.sermon_frame_layout.addWidget(sermon_label, 6, 0)
         
-        sermon_text = CustomTextEdit(self.win, self)
+        sermon_text = CustomTextEdit(self)
         sermon_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(sermon_text))
         self.sermon_frame_layout.addWidget(sermon_text, 7, 0, 1, 8)
 
         scripture_box = ScriptureBox(self.background_color)
         self.sermon_frame_layout.addWidget(scripture_box, 0, 9, 8, 1)
         
-        self.tabbed_frame.addTab(self.sermon_frame, QIcon(self.spd.cwd + '/resources/svg/spSermonIcon.svg'), 'Sermon')
+        self.tabbed_frame.addTab(self.sermon_frame, QIcon('resources/svg/spSermonIcon.svg'), 'Sermon')
 
     def clear_changes(self):
         self.changes = False
 
-    def set_style_sheets(self, type=''):
+    def apply_font(self, family, size, font_chooser=None):
         """
-        Applies predetermined style sheets to self.tabbed_frame as well as each tab's QWidget. Also makes font changes
-        to the TopFrame. Customizes the styles with the user's background color, accent color, font family, and font
-        size.
+        Method to apply the user's font changes to the GUI
+
+        :param QWidget fontChooser: The widget created in the change_font method.
+        :param str family: The family name of the font the user chose.
+        :param int size: The font size the user chose.
+        :param boolean close: True if this was called when the user clicked 'OK', so close fontChooser.
         """
-        current_changes_state = self.changes
-
-        if self.text_background == 'rgb(50, 50, 50)':
-            selected_color = 'white'
-            tab_color = self.font_color
-        else:
-            selected_color = 'black'
-            tab_color = 'white'
-
-        self.tabbed_frame.setStyleSheet('''
-            QTabWidget::pane {
-                border: 50px solid ''' + self.background_color + ''';}
-            QTabBar::tab {
-                background-color: ''' + self.accent_color + ''';
-                color: ''' + tab_color + ''';
-                font-family: "''' + self.font_family + '''";
-                font-size: ''' + str(self.font_size) + '''pt;
-                font-weight: bold;
-                width: 40px;
-                height: 120px;
-                padding: 10px;
-                margin-bottom: 5px;}
-            QTabBar::tab:selected {
-                background-color: ''' + self.background_color + ''';
-                color: ''' + selected_color + ''';
-                font-family: "''' + self.font_family + '''";
-                font-size: 20px;
-                font-weight: bold;
-                width: 50px;}
-            ''')
-
-        standard_style_sheet = ('''
-            QWidget {
-                background-color: ''' + self.background_color + ''';
-                color: ''' + self.font_color + ''';}
-            QLabel {
-                font-family: "''' + self.font_family + '''";
-                font-size: ''' + str(self.font_size) + '''pt;
-                color: ''' + self.font_color + ''';
-                background-color: ''' + self.background_color + ''';}
-            QLineEdit {
-                font-family: "''' + self.font_family + '''";
-                font-size: ''' + str(self.font_size) + '''pt;
-                padding: 3px;
-                border: 1px solid ''' + self.accent_color + ''';
-                color: ''' + self.font_color + ''';
-                background-color: ''' + self.text_background + ''';}
-            QTextEdit {
-                font-family: "''' + self.font_family + '''";
-                font-size: ''' + str(self.font_size) + '''pt;
-                padding: 3px;
-                border: 1px solid ''' + self.accent_color + ''';
-                color: ''' + self.font_color + ''';
-                background-color: ''' + self.text_background + ''';}
-            QDateEdit {
-                font-family: "''' + self.font_family + '''";
-                font-size: "''' + str(self.font_size) + '''";
-                padding: 3px;
-                border: 1px solid ''' + self.accent_color + ''';
-                color: ''' + self.font_color + ''';
-                background-color: ''' + self.text_background + ''';}
-            ''')
-        # anything larger than 12 is too big for the top frame
-        if int(self.font_size) <= 12:
-            size = self.font_size
-        else:
-            size = 12
-
-        if type == 'dark':
-            show_text_checked_icon = 'spShowTextCheckedDark.svg'
-            show_text_icon = 'spShowTextDark.svg'
-        else:
-            show_text_checked_icon = 'spShowTextChecked.svg'
-            show_text_icon = 'spShowText.svg'
-
-        top_frame_style_sheet = ('''
-            QLabel {
-                font-family: "''' + self.font_family + '''";
-                font-size: ''' + str(size) + '''pt;
-                color: ''' + self.font_color + ''';}
-            QLineEdit {
-                font-family: "''' + self.font_family + '''";
-                font-size: ''' + str(size) + '''pt;
-                padding: 3px;
-                border: 1px solid ''' + self.accent_color + ''';
-                color: ''' + self.font_color + ''';
-                background-color: ''' + self.text_background + ''';}
-            QComboBox {
-                font-family: "''' + self.font_family + '''";
-                font-size: ''' + str(size) + '''pt;
-                padding: 3px;
-                border: 1px solid ''' + self.accent_color + ''';
-                background-color: ''' + self.text_background + ''';
-                color: ''' + self.font_color + ''';
-                selection-background-color: ''' + self.background_color + ''';
-                selection-color: ''' + self.font_color + ''';}
-            QPushButton { 
-                padding: 5;
-                border: 0;}
-            QPushButton:pressed {
-                background-color: white;}
-            QPushButton:hover {
-                background-color: ''' + self.background_color + ''';}
-            QPushButton:checked { 
-                background-color: ''' + self.background_color + ''';}
-            QPushButton#text_visible {
-                icon: url(''' + self.spd.cwd + '''/resources/svg/''' + show_text_icon + ''');
-                background-color: none;}
-            QPushButton#text_visible:checked {
-                icon: url(''' + self.spd.cwd + '''/resources/svg/''' + show_text_checked_icon + '''); 
-                background-color: none;}
-            QPushButton#text_visible:hover {
-                background-color: ''' + self.background_color + ''';}
-        ''')
-
-        menu_style_sheet = '''
-            QMenu { background: ''' + self.text_background + '''; } 
-            QMenu:separator:hr { 
-                background-color: ''' + self.text_background + ''';
-                height: 0px;
-                border-top: 1px solid ''' + self.accent_color + '''; 
-                margin: 5px 
-            } 
-            QMenu::item:unselected { 
-                background-color: ''' + self.text_background + ''';
-                color: ''' + self.font_color + ''';
-            } 
-            QMenu::item:selected {
-                background: ''' + self.background_color + ''';
-                color: ''' + self.font_color + ''';
-            }'''
-
-        self.scripture_frame.setStyleSheet(standard_style_sheet)
-        self.exegesis_frame.setStyleSheet(standard_style_sheet)
-        self.outline_frame.setStyleSheet(standard_style_sheet)
-        self.research_frame.setStyleSheet(standard_style_sheet)
-        self.sermon_frame.setStyleSheet(standard_style_sheet)
-        self.top_frame.setStyleSheet(top_frame_style_sheet)
-        self.menuBar().setStyleSheet(menu_style_sheet)
-        self.sermon_date_edit.setFont(QFont(self.font_family, int(size)))
-
-        palette = self.main_widget.palette()
-        palette.setColor(QPalette.ColorRole.Window, QColor(self.text_background))
-        palette.setColor(QPalette.ColorRole.WindowText, QColor(self.font_color))
-        self.main_widget.setPalette(palette)
-        self.main_widget.setAutoFillBackground(True)
-
-        palette = self.top_frame.palette()
-        palette.setColor(QPalette.ColorRole.Window, QColor(self.text_background))
-        palette.setColor(QPalette.ColorRole.WindowText, QColor(self.font_color))
-        self.top_frame.setPalette(palette)
-        self.top_frame.setAutoFillBackground(True)
-
-        palette = self.menuBar().palette()
-        palette.setColor(QPalette.ColorRole.Window, QColor(self.text_background))
-        palette.setColor(QPalette.ColorRole.WindowText, QColor(self.font_color))
-        self.menuBar().setPalette(palette)
-        self.menuBar().setAutoFillBackground(True)
-
-        for component in self.tabbed_frame.findChildren(CustomTextEdit, 'custom_text_edit'):
-            component.document().setDefaultFont(QFont(self.font_family, int(self.font_size)))
-
-        if type == 'dark':
-            self.top_frame.undo_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spUndoIconDark.svg'))
-            self.top_frame.redo_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spRedoIconDark.svg'))
-            self.top_frame.bold_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spBoldIconDark.svg'))
-            self.top_frame.italic_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spItalicIconDark.svg'))
-            self.top_frame.underline_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spUnderlineIconDark.svg'))
-            self.top_frame.bullet_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spBulletIconDark.svg'))
-            self.top_frame.text_visible.setIcon(QIcon(self.spd.cwd + '/resources/svg/spShowTextDark.svg'))
-            self.top_frame.first_rec_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spFirstRecIconDark.svg'))
-            self.top_frame.prev_rec_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spPrevRecIconDark.svg'))
-            self.top_frame.next_rec_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spNextRecIconDark.svg'))
-            self.top_frame.last_rec_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spLastRecIconDark.svg'))
-            self.top_frame.new_rec_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spNewIconDark.svg'))
-            self.top_frame.save_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spSaveIconDark.svg'))
-            self.top_frame.print_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spPrintIconDark.svg'))
-        else:
-            self.top_frame.undo_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spUndoIcon.svg'))
-            self.top_frame.redo_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spRedoIcon.svg'))
-            self.top_frame.bold_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spBoldIcon.svg'))
-            self.top_frame.italic_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spItalicIcon.svg'))
-            self.top_frame.underline_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spUnderlineIcon.svg'))
-            self.top_frame.bullet_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spBulletIcon.svg'))
-            self.top_frame.text_visible.setIcon(QIcon(self.spd.cwd + '/resources/svg/spShowText.svg'))
-            self.top_frame.first_rec_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spFirstRecIcon.svg'))
-            self.top_frame.prev_rec_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spPrevRecIcon.svg'))
-            self.top_frame.next_rec_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spNextRecIcon.svg'))
-            self.top_frame.last_rec_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spLastRecIcon.svg'))
-            self.top_frame.new_rec_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spNewIcon.svg'))
-            self.top_frame.save_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spSaveIcon.svg'))
-            self.top_frame.print_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spPrintIcon.svg'))
-
-        self.changes = current_changes_state
+        for label in self.findChildren(QLabel):
+            label.setFont(QFont(family, int(size)))
+        for line_edit in self.findChildren(QLineEdit):
+            line_edit.setFont(QFont(family, int(size)))
+        for text_edit in self.findChildren(QTextEdit):
+            text_edit.setFont(QFont(family, int(size)))
+        for tab_bar in self.findChildren(QTabBar):
+            tab_bar.setFont(QFont(family, int(size)))
+        if font_chooser:
+            font_chooser.deleteLater()
+        self.font_family = family
+        self.font_size = size
+        self.spd.write_font_changes(self.font_family, str(self.font_size))
 
     def set_style_buttons(self, component):
         """
@@ -611,23 +435,23 @@ class GUI(QMainWindow):
         cursor = component.textCursor()
         font = cursor.charFormat().font()
         if font.weight() == QFont.Weight.Normal:
-            self.top_frame.bold_button.setChecked(False)
+            self.toolbar.bold_button.setChecked(False)
         else:
-            self.top_frame.bold_button.setChecked(True)
+            self.toolbar.bold_button.setChecked(True)
         if font.italic():
-            self.top_frame.italic_button.setChecked(True)
+            self.toolbar.italic_button.setChecked(True)
         else:
-            self.top_frame.italic_button.setChecked(False)
+            self.toolbar.italic_button.setChecked(False)
         if font.underline():
-            self.top_frame.underline_button.setChecked(True)
+            self.toolbar.underline_button.setChecked(True)
         else:
-            self.top_frame.underline_button.setChecked(False)
+            self.toolbar.underline_button.setChecked(False)
 
         text_list = cursor.currentList()
         if text_list:
-            self.top_frame.bullet_button.setChecked(True)
+            self.toolbar.bullet_button.setChecked(True)
         else:
-            self.top_frame.bullet_button.setChecked(False)
+            self.toolbar.bullet_button.setChecked(False)
         
     def fill_values(self, record):
         """
@@ -759,11 +583,11 @@ class GUI(QMainWindow):
             widget = frame.findChild(QWidget, 'text_box')
             if widget:
                 text_title = widget.findChild(QLabel, 'text_title')
-                text_edit = widget.findChild(QTextEdit, 'text_edit')
+                text_edit = widget.findChild(QTextEdit, 'text_box_text_edit')
                 text_edit.setText(self.sermon_text_edit.toPlainText())
                 text_title.setText(self.sermon_reference_field.text())
 
-        self.top_frame.id_label.setText('ID: ' + str(record[0][0]))
+        self.toolbar.id_label.setText('ID: ' + str(record[0][0]))
 
         self.changes = False
 
@@ -780,7 +604,7 @@ class GUI(QMainWindow):
         fill turned on, use GetScripture to fill the sermon text TextEdit.
         """
         try:
-            self.top_frame.references_cb.setItemText(self.top_frame.references_cb.currentIndex(), self.sermon_reference_field.text())
+            self.toolbar.references_cb.setItemText(self.toolbar.references_cb.currentIndex(), self.sermon_reference_field.text())
             self.setWindowTitle('Sermon Prep Database - ' + self.sermon_date_edit.text() + ' - ' + self.sermon_reference_field.text())
 
             num_tabs = self.tabbed_frame.count()
@@ -832,7 +656,7 @@ class GUI(QMainWindow):
         """
         Method to change the dates combobox and window title to reflect changes made to the sermon date.
         """
-        self.top_frame.dates_cb.setItemText(self.top_frame.dates_cb.currentIndex(), self.sermon_date_edit.text())
+        self.toolbar.dates_cb.setItemText(self.toolbar.dates_cb.currentIndex(), self.sermon_date_edit.text())
         self.setWindowTitle(
             'Sermon Prep Database - ' + self.sermon_date_edit.text() + ' - ' + self.sermon_reference_field.text())
         self.changes = True
@@ -894,37 +718,37 @@ class GUI(QMainWindow):
         if ((event.modifiers() & Qt.KeyboardModifier.ControlModifier)
                 and (event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
                 and event.key() == Qt.Key.Key_B):
-            self.top_frame.set_bullet()
-            self.top_frame.bullet_button.blockSignals(True)
-            if self.top_frame.bullet_button.isChecked():
-                self.top_frame.bullet_button.setChecked(False)
+            self.toolbar.set_bullet()
+            self.toolbar.bullet_button.blockSignals(True)
+            if self.toolbar.bullet_button.isChecked():
+                self.toolbar.bullet_button.setChecked(False)
             else:
-                self.top_frame.bullet_button.setChecked(True)
-            self.top_frame.bold_button.blockSignals(False)
+                self.toolbar.bullet_button.setChecked(True)
+            self.toolbar.bold_button.blockSignals(False)
         elif event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_B:
-            self.top_frame.set_bold()
-            self.top_frame.bold_button.blockSignals(True)
-            if self.top_frame.bold_button.isChecked():
-                self.top_frame.bold_button.setChecked(False)
+            self.toolbar.set_bold()
+            self.toolbar.bold_button.blockSignals(True)
+            if self.toolbar.bold_button.isChecked():
+                self.toolbar.bold_button.setChecked(False)
             else:
-                self.top_frame.bold_button.setChecked(True)
-            self.top_frame.bold_button.blockSignals(False)
+                self.toolbar.bold_button.setChecked(True)
+            self.toolbar.bold_button.blockSignals(False)
         elif event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_I:
-            self.top_frame.set_italic()
-            self.top_frame.italic_button.blockSignals(True)
-            if self.top_frame.italic_button.isChecked():
-                self.top_frame.italic_button.setChecked(False)
+            self.toolbar.set_italic()
+            self.toolbar.italic_button.blockSignals(True)
+            if self.toolbar.italic_button.isChecked():
+                self.toolbar.italic_button.setChecked(False)
             else:
-                self.top_frame.italic_button.setChecked(True)
-            self.top_frame.italic_button.blockSignals(False)
+                self.toolbar.italic_button.setChecked(True)
+            self.toolbar.italic_button.blockSignals(False)
         elif event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_U:
-            self.top_frame.set_underline()
-            self.top_frame.underline_button.blockSignals(True)
-            if self.top_frame.underline_button.isChecked():
-                self.top_frame.underline_button.setChecked(False)
+            self.toolbar.set_underline()
+            self.toolbar.underline_button.blockSignals(True)
+            if self.toolbar.underline_button.isChecked():
+                self.toolbar.underline_button.setChecked(False)
             else:
-                self.top_frame.underline_button.setChecked(True)
-            self.top_frame.underline_button.blockSignals(False)
+                self.toolbar.underline_button.setChecked(True)
+            self.toolbar.underline_button.blockSignals(False)
         elif event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_S:
             self.spd.save_rec()
         elif event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_P:
@@ -975,7 +799,7 @@ class InitialStartup(QRunnable):
         self.gui.spd.backup_db()
 
         self.startup_splash.update_text.emit('Finishing Up')
-        self.gui.create_main_gui.emit()
+        self.gui.create_main_gui.emit(self.gui.spd.user_settings[1])
         self.startup_splash.end.emit()
 
         self.gui.changes = False
@@ -994,7 +818,6 @@ class StartupSplash(QDialog):
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.setModal(True)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setStyleSheet('background-color: transparent')
         self.setMinimumWidth(300)
 
         layout = QGridLayout()
@@ -1052,10 +875,9 @@ class CustomTextEdit(QTextEdit):
     :param QMainWindow win: GUI's Main Window
     :param GUI gui: The GUI object
     """
-    def __init__(self, win, gui):
+    def __init__(self, gui):
         super().__init__()
         self.setObjectName('custom_text_edit')
-        self.win = win
         self.gui = gui
         self.full_spell_check_done = False
         self.textChanged.connect(self.text_changed)
@@ -1076,7 +898,6 @@ class CustomTextEdit(QTextEdit):
         to remove extraneous whitespace from the text.
         """
         menu = self.createStandardContextMenu()
-        menu.setStyleSheet('QMenu::item:selected { background: white; color: black; }')
 
         clean_whitespace_action = QAction("Remove extra whitespace")
         clean_whitespace_action.triggered.connect(self.clean_whitespace)
@@ -1216,7 +1037,7 @@ class CustomTextEdit(QTextEdit):
         """
         Method to remove duplicate spaces and tabs from the document.
         """
-        component = self.win.focusWidget()
+        component = self.gui.focusWidget()
         if isinstance(component, QTextEdit):
             string = component.toHtml()
             string = re.sub(' +', ' ', string)
@@ -1247,11 +1068,9 @@ class ScriptureBox(QWidget):
         self.setLayout(text_layout)
         text_title = QLabel()
         text_title.setObjectName('text_title')
-        text_title.setStyleSheet('font-weight: bold; text-decoration: underline;')
         text_layout.addWidget(text_title)
         self.text_edit = QTextEdit()
-        self.text_edit.setObjectName('text_edit')
-        self.text_edit.setStyleSheet('background-color: ' + bgcolor + '; border: 0;')
+        self.text_edit.setObjectName('text_box_text_edit')
         self.text_edit.setReadOnly(True)
         text_layout.addWidget(self.text_edit)
         self.hide()
@@ -1278,21 +1097,6 @@ class SearchBox(QWidget):
         """
         results_widget_layout = QVBoxLayout()
         self.setLayout(results_widget_layout)
-        self.setStyleSheet('''
-                        QWidget {
-                            background-color: ''' + self.gui.background_color + ''';}
-                        QLabel {
-                            font-family: "Helvetica";
-                            font-size: 16px;
-                            padding: 10px;
-                            font-color: ''' + self.gui.accent_color + ''';}
-                        QTableView {
-                            background-color: white;
-                            font-family: "Helvetica";
-                            font-size: 16px;
-                            padding: 3px;
-                        }
-                        ''')
 
         results_header = QWidget()
         header_layout = QHBoxLayout()
@@ -1302,8 +1106,7 @@ class SearchBox(QWidget):
         header_layout.addWidget(results_label)
 
         close_button = QPushButton()
-        close_button.setIcon(QIcon(self.gui.spd.cwd + '/resources/svg/spCloseIcon.svg'))
-        close_button.setStyleSheet('background-color: ' + self.gui.accent_color)
+        close_button.setIcon(QIcon('resources/svg/spCloseIcon.svg'))
         close_button.setToolTip('Close the search tab')
         close_button.pressed.connect(self.remove_self)
         header_layout.addStretch()
@@ -1355,7 +1158,7 @@ class SearchBox(QWidget):
         results_table_view.setColumnWidth(5, 100)
         results_table_view.setColumnWidth(6, 500)
         results_table_view.setShowGrid(False)
-        results_table_view.setSelectionBehavior(QTableView.SelectRows)
+        results_table_view.setSelectionBehavior(QTableView.SelectionBehavior.SelectRows)
         results_table_view.doubleClicked.connect(
             lambda: self.retrieve_selection(model, results_table_view.selectionModel().currentIndex().row()))
         results_widget_layout.addWidget(results_table_view)

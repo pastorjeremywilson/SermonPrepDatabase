@@ -3,7 +3,7 @@
 
 Copyright 2024 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.5.0.0)
+This file is a part of the Sermon Prep Database program (v.5.0.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -123,7 +123,7 @@ class GetFromDocx:
             None,
             'Choose Folder',
             os.path.expanduser('~/Documents'),
-            QFileDialog.ShowDirsOnly
+            QFileDialog.Option.ShowDirsOnly
         )
         return folder
 

@@ -26,7 +26,7 @@ WizardSmallImageFile = {#ResourceLocation}\installImageSmall.bmp
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-OutputDir="C:\Users\pasto\Desktop\output\Sermon Prep Database"
+OutputDir="C:\Users\pasto\Desktop\output\SermonPrepDatabase\installer\"
 OutputBaseFilename=Setup_SPD_{#MyAppVersion}
 SetupIconFile={#ResourceLocation}\icons.ico
 Compression=lzma

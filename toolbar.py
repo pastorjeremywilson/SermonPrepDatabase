@@ -3,7 +3,7 @@
 
 Copyright 2024 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.5.0.0)
+This file is a part of the Sermon Prep Database program (v.5.0.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -28,166 +28,167 @@ from PyQt6.QtGui import QTextCharFormat, QFont, QTextListFormat, QTextCursor, QI
 from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QLabel, QComboBox, QLineEdit, QTextEdit, QMessageBox
 
 
-class TopFrame(QWidget):
+class Toolbar(QWidget):
     """
-    TopFrame creates the uppermost QWidget of the GUI that holds formatting, search, and navigation elements.
+    Toolbar creates the uppermost QWidget of the GUI that holds formatting, search, and navigation elements.
     """
     def __init__(self, gui, spd):
         super().__init__()
         self.gui = gui
         self.spd = spd
+        self.setObjectName('toolbar')
 
         icon_size = QSize(16, 16)
-        button_frame = QWidget()
 
-        button_frame_layout = QHBoxLayout()
-        self.setLayout(button_frame_layout)
+        toolbar_layout = QHBoxLayout(self)
+        toolbar_layout.setContentsMargins(5, 5, 5, 5)
 
         self.undo_button = QPushButton()
-        self.undo_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spUndoIcon.svg'))
+        self.undo_button.setIcon(QIcon('resources/svg/spUndoIcon.svg'))
         self.undo_button.setIconSize(icon_size)
         self.undo_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.undo_button.clicked.connect(self.gui.menu_bar.press_ctrl_z)
         self.undo_button.setToolTip('Undo')
-        button_frame_layout.addWidget(self.undo_button)
+        toolbar_layout.addWidget(self.undo_button)
 
         self.redo_button = QPushButton()
-        self.redo_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spRedoIcon.svg'))
+        self.redo_button.setIcon(QIcon('resources/svg/spRedoIcon.svg'))
         self.redo_button.setIconSize(icon_size)
         self.redo_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.redo_button.clicked.connect(self.gui.menu_bar.press_ctrl_y)
         self.redo_button.setToolTip('Redo')
-        button_frame_layout.addWidget(self.redo_button)
-        button_frame_layout.addSpacing(20)
+        toolbar_layout.addWidget(self.redo_button)
+        toolbar_layout.addSpacing(20)
 
         self.bold_button = QPushButton()
         self.bold_button.setCheckable(True)
         self.bold_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.bold_button.clicked.connect(self.set_bold)
-        self.bold_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spBoldIcon.svg'))
+        self.bold_button.setIcon(QIcon('resources/svg/spBoldIcon.svg'))
         self.bold_button.setIconSize(icon_size)
         self.bold_button.setToolTip('Bold\n(Ctrl+B)')
-        button_frame_layout.addWidget(self.bold_button)
+        toolbar_layout.addWidget(self.bold_button)
 
         self.italic_button = QPushButton()
         self.italic_button.setCheckable(True)
         self.italic_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.italic_button.clicked.connect(self.set_italic)
-        self.italic_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spItalicIcon.svg'))
+        self.italic_button.setIcon(QIcon('resources/svg/spItalicIcon.svg'))
         self.italic_button.setIconSize(icon_size)
         self.italic_button.setToolTip('Italic\n(Ctrl+I)')
-        button_frame_layout.addWidget(self.italic_button)
+        toolbar_layout.addWidget(self.italic_button)
 
         self.underline_button = QPushButton()
         self.underline_button.setCheckable(True)
         self.underline_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.underline_button.clicked.connect(self.set_underline)
-        self.underline_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spUnderlineIcon.svg'))
+        self.underline_button.setIcon(QIcon('resources/svg/spUnderlineIcon.svg'))
         self.underline_button.setIconSize(icon_size)
         self.underline_button.setToolTip('Underline\n(Ctrl+U)')
-        button_frame_layout.addWidget(self.underline_button)
+        toolbar_layout.addWidget(self.underline_button)
 
         self.bullet_button = QPushButton()
         self.bullet_button.setCheckable(True)
         self.bullet_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.bullet_button.clicked.connect(self.set_bullet)
-        self.bullet_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spBulletIcon.svg'))
+        self.bullet_button.setIcon(QIcon('resources/svg/spBulletIcon.svg'))
         self.bullet_button.setIconSize(icon_size)
         self.bullet_button.setToolTip('Add Bullets\n(Ctrl+Shift+B)')
-        button_frame_layout.addWidget(self.bullet_button)
-        button_frame_layout.addSpacing(20)
+        toolbar_layout.addWidget(self.bullet_button)
+        toolbar_layout.addSpacing(20)
 
         self.text_visible = QPushButton()
         self.text_visible.setObjectName('text_visible')
         self.text_visible.setCheckable(True)
         self.text_visible.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.text_visible.setToolTip('Show Sermon Text on All Tabs')
-        self.text_visible.setIcon(QIcon(self.spd.cwd + '/resources/svg/spShowText.svg'))
-        self.text_visible.setIconSize(QSize(round(icon_size.width() * 2.5), round(icon_size.height() * 2.5)))
+        self.text_visible.setIcon(QIcon('resources/svg/spShowText.svg'))
+        self.text_visible.setIconSize(QSize(round(icon_size.width() * 2.5), icon_size.height()))
         self.text_visible.clicked.connect(self.keep_text_visible)
-        button_frame_layout.addWidget(self.text_visible)
+        toolbar_layout.addWidget(self.text_visible)
 
-        button_frame_layout.addStretch(1)
+        toolbar_layout.addStretch(1)
 
         dates_label = QLabel('Choose Record by Date:')
-        button_frame_layout.addWidget(dates_label)
+        dates_label.setAutoFillBackground(False)
+        toolbar_layout.addWidget(dates_label)
 
         self.dates_cb = QComboBox()
         self.dates_cb.addItems(self.spd.dates)
         self.dates_cb.currentIndexChanged.connect(lambda: self.spd.get_by_index(self.dates_cb.currentIndex()))
-        button_frame_layout.addWidget(self.dates_cb)
+        toolbar_layout.addWidget(self.dates_cb)
 
         references_label = QLabel('Choose Record by Sermon Reference:')
-        button_frame_layout.addWidget(references_label)
+        references_label.setAutoFillBackground(False)
+        toolbar_layout.addWidget(references_label)
 
         self.references_cb = QComboBox()
         for item in self.spd.references:
             self.references_cb.addItem(item[0])
         self.references_cb.currentIndexChanged.connect(
             lambda: self.get_index_of_reference(self.references_cb.currentIndex()))
-        button_frame_layout.addWidget(self.references_cb)
+        toolbar_layout.addWidget(self.references_cb)
 
         search_label = QLabel('Keyword Search:')
-        button_frame_layout.addWidget(search_label)
+        search_label.setAutoFillBackground(False)
+        toolbar_layout.addWidget(search_label)
 
         search_field = QLineEdit()
         search_field.setMinimumWidth(200)
         search_field.returnPressed.connect(lambda: self.do_search(search_field.text()))
-        button_frame_layout.addWidget(search_field)
+        toolbar_layout.addWidget(search_field)
 
-        button_frame_layout.addStretch(1)
+        toolbar_layout.addStretch(1)
 
         self.first_rec_button = QPushButton()
-        self.first_rec_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spFirstRecIcon.svg'))
+        self.first_rec_button.setIcon(QIcon('resources/svg/spFirstRecIcon.svg'))
         self.first_rec_button.setIconSize(icon_size)
         self.first_rec_button.clicked.connect(lambda: self.spd.first_rec())
         self.first_rec_button.setToolTip('Jump to First Record')
-        button_frame_layout.addWidget(self.first_rec_button)
+        toolbar_layout.addWidget(self.first_rec_button)
 
         self.prev_rec_button = QPushButton()
-        self.prev_rec_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spPrevRecIcon.svg'))
+        self.prev_rec_button.setIcon(QIcon('resources/svg/spPrevRecIcon.svg'))
         self.prev_rec_button.setIconSize(icon_size)
         self.prev_rec_button.clicked.connect(lambda: self.spd.prev_rec())
         self.prev_rec_button.setToolTip('Go to Previous Record')
-        button_frame_layout.addWidget(self.prev_rec_button)
+        toolbar_layout.addWidget(self.prev_rec_button)
 
         self.next_rec_button = QPushButton()
-        self.next_rec_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spNextRecIcon.svg'))
+        self.next_rec_button.setIcon(QIcon('resources/svg/spNextRecIcon.svg'))
         self.next_rec_button.clicked.connect(lambda: self.spd.next_rec())
         self.next_rec_button.setToolTip('Go to Next Record')
-        button_frame_layout.addWidget(self.next_rec_button)
+        toolbar_layout.addWidget(self.next_rec_button)
 
         self.last_rec_button = QPushButton()
-        self.last_rec_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spLastRecIcon.svg'))
+        self.last_rec_button.setIcon(QIcon('resources/svg/spLastRecIcon.svg'))
         self.last_rec_button.clicked.connect(lambda: self.spd.last_rec())
         self.last_rec_button.setToolTip('Jump to Last Record')
-        button_frame_layout.addWidget(self.last_rec_button)
+        toolbar_layout.addWidget(self.last_rec_button)
 
         self.new_rec_button = QPushButton()
-        self.new_rec_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spNewIcon.svg'))
+        self.new_rec_button.setIcon(QIcon('resources/svg/spNewIcon.svg'))
         self.new_rec_button.clicked.connect(lambda: self.spd.new_rec())
         self.new_rec_button.setToolTip('Create a New Record')
-        button_frame_layout.addWidget(self.new_rec_button)
-        button_frame_layout.addSpacing(20)
+        toolbar_layout.addWidget(self.new_rec_button)
+        toolbar_layout.addSpacing(20)
 
         self.save_button = QPushButton()
-        self.save_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spSaveIcon.svg'))
+        self.save_button.setIcon(QIcon('resources/svg/spSaveIcon.svg'))
         self.save_button.setIconSize(icon_size)
         self.save_button.clicked.connect(lambda: self.spd.save_rec())
         self.save_button.setToolTip('Save this Record')
-        button_frame_layout.addWidget(self.save_button)
+        toolbar_layout.addWidget(self.save_button)
 
         self.print_button = QPushButton()
-        self.print_button.setIcon(QIcon(self.spd.cwd + '/resources/svg/spPrintIcon.svg'))
+        self.print_button.setIcon(QIcon('resources/svg/spPrintIcon.svg'))
         self.print_button.setIconSize(icon_size)
         self.print_button.clicked.connect(self.gui.menu_bar.print_rec)
         self.print_button.setToolTip('Print this Record')
-        button_frame_layout.addWidget(self.print_button)
+        toolbar_layout.addWidget(self.print_button)
 
         self.id_label = QLabel()
-        button_frame_layout.addWidget(self.id_label)
-
-        self.gui.layout.addWidget(button_frame)
+        toolbar_layout.addWidget(self.id_label)
 
     def keep_text_visible(self):
         """
@@ -203,7 +204,7 @@ class TopFrame(QWidget):
                     frame = self.gui.tabbed_frame.widget(i)
                     widget = frame.findChild(QWidget, 'text_box')
                     text_title = widget.findChild(QLabel, 'text_title')
-                    text_edit = widget.findChild(QTextEdit, 'text_edit')
+                    text_edit = widget.findChild(QTextEdit, 'text_box_text_edit')
                     text_edit.setText(self.gui.sermon_text_edit.toPlainText())
                     text_title.setText(self.gui.sermon_reference_field.text())
                     if widget:
@@ -249,7 +250,7 @@ class TopFrame(QWidget):
         else:
             from gui import SearchBox
             search_box = SearchBox(self.gui)
-            self.gui.tabbed_frame.addTab(search_box, QIcon(self.gui.spd.cwd + '/resources/svg/spSearchIcon.svg'), 'Search')
+            self.gui.tabbed_frame.addTab(search_box, QIcon('resources/svg/spSearchIcon.svg'), 'Search')
             search_box.show_results(result_list)
             self.gui.tabbed_frame.setCurrentWidget(search_box)
 

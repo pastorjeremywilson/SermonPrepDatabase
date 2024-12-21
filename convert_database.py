@@ -3,7 +3,7 @@
 
 Copyright 2024 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.5.0.0)
+This file is a part of the Sermon Prep Database program (v.5.0.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -90,7 +90,7 @@ class ConvertDatabase(QDialog):
             if not exists(app_dir):
                 os.mkdir(app_dir)
 
-            shutil.copy(self.spd.cwd + '/resources/database_template.db', self.spd.db_loc)
+            shutil.copy('resources/database_template.db', self.spd.db_loc)
 
             QMessageBox.information(
                 None,
@@ -118,7 +118,7 @@ class ConvertDatabase(QDialog):
                 if not exists(self.spd.app_dir):
                     os.mkdir(self.spd.app_dir)
 
-                shutil.copy(self.spd.cwd + '/resources/database_template.db', self.spd.db_loc)
+                shutil.copy('resources/database_template.db', self.spd.db_loc)
 
                 # remove the new user introduction record from the database template
                 conn = sqlite3.connect(self.spd.db_loc)

@@ -3,7 +3,7 @@
 
 Copyright 2024 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.5.0.0)
+This file is a part of the Sermon Prep Database program (v.5.0.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -37,7 +37,6 @@ def message_box(title, message, bg):
     """
     dialog = QDialog()
     dialog.setWindowTitle(title)
-    dialog.setStyleSheet('background: ' + bg)
     dialog.setModal(True)
 
     layout = QGridLayout()
@@ -64,7 +63,6 @@ def yes_no_cancel_box(*args):
     result = -1
 
     dialog = QDialog()
-    dialog.setStyleSheet('background: ' + args[2])
 
     dialog.setWindowTitle(args[0])
 
@@ -116,14 +114,12 @@ def timed_popup(message, millis, bg):
     dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
     dialog.setWindowOpacity(0.75)
     dialog.setBaseSize(QSize(200, 75))
-    dialog.setStyleSheet('background-color: ' + bg)
     dialog.setModal(True)
 
     layout = QVBoxLayout()
     dialog.setLayout(layout)
 
     label = QLabel(message)
-    label.setStyleSheet('font-size: 18pt; color: white;')
     layout.addWidget(label)
 
     timer = QTimer()

@@ -7,6 +7,11 @@ DONE
 
 
 TO DO
+    Change help fonts to gui fonts
+    Test incidental widgets for style
+    Test deleting default dictionary
     Use representative font widget when choosing font
+    Fix line spacing (menu)
+    Switch to unified stylesheets
     Move user config to json file and create one main config dictionary to pull data from
     Switch date recognition to native Python date parsing.

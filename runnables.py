@@ -192,13 +192,13 @@ class LoadDictionary(QRunnable):
         Method to create a SymSpell object based on the default dictionary and the user's custom words list.
         For SymSpellPy documentation, see https://symspellpy.readthedocs.io/en/latest/index.html
         """
-        if not exists(self.main.cwd + '/resources/default_dictionary.pkl'):
+        if not exists('resources/default_dictionary.pkl'):
             self.main.sym_spell = SymSpell()
-            self.main.sym_spell.create_dictionary(self.main.cwd + '/resources/default_dictionary.txt')
-            self.main.sym_spell.save_pickle(os.path.normpath(self.main.cwd + '/resources/default_dictionary.pkl'))
+            self.main.sym_spell.create_dictionary('resources/default_dictionary.txt')
+            self.main.sym_spell.save_pickle(os.path.normpath('resources/default_dictionary.pkl'))
         else:
             self.main.sym_spell = SymSpell()
-            self.main.sym_spell.load_pickle(os.path.normpath(self.main.cwd + '/resources/default_dictionary.pkl'))
+            self.main.sym_spell.load_pickle(os.path.normpath('resources/default_dictionary.pkl'))
 
         with open(self.main.app_dir + '/custom_words.txt', 'r') as file:
             custom_words = file.readlines()

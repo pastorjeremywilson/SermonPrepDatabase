@@ -3,7 +3,7 @@
 
 Copyright 2024 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.5.0.0)
+This file is a part of the Sermon Prep Database program (v.5.0.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -32,14 +32,14 @@ from os.path import exists
 
 import wmi
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap, QTextCursor
+from PyQt6.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap, QTextCursor, QFont, QIcon
 from PyQt6.QtPrintSupport import QPrinter
 from PyQt6.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableView, QPushButton, QColorDialog, \
-    QTabWidget, QHBoxLayout, QComboBox, QTextBrowser, QLineEdit, QTextEdit, QDateEdit, QMessageBox
+    QTabWidget, QHBoxLayout, QComboBox, QTextBrowser, QLineEdit, QTextEdit, QDateEdit, QMessageBox, QTabBar
 from pynput.keyboard import Key, Controller
 
 from runnables import LoadDictionary, SpellCheck
-from top_frame import TopFrame
+from toolbar import Toolbar
 
 
 class MenuBar:
@@ -109,30 +109,30 @@ class MenuBar:
         config_menu = edit_menu.addMenu('Configure')
         config_menu.setToolTipsVisible(True)
 
-        color_menu = config_menu.addMenu('Change Colors')
+        color_menu = config_menu.addMenu('Change Theme')
 
-        red_color_action = color_menu.addAction('Red Theme')
+        red_color_action = color_menu.addAction('Wine')
         red_color_action.triggered.connect(lambda: self.color_change('red'))
 
-        green_color_action = color_menu.addAction('Green Theme')
+        green_color_action = color_menu.addAction('Forest')
         green_color_action.triggered.connect(lambda: self.color_change('green'))
 
-        blue_color_action = color_menu.addAction('Blue Theme')
+        blue_color_action = color_menu.addAction('Sky')
         blue_color_action.triggered.connect(lambda: self.color_change('blue'))
 
-        yellow_color_action = color_menu.addAction('Gold Theme')
+        yellow_color_action = color_menu.addAction('Gold')
         yellow_color_action.triggered.connect(lambda: self.color_change('gold'))
 
-        surf_color_action = color_menu.addAction('Surf Theme')
+        surf_color_action = color_menu.addAction('Surf')
         surf_color_action.triggered.connect(lambda: self.color_change('surf'))
 
-        royal_color_action = color_menu.addAction('Royal Theme')
+        royal_color_action = color_menu.addAction('Royal')
         royal_color_action.triggered.connect(lambda: self.color_change('royal'))
 
-        dark_color_action = color_menu.addAction('Dark Theme')
+        dark_color_action = color_menu.addAction('Dark')
         dark_color_action.triggered.connect(lambda: self.color_change('dark'))
 
-        custom_color_menu = color_menu.addMenu('Custom Colors')
+        """custom_color_menu = color_menu.addMenu('Custom Colors')
 
         bg_color_action = custom_color_menu.addAction('Change Accent Color')
         bg_color_action.setToolTip('Choose a different color for accents and borders')
@@ -140,7 +140,7 @@ class MenuBar:
 
         fg_color_action = custom_color_menu.addAction('Change Background Color')
         fg_color_action.setToolTip('Choose a different color for the background')
-        fg_color_action.triggered.connect(lambda: self.color_change('fg'))
+        fg_color_action.triggered.connect(lambda: self.color_change('fg'))"""
 
         font_action = config_menu.addAction('Change Font')
         font_action.setToolTip('Change the font and font size used in the program')
@@ -342,7 +342,7 @@ class MenuBar:
             import os
             user_dir = os.path.expanduser('~')
 
-            fileName = QFileDialog.getSaveFileName(self.win, 'Create Backup',
+            fileName = QFileDialog.getSaveFileName(self.gui, 'Create Backup',
                                                    user_dir + '/sermon_prep_database_backup.db', 'Database File (*.db)');
             import shutil
             shutil.copy(self.spd.db_loc, fileName[0])
@@ -390,9 +390,9 @@ class MenuBar:
                 self.spd.get_date_list()
                 self.spd.get_scripture_list()
                 self.spd.get_user_settings()
-                self.gui.top_frame.dates_cb.addItems(self.spd.dates)
+                self.gui.toolbar.dates_cb.addItems(self.spd.dates)
                 for item in self.spd.references:
-                    self.gui.top_frame.references_cb.addItem(item[0])
+                    self.gui.toolbar.references_cb.addItem(item[0])
                 self.spd.last_rec()
             except Exception as err:
                 shutil.copy(self.spd.app_dir + '/active-database-backup.db', self.spd.db_loc)
@@ -410,7 +410,7 @@ class MenuBar:
                 self.spd.get_date_list()
                 self.spd.get_scripture_list()
                 self.spd.get_user_settings()
-                self.gui.top_frame.dates_cb.addItems(self.spd.dates)
+                self.gui.toolbar.dates_cb.addItems(self.spd.dates)
                 for item in self.spd.references:
                     self.gui.references_cb.addItem(item[0])
                 self.spd.last_rec()
@@ -510,20 +510,6 @@ class MenuBar:
         self.rename_widget.resize(920, 400)
         rename_widget_layout = QVBoxLayout()
         self.rename_widget.setLayout(rename_widget_layout)
-        self.rename_widget.setStyleSheet('''
-            QWidget {
-                background-color: ''' + self.gui.background_color + ''';}
-            QLabel {
-                font-family: "Helvetica";
-                font-size: 16px;
-                padding: 10px;
-                font-color: ''' + self.gui.accent_color + ''';}
-            QTableView {
-                background-color: white;
-                font-family: "Helvetica";
-                font-size: 16px;
-                padding: 3px;}
-            ''')
 
         rename_label = QLabel('Use this table to set new names for any of the labels in this program.\n'
                              'Double-click a label under "New Label" to rename it')
@@ -571,8 +557,8 @@ class MenuBar:
                 self.gui.layout.removeWidget(widget)
 
         self.gui.menu_bar = self
-        self.gui.top_frame = TopFrame(self.win, self.gui, self.spd)
-        self.gui.layout.addWidget(self.gui.top_frame)
+        self.gui.toolbar = Toolbar(self.gui, self.spd)
+        self.gui.layout.addWidget(self.gui.toolbar)
         self.gui.build_tabbed_frame()
         self.gui.build_scripture_tab()
         self.gui.build_exegesis_tab()
@@ -589,52 +575,63 @@ class MenuBar:
         :param str type: The theme or custom color chosen by the user.
         """
         if type == 'red':
-            self.gui.accent_color = '#502020'
-            self.gui.background_color = '#fff0f0'
-            self.gui.font_color = '#000000'
-            self.gui.text_background = '#ffffff'
+            style_sheet = open('resources/style_sheets/spd-red.qss').read()
+            self.gui.setStyleSheet(style_sheet)
         elif type == 'green':
-            self.gui.accent_color = '#205020'
-            self.gui.background_color = '#f0fff0'
-            self.gui.font_color = '#000000'
-            self.gui.text_background = '#ffffff'
+            style_sheet = open('resources/style_sheets/spd-green.qss').read()
+            self.gui.setStyleSheet(style_sheet)
         elif type == 'blue':
-            self.gui.accent_color = '#202050'
-            self.gui.background_color = '#f0f0ff'
-            self.gui.font_color = '#000000'
-            self.gui.text_background = '#ffffff'
+            style_sheet = open('resources/style_sheets/spd-blue.qss').read()
+            self.gui.setStyleSheet(style_sheet)
         elif type == 'gold':
-            self.gui.accent_color = '#808020'
-            self.gui.background_color = '#fffff0'
-            self.gui.font_color = '#000000'
-            self.gui.text_background = '#ffffff'
+            style_sheet = open('resources/style_sheets/spd-leather.qss').read()
+            self.gui.setStyleSheet(style_sheet)
         elif type == 'surf':
-            self.gui.accent_color = '#208080'
-            self.gui.background_color = '#f0ffff'
-            self.gui.font_color = '#000000'
-            self.gui.text_background = '#ffffff'
+            style_sheet = open('resources/style_sheets/spd-surf.qss').read()
+            self.gui.setStyleSheet(style_sheet)
         elif type == 'royal':
-            self.gui.accent_color = '#602080'
-            self.gui.background_color = '#eff0ff'
-            self.gui.font_color = '#000000'
-            self.gui.text_background = '#ffffff'
+            style_sheet = open('resources/style_sheets/spd-royal.qss').read()
+            self.gui.setStyleSheet(style_sheet)
         elif type == 'dark':
-            self.gui.accent_color = 'rgb(0, 0, 0)'
-            self.gui.background_color = 'rgb(80, 80, 80)'
-            self.gui.font_color = 'rgb(200, 200, 200)'
-            self.gui.text_background = 'rgb(50, 50, 50)'
-        elif type == 'bg':
-            color_chooser = QColorDialog()
-            new_color = color_chooser.getColor(QColor(self.gui.accent_color))
-            if not new_color == QColor():
-                self.gui.accent_color = new_color.name()
+            style_sheet = open('resources/style_sheets/spd-dark.qss').read()
+            self.gui.setStyleSheet(style_sheet)
         else:
-            color_chooser = QColorDialog()
-            new_color = color_chooser.getColor(QColor(self.gui.background_color))
-            if not new_color == QColor():
-                self.gui.background_color = new_color.name()
-        self.gui.set_style_sheets(type)
-        self.spd.write_color_changes()
+            type = 'blue'
+            style_sheet = open('resources/style_sheets/spd-blue.qss').read()
+            self.gui.setStyleSheet(style_sheet)
+
+        if type == 'dark':
+            self.gui.toolbar.undo_button.setIcon(QIcon('resources/svg/spUndoIconDark.svg'))
+            self.gui.toolbar.redo_button.setIcon(QIcon('resources/svg/spRedoIconDark.svg'))
+            self.gui.toolbar.bold_button.setIcon(QIcon('resources/svg/spBoldIconDark.svg'))
+            self.gui.toolbar.italic_button.setIcon(QIcon('resources/svg/spItalicIconDark.svg'))
+            self.gui.toolbar.underline_button.setIcon(QIcon('resources/svg/spUnderlineIconDark.svg'))
+            self.gui.toolbar.bullet_button.setIcon(QIcon('resources/svg/spBulletIconDark.svg'))
+            self.gui.toolbar.text_visible.setIcon(QIcon('resources/svg/spShowTextDark.svg'))
+            self.gui.toolbar.first_rec_button.setIcon(QIcon('resources/svg/spFirstRecIconDark.svg'))
+            self.gui.toolbar.prev_rec_button.setIcon(QIcon('resources/svg/spPrevRecIconDark.svg'))
+            self.gui.toolbar.next_rec_button.setIcon(QIcon('resources/svg/spNextRecIconDark.svg'))
+            self.gui.toolbar.last_rec_button.setIcon(QIcon('resources/svg/spLastRecIconDark.svg'))
+            self.gui.toolbar.new_rec_button.setIcon(QIcon('resources/svg/spNewIconDark.svg'))
+            self.gui.toolbar.save_button.setIcon(QIcon('resources/svg/spSaveIconDark.svg'))
+            self.gui.toolbar.print_button.setIcon(QIcon('resources/svg/spPrintIconDark.svg'))
+        else:
+            self.gui.toolbar.undo_button.setIcon(QIcon('resources/svg/spUndoIcon.svg'))
+            self.gui.toolbar.redo_button.setIcon(QIcon('resources/svg/spRedoIcon.svg'))
+            self.gui.toolbar.bold_button.setIcon(QIcon('resources/svg/spBoldIcon.svg'))
+            self.gui.toolbar.italic_button.setIcon(QIcon('resources/svg/spItalicIcon.svg'))
+            self.gui.toolbar.underline_button.setIcon(QIcon('resources/svg/spUnderlineIcon.svg'))
+            self.gui.toolbar.bullet_button.setIcon(QIcon('resources/svg/spBulletIcon.svg'))
+            self.gui.toolbar.text_visible.setIcon(QIcon('resources/svg/spShowText.svg'))
+            self.gui.toolbar.first_rec_button.setIcon(QIcon('resources/svg/spFirstRecIcon.svg'))
+            self.gui.toolbar.prev_rec_button.setIcon(QIcon('resources/svg/spPrevRecIcon.svg'))
+            self.gui.toolbar.next_rec_button.setIcon(QIcon('resources/svg/spNextRecIcon.svg'))
+            self.gui.toolbar.last_rec_button.setIcon(QIcon('resources/svg/spLastRecIcon.svg'))
+            self.gui.toolbar.new_rec_button.setIcon(QIcon('resources/svg/spNewIcon.svg'))
+            self.gui.toolbar.save_button.setIcon(QIcon('resources/svg/spSaveIcon.svg'))
+            self.gui.toolbar.print_button.setIcon(QIcon('resources/svg/spPrintIcon.svg'))
+
+        self.spd.write_color_changes(type)
 
     def disable_spell_check(self):
         """
@@ -687,13 +684,11 @@ class MenuBar:
         """
         global about_win
         about_win = QWidget()
-        about_win.setStyleSheet('background-color: ' + self.gui.background_color + ';')
         about_win.resize(600, 400)
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.5.0.0')
-        about_label.setStyleSheet('font-family: "Helvetica"; font-weight: bold; font-size: 16px;')
+        about_label = QLabel('Sermon Prep Database v.5.0.1')
         about_layout.addWidget(about_label)
 
         about_text = QTextBrowser()
@@ -720,7 +715,6 @@ class MenuBar:
             missing features, or attempts to assimilate your unique biological and
             technological distinctiveness, email <a href="mailto:pastorjeremywilson@gmail.com">pastorjeremywilson@gmail.com</a>
         ''')
-        about_text.setStyleSheet('font-family: "Helvetica"; font-size: 16px')
         about_text.setOpenExternalLinks(True)
         about_text.setReadOnly(True)
         about_layout.addWidget(about_text)
@@ -746,7 +740,6 @@ class MenuBar:
         font_chooser = QWidget()
         font_layout = QVBoxLayout()
         font_chooser.setLayout(font_layout)
-        font_chooser.setStyleSheet('background: ' + self.gui.background_color + ';')
 
         top_panel = QWidget()
         top_layout = QHBoxLayout()
@@ -756,14 +749,14 @@ class MenuBar:
         family_combo_box = QComboBox()
         family_combo_box.addItems(QFontDatabase.families())
         family_combo_box.currentIndexChanged.connect(
-            lambda: self.apply_font(font_chooser, family_combo_box.currentText(), self.gui.font_size, False))
+            lambda: self.gui.apply_font(family_combo_box.currentText(), self.gui.font_size))
         top_layout.addWidget(family_combo_box)
 
         size_combo_box = QComboBox()
         sizes = ['10', '12', '14', '16', '18', '20', '24', '28', '32']
         size_combo_box.addItems(sizes)
         size_combo_box.currentIndexChanged.connect(
-            lambda: self.apply_font(font_chooser, self.gui.font_family, size_combo_box.currentText(), False))
+            lambda: self.gui.apply_font(self.gui.font_family, size_combo_box.currentText()))
         top_layout.addWidget(size_combo_box)
 
         family_combo_box.setCurrentText(self.gui.font_family)
@@ -776,11 +769,11 @@ class MenuBar:
 
         ok_button = QPushButton('OK')
         ok_button.clicked.connect(
-            lambda: self.apply_font(font_chooser, family_combo_box.currentText(), size_combo_box.currentText(), True))
+            lambda: self.gui.apply_font(family_combo_box.currentText(), size_combo_box.currentText(), font_chooser))
         bottom_layout.addWidget(ok_button)
 
         cancel_button = QPushButton('Cancel')
-        cancel_button.clicked.connect(lambda: self.apply_font(font_chooser, current_font, current_size, True))
+        cancel_button.clicked.connect(lambda: self.gui.apply_font(current_font, current_size, font_chooser))
         bottom_layout.addWidget(cancel_button)
 
         font_chooser.show()
@@ -803,22 +796,6 @@ class MenuBar:
 
             self.gui.fill_values(self.spd.get_record_data())
             self.spd.write_line_spacing_changes()
-
-    def apply_font(self, fontChooser, family, size, close):
-        """
-        Method to apply the user's font changes to the GUI
-
-        :param QWidget fontChooser: The widget created in the change_font method.
-        :param str family: The family name of the font the user chose.
-        :param int size: The font size the user chose.
-        :param boolean close: True if this was called when the user clicked 'OK', so close fontChooser.
-        """
-        self.gui.font_family = family
-        self.gui.font_size = size
-        self.gui.set_style_sheets()
-        if close:
-            self.spd.write_font_changes(family, size)
-            fontChooser.destroy()
 
     def press_ctrl_z(self):
         """
@@ -887,27 +864,8 @@ class ShowHelp(QTabWidget):
         self.font_family = font_family
         self.font_size = font_size
         self.spd = spd
-        self.bold_font = 'font-family: "' + self.font_family + '"; font-weight: bold; font-size: ' + self.font_size + 'pt;'
-        self.plain_font = 'font-family: "' + self.font_family + '"; font-size: ' + self.font_size + 'pt;'
-
-        self.setStyleSheet('''
-                    QTabBar::tab {
-                        background-color: ''' + self.accent_color + ''';
-                        color: white;
-                        font-family: "''' + self.font_family + '''";
-                        font-size: ''' + self.font_size + '''pt;
-                        width: 140px;
-                        height: 30px;
-                        padding: 10px;}
-                    QTabBar::tab:selected {
-                        background-color: ''' + self.background_color + ''';
-                        color: black;
-                        font-family: "''' + self.font_family + '''";
-                        font-size: ''' + str(self.font_size) + '''pt;
-                        width: 140px;
-                        height: 30px;
-                        font-weight: bold;}
-                    ''')
+        self.bold_font = QFont(self.font_family, self.font_size, QFont.Weight.Bold)
+        self.plain_font = QFont(self.font_family, self.font_size)
 
         self.resize(1200, 800)
         self.make_intro()
@@ -924,12 +882,10 @@ class ShowHelp(QTabWidget):
         Method to create the intro widget for the help tabs.
         """
         intro_widget = QWidget()
-        intro_widget.setStyleSheet('background-color: ' + self.background_color)
         intro_layout = QVBoxLayout()
         intro_widget.setLayout(intro_layout)
 
         intro_label = QLabel('Introduction')
-        intro_label.setStyleSheet(self.bold_font)
         intro_layout.addWidget(intro_label)
 
         intro_text = QTextBrowser()
@@ -951,7 +907,6 @@ class ShowHelp(QTabWidget):
             '<a href='"'mailto:pastorjeremywilson@gmail.com'"'>pastorjeremywilson@gmail.com</a>'
         )
         intro_text.setOpenExternalLinks(True)
-        intro_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
         intro_text.setMinimumWidth(750)
         intro_text.setReadOnly(True)
         intro_layout.addWidget(intro_text)
@@ -963,14 +918,13 @@ class ShowHelp(QTabWidget):
         Method to create the menu widget for the help tabs.
         """
         menu_widget = QWidget()
-        menu_widget.setStyleSheet('background-color: ' + self.background_color)
         menu_layout = QVBoxLayout()
         menu_widget.setLayout(menu_layout)
 
         menu_label = QLabel('Menu Bar')
-        menu_label.setStyleSheet(self.bold_font)
+        menu_label.setFont(self.bold_font)
         menu_layout.addWidget(menu_label)
-        menu_pic = QPixmap(self.spd.cwd + '/resources/menuPic.png')
+        menu_pic = QPixmap('resources/menuPic.png')
         menu_pic_label = QLabel()
         menu_pic_label.setPixmap(menu_pic)
         menu_layout.addWidget(menu_pic_label)
@@ -1036,7 +990,7 @@ class ShowHelp(QTabWidget):
             'Deleting a record cannot be undone, so you will be prompted to make sure you really want to delete the '
             'current record.'
         )
-        menu_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
+        menu_text.setFont(self.plain_font)
         menu_text.setReadOnly(True)
         menu_text.setOpenExternalLinks(True)
         menu_layout.addWidget(menu_text)
@@ -1052,21 +1006,21 @@ class ShowHelp(QTabWidget):
         tool_widget.setLayout(tool_layout)
 
         tool_label = QLabel('Toolbar')
-        tool_label.setStyleSheet(self.bold_font)
+        tool_label.setFont(self.bold_font)
         tool_layout.addWidget(tool_label)
 
         tool_text = QTextEdit()
         tool_text.setHtml(
             'Along the top of the window, you\'ll see a toolbar containing different formatting and navigation tools.'
-            '<br><br><img src="' + self.spd.cwd + '/resources/undoPic.png"><br>'
+            '<br><br><img src="resources/undoPic.png"><br>'
             'First, you\'ll see Undo and Redo buttons that you can use to undo or redo any editing you perform. Of '
-            'course, Ctrl-Z and Ctrl-Y will also perform these functions.<br><br><img src="' + self.spd.cwd +
-            '/resources/formatPic.png"><br>Beside those are the buttons you can use to format your text with bold, '
-            'italic, underline, and bullet-point options.<br><br><img src="' + self.spd.cwd +
-            '/resources/showScripturePic.png"><br>Right beside these is an option to show the sermon text on all tabs. '
+            'course, Ctrl-Z and Ctrl-Y will also perform these functions.<br><br><img src="'
+            'resources/formatPic.png"><br>Beside those are the buttons you can use to format your text with bold, '
+            'italic, underline, and bullet-point options.<br><br><img src="'
+            'resources/showScripturePic.png"><br>Right beside these is an option to show the sermon text on all tabs. '
             'If you would like to keep your sermon text handy while you are entering, for example, your exegesis notes '
             'or research notes, click this icon. The sermon text will be shown to the right of the Exegesis, Outline, '
-            'Research, and Sermon tabs.<br><br><img src="' + self.spd.cwd + '/resources/searchPic.png"><br>In the '
+            'Research, and Sermon tabs.<br><br><img src="resources/searchPic.png"><br>In the '
             'middle of this bar are two pull-down menus where you can bring up past sermons by the sermon date '
             'or the sermon\'s scripture. This becomes increasingly useful as you add more and more sermons to the '
             'database, allowing you to see what you\'ve preached on in the past or how you\'ve dealt with particular '
@@ -1076,7 +1030,7 @@ class ShowHelp(QTabWidget):
             'showing any records where your search term(s) appear, and double-clicking any of the results '
             'will bring up that particular sermon\'s record. The search results are sorted with exact matches first,'
             ' followed by results in order of how many search terms were found. This new tab can be closed by pressing '
-            'the "X" icon.<br><br><img src="' + self.spd.cwd + '/resources/navPic.png"><br>To the right of this upper bar are the navigation '
+            'the "X" icon.<br><br><img src="resources/navPic.png"><br>To the right of this upper bar are the navigation '
             'buttons, as well as the save and print buttons. These '
             'buttons will allow you to navigate to the first or last sermons in your database or switch to the '
             'previous or next sermons. Just to the right of these navigation buttons is the "New Record" button. '
@@ -1085,7 +1039,7 @@ class ShowHelp(QTabWidget):
             'while the print button will print a basic hard-copy of the information you have for the currently '
             'showing sermon.'
         )
-        tool_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
+        tool_text.setFont(self.plain_font)
         tool_text.setReadOnly(True)
         tool_layout.addWidget(tool_text)
 
@@ -1099,7 +1053,7 @@ class ShowHelp(QTabWidget):
         scripture_layout = QVBoxLayout()
         scripture_widget.setLayout(scripture_layout)
         scripture_label = QLabel('Scripture Tab')
-        scripture_label.setStyleSheet(self.bold_font)
+        scripture_label.setFont(self.bold_font)
         scripture_layout.addWidget(scripture_label)
 
         scripture_text = QTextEdit()
@@ -1114,7 +1068,7 @@ class ShowHelp(QTabWidget):
             'XML bible file, the text of the passage you typed in will be automatically filled in. To turn this '
             'feature off, simply uncheck the box labeled "Auto-fill ' + self.spd.user_settings[8] + '".'
         )
-        scripture_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
+        scripture_text.setFont(self.plain_font)
         scripture_text.setReadOnly(True)
         scripture_layout.addWidget(scripture_text)
 
@@ -1128,7 +1082,7 @@ class ShowHelp(QTabWidget):
         exeg_layout = QVBoxLayout()
         exeg_widget.setLayout(exeg_layout)
         exeg_label = QLabel('Exegesis Tab')
-        exeg_label.setStyleSheet(self.bold_font)
+        exeg_label.setFont(self.bold_font)
         exeg_layout.addWidget(exeg_label)
 
         exeg_text = QTextEdit()
@@ -1145,7 +1099,7 @@ class ShowHelp(QTabWidget):
             'congregation. What is the sin problem that the sermon will address? What is the gospel answer to that '
             'sin problem? What is the big idea that your sermon is going to convey?'
         )
-        exeg_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
+        exeg_text.setFont(self.plain_font)
         exeg_text.setReadOnly(True)
         exeg_layout.addWidget(exeg_text)
 
@@ -1160,7 +1114,7 @@ class ShowHelp(QTabWidget):
         outline_widget.setLayout(outline_layout)
 
         outline_label = QLabel('Outline Tab')
-        outline_label.setStyleSheet(self.bold_font)
+        outline_label.setFont(self.bold_font)
         outline_layout.addWidget(outline_label)
 
         outline_text = QTextEdit()
@@ -1168,7 +1122,7 @@ class ShowHelp(QTabWidget):
             'In the outline tab, you can record outlines for the sermon text as well as for your sermon. You can also '
             'save any illustration ideas that come up as you study'
         )
-        outline_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
+        outline_text.setFont(self.plain_font)
         outline_text.setReadOnly(True)
         outline_layout.addWidget(outline_text)
 
@@ -1183,14 +1137,14 @@ class ShowHelp(QTabWidget):
         research_widget.setLayout(research_layout)
 
         research_label = QLabel('Research Tab')
-        research_label.setStyleSheet(self.bold_font)
+        research_label.setFont(self.bold_font)
         research_layout.addWidget(research_label)
 
         research_text = QTextEdit()
         research_text.setHtml('In the research tab, you can jot down notes as you do research on the text for your '
                                'sermon.<br><br>You are able to use basic formatting as you record your notes: bold, '
                                'underline, italic, and bullet points.')
-        research_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
+        research_text.setFont(self.plain_font)
         research_text.setReadOnly(True)
         research_layout.addWidget(research_text)
 
@@ -1204,7 +1158,7 @@ class ShowHelp(QTabWidget):
         sermon_layout = QVBoxLayout()
         sermon_widget.setLayout(sermon_layout)
         sermon_label = QLabel('Sermon Tab')
-        sermon_label.setStyleSheet(self.bold_font)
+        sermon_label.setFont(self.bold_font)
         sermon_layout.addWidget(sermon_label)
 
         sermon_text = QTextEdit()
@@ -1216,7 +1170,7 @@ class ShowHelp(QTabWidget):
             'like in the research tab, you are able to format the text of your sermon manuscript with bold, italic, '
             'and underline fonts as you need to.'
         )
-        sermon_text.setStyleSheet('background-color: ' + self.background_color + '; ' + self.plain_font)
+        sermon_text.setFont(self.plain_font)
         sermon_text.setReadOnly(True)
         sermon_layout.addWidget(sermon_text)
 
