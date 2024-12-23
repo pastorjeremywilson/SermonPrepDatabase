@@ -73,7 +73,7 @@ QMenu::item:pressed {
     background: #303030;
 }
 
-/*-------------------- tab_widget --------------------*/
+/*-------------------- QTabWidget --------------------*/
 QTabWidget {
     background-color: #303030;
 }
@@ -98,6 +98,28 @@ QTabBar::tab:selected {
     width: 50px;
 }
 QTabBar::tab:last {
+    border-bottom: none;
+}
+
+/*-------------------- QTabBar help_tab_widget--------------------*/
+QWidget#help_widget {
+    background-color: #303030;
+}
+
+QTabBar#help_tab_widget::tab {
+    background-color: #000000;
+    color: #ffffff;
+    font-weight: normal;
+    height:24px;
+    width: 80px;
+    border-right: 2px solid #303030;
+}
+QTabBar#help_tab_widget::tab:selected {
+    color: #ffffff;
+    background-color: #303030;
+    font-weight: bold;
+}
+QTabBar#help_tab_widget::tab:last
     border-bottom: none;
 }
 

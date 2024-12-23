@@ -9,6 +9,5 @@ DONE
 
 
 TO DO
-    Test incidental widgets for style
     Move user config to json file and create one main config dictionary to pull data from
     Switch date recognition to native Python date parsing.

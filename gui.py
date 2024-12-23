@@ -60,12 +60,8 @@ class GUI(QMainWindow):
         self.setWindowTitle('Sermon Prep Database')
 
         try:
-            self.accent_color = self.spd.user_settings[1]
-            self.background_color = self.spd.user_settings[2]
             self.font_family = self.spd.user_settings[3]
             self.font_size = self.spd.user_settings[4]
-            self.font_color = self.spd.user_settings[29]
-            self.text_background = self.spd.user_settings[30]
             self.standard_font = QFont(self.font_family, int(self.font_size))
             self.bold_font = QFont(self.font_family, int(self.font_size), QFont.Weight.Bold)
             self.spd.line_spacing = str(self.spd.user_settings[28])
@@ -112,7 +108,6 @@ class GUI(QMainWindow):
         self.layout.addWidget(tab_container)
 
         self.tabbed_frame = QTabWidget()
-        self.tabbed_frame.setObjectName('tabbedFrame')
         self.tabbed_frame.setTabPosition(QTabWidget.TabPosition.West)
         self.tabbed_frame.setIconSize(QSize(24, 24))
         tab_container_layout.addWidget(self.tabbed_frame)
@@ -250,7 +245,7 @@ class GUI(QMainWindow):
         cps_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(cps_text))
         self.exegesis_frame_layout.addWidget(cps_text, 7, 4)
 
-        scripture_box = ScriptureBox(self.background_color)
+        scripture_box = ScriptureBox()
         self.exegesis_frame_layout.addWidget(scripture_box, 0, 6, 8, 1)
         
         self.tabbed_frame.addTab(self.exegesis_frame, QIcon('resources/svg/spExegIcon.svg'), 'Exegesis')
@@ -287,7 +282,7 @@ class GUI(QMainWindow):
         illustration_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(illustration_text))
         self.outline_frame_layout.addWidget(illustration_text, 1, 4)
 
-        scripture_box = ScriptureBox(self.background_color)
+        scripture_box = ScriptureBox()
         self.outline_frame_layout.addWidget(scripture_box, 0, 6, 5, 1)
 
         self.tabbed_frame.addTab(self.outline_frame, QIcon('resources/svg/spOutlineIcon.svg'), 'Outlines')
@@ -309,7 +304,7 @@ class GUI(QMainWindow):
         research_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(research_text))
         self.research_frame_layout.addWidget(research_text, 1, 0)
 
-        scripture_box = ScriptureBox(self.background_color)
+        scripture_box = ScriptureBox()
         self.research_frame_layout.addWidget(scripture_box, 0, 2, 2, 1)
         
         self.tabbed_frame.addTab(self.research_frame, QIcon('resources/svg/spResearchIcon.svg'), 'Research')
@@ -371,7 +366,7 @@ class GUI(QMainWindow):
         sermon_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(sermon_text))
         self.sermon_frame_layout.addWidget(sermon_text, 7, 0, 1, 8)
 
-        scripture_box = ScriptureBox(self.background_color)
+        scripture_box = ScriptureBox()
         self.sermon_frame_layout.addWidget(scripture_box, 0, 9, 8, 1)
         
         self.tabbed_frame.addTab(self.sermon_frame, QIcon('resources/svg/spSermonIcon.svg'), 'Sermon')
@@ -1046,7 +1041,7 @@ class ScriptureBox(QWidget):
 
     :param str bgcolor: User's chosen background color
     """
-    def __init__(self, bgcolor):
+    def __init__(self):
         super().__init__()
         self.setObjectName('text_box')
         self.setMaximumWidth(300)

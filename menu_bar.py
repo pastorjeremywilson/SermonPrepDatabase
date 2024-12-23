@@ -96,7 +96,7 @@ class MenuBar:
         blue_color_action = color_menu.addAction('Sky')
         blue_color_action.triggered.connect(lambda: self.color_change('blue'))
 
-        yellow_color_action = color_menu.addAction('Gold')
+        yellow_color_action = color_menu.addAction('Leather')
         yellow_color_action.triggered.connect(lambda: self.color_change('gold'))
 
         surf_color_action = color_menu.addAction('Surf')
@@ -325,7 +325,10 @@ class MenuBar:
             user_dir = os.path.expanduser('~')
 
             fileName = QFileDialog.getSaveFileName(self.gui, 'Create Backup',
-                                                   user_dir + '/sermon_prep_database_backup.db', 'Database File (*.db)');
+                                                   user_dir + '/sermon_prep_database_backup.db', 'Database File (*.db)')
+            if len(fileName[0]) == 0:
+                return
+
             import shutil
             shutil.copy(self.spd.db_loc, fileName[0])
             self.spd.write_to_log('Created Backup as ' + fileName[0])
@@ -348,10 +351,10 @@ class MenuBar:
         dialog = QFileDialog()
         dialog.setWindowTitle('Restore from Backup')
         dialog.setNameFilter('Database File (*.db)')
-        dialog.setFileMode(QFileDialog.ExistingFile)
+        dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
         dialog.setDirectory(self.spd.app_dir)
 
-        dialog.exec_()
+        dialog.exec()
 
         if dialog.selectedFiles():
             db_file = dialog.selectedFiles()[0]
@@ -656,21 +659,31 @@ class MenuBar:
         """
         Call the ShowHelp class on user's input
         """
-        global sh
+        self.help_widget = QWidget()
+        self.help_widget.setObjectName('help_widget')
+        self.help_widget.setParent(self.gui)
+        self.help_widget.setWindowFlag(Qt.WindowType.Window)
+        self.help_widget.setWindowTitle('Help Topics')
+        help_layout = QVBoxLayout(self.help_widget)
+
+        help_label = QLabel('Help Topics')
+        help_label.setFont(QFont(self.gui.font_family, 20))
+        help_layout.addWidget(help_label)
+
         sh = ShowHelp(self.gui, self.spd)
-        sh.show()
+        help_layout.addWidget(sh)
+
+        self.help_widget.showMaximized()
 
     def show_about(self):
         """
         Display the 'about' text on user's input
         """
-        global about_win
-        about_win = QWidget()
-        about_win.resize(600, 400)
+        self.about_win = QWidget()
         about_layout = QVBoxLayout()
-        about_win.setLayout(about_layout)
+        self.about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.5.0.2')
+        about_label = QLabel('Sermon Prep Database v.5.0.3')
         about_layout.addWidget(about_label)
 
         about_text = QTextBrowser()
@@ -701,7 +714,7 @@ class MenuBar:
         about_text.setReadOnly(True)
         about_layout.addWidget(about_text)
 
-        about_win.show()
+        self.about_win.show()
 
     def remove_words(self):
         """
@@ -837,6 +850,9 @@ class ShowHelp(QTabWidget):
         super().__init__()
         self.gui = gui
         self.spd = spd
+
+        self.setObjectName('help_tab_widget')
+        self.tabBar().setObjectName('help_tab_widget')
 
         self.resize(1200, 800)
         self.make_intro()
