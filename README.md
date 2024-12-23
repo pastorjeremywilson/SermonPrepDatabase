@@ -8,7 +8,8 @@
 Sermon Prep Database is a program to organize - and store for easy retrieval - your thoughts and research when preparing a sermon.
 
 # What's New in v.5.0.3?
-- Standardized all text handling across each widget.
+- Standardized all text handling across each widget. _Note: This change may cause the loss of some formatting in older
+	databases (text styling and paragraph breaks)._
 - Many improvements to the spell-checking functions, preventing a newly-developed crash and increasing speed and reliability
 - Improved the printing functions.
 - Other improvements and bug fixes under the hood.
