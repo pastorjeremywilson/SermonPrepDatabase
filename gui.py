@@ -1,27 +1,3 @@
-"""
-@author Jeremy G. Wilson
-
-Copyright 2024 Jeremy G. Wilson
-
-This file is a part of the Sermon Prep Database program (v.5.0.1)
-
-Sermon Prep Database is free software: you can redistribute it and/or
-modify it under the terms of the GNU General Public License (GNU GPL)
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-The Sermon Prep Database program includes Artifex Software's GhostScript,
-licensed under the GNU Affero General Public License (GNU AGPL). See
-https://www.ghostscript.com/licensing/index.html for more information.
-"""
 import re
 from os.path import exists
 
@@ -117,6 +93,7 @@ class GUI(QMainWindow):
         self.build_sermon_tab()
 
         self.apply_font(self.font_family, self.font_size)
+        self.apply_line_spacing()
         self.menu_bar.color_change(theme)
 
         self.showMaximized()
@@ -424,6 +401,15 @@ class GUI(QMainWindow):
         self.font_family = family
         self.font_size = size
         self.spd.write_font_changes(self.font_family, str(self.font_size))
+
+    def apply_line_spacing(self):
+        for text_edit in self.findChildren(QTextEdit):
+            text_edit_html = text_edit.toHtml()
+            text_edit_html = re.sub('<p.*?>', f'<p style="line-height: {self.spd.line_spacing}">', text_edit_html)
+            text_edit.setHtml(text_edit_html)
+            self.menuBar().findChild(QAction, 'compact').setChecked(self.spd.line_spacing == '1.0')
+            self.menuBar().findChild(QAction, 'regular').setChecked(self.spd.line_spacing == '1.2')
+            self.menuBar().findChild(QAction, 'wide').setChecked(self.spd.line_spacing == '1.5')
 
     def set_style_buttons(self, component):
         """

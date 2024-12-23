@@ -1,28 +1,3 @@
-"""
-@author Jeremy G. Wilson
-
-Copyright 2024 Jeremy G. Wilson
-
-This file is a part of the Sermon Prep Database program (v.5.0.1)
-
-Sermon Prep Database is free software: you can redistribute it and/or
-modify it under the terms of the GNU General Public License (GNU GPL)
-published by the Free Software Foundation, either version 3 of the
-License, or (at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-The Sermon Prep Database program includes Artifex Software's GhostScript,
-licensed under the GNU Affero General Public License (GNU AGPL). See
-https://www.ghostscript.com/licensing/index.html for more information.
-"""
-
 import logging
 import os
 import re
@@ -32,10 +7,11 @@ from os.path import exists
 
 import wmi
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap, QTextCursor, QFont, QIcon
+from PyQt6.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap, QTextCursor, QFont, QIcon, \
+    QAction
 from PyQt6.QtPrintSupport import QPrinter
 from PyQt6.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableView, QPushButton, QColorDialog, \
-    QTabWidget, QHBoxLayout, QComboBox, QTextBrowser, QLineEdit, QTextEdit, QDateEdit, QMessageBox, QTabBar
+    QTabWidget, QHBoxLayout, QComboBox, QTextBrowser, QLineEdit, QTextEdit, QDateEdit, QMessageBox, QTabBar, QMenuBar
 from pynput.keyboard import Key, Controller
 
 from runnables import LoadDictionary, SpellCheck
@@ -151,16 +127,22 @@ class MenuBar:
 
         compact_spacing_action = line_spacing_menu.addAction('Compact')
         compact_spacing_action.setObjectName('compact')
+        compact_spacing_action.setCheckable(True)
+        compact_spacing_action.setChecked(False)
         compact_spacing_action.setToolTip('Set line spacing to compact')
         compact_spacing_action.triggered.connect(lambda: self.change_line_spacing('compact'))
 
         regular_spacing_action = line_spacing_menu.addAction('Regular')
         regular_spacing_action.setObjectName('regular')
+        regular_spacing_action.setCheckable(True)
+        regular_spacing_action.setChecked(False)
         regular_spacing_action.setToolTip('Set line spacing to regular')
         regular_spacing_action.triggered.connect(lambda: self.change_line_spacing('regular'))
 
         wide_spacing_action = line_spacing_menu.addAction('Wide')
         wide_spacing_action.setObjectName('wide')
+        wide_spacing_action.setCheckable(True)
+        wide_spacing_action.setChecked(False)
         wide_spacing_action.setToolTip('Set line spacing to wide')
         wide_spacing_action.triggered.connect(lambda: self.change_line_spacing('wide'))
 
@@ -675,7 +657,7 @@ class MenuBar:
         Call the ShowHelp class on user's input
         """
         global sh
-        sh = ShowHelp(self.gui.background_color, self.gui.accent_color, self.gui.font_family, self.gui.font_size, self.spd)
+        sh = ShowHelp(self.gui, self.spd)
         sh.show()
 
     def show_about(self):
@@ -688,7 +670,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.5.0.1')
+        about_label = QLabel('Sermon Prep Database v.5.0.2')
         about_layout.addWidget(about_label)
 
         about_text = QTextBrowser()
@@ -746,8 +728,8 @@ class MenuBar:
         top_panel.setLayout(top_layout)
         font_layout.addWidget(top_panel)
 
-        family_combo_box = QComboBox()
-        family_combo_box.addItems(QFontDatabase.families())
+        family_combo_box = FontFaceComboBox(self.gui)
+        family_combo_box.setCurrentText(current_font)
         family_combo_box.currentIndexChanged.connect(
             lambda: self.gui.apply_font(family_combo_box.currentText(), self.gui.font_size))
         top_layout.addWidget(family_combo_box)
@@ -758,8 +740,6 @@ class MenuBar:
         size_combo_box.currentIndexChanged.connect(
             lambda: self.gui.apply_font(self.gui.font_family, size_combo_box.currentText()))
         top_layout.addWidget(size_combo_box)
-
-        family_combo_box.setCurrentText(self.gui.font_family)
         size_combo_box.setCurrentText(self.gui.font_size)
 
         bottom_panel = QWidget()
@@ -783,19 +763,15 @@ class MenuBar:
         Method to change the line spacing in the custom text edits. Since the data needs to be reloaded for the changes
         to be effected, ask for save first.
         """
-        goon = True
-        if self.gui.changes:
-            goon = self.spd.ask_save()
-        if goon:
-            if spacing == 'compact':
-                self.spd.line_spacing = '1.0'
-            elif spacing == 'regular':
-                self.spd.line_spacing = '1.2'
-            elif spacing == 'wide':
-                self.spd.line_spacing = '1.5'
+        if spacing == 'compact':
+            self.spd.line_spacing = '1.0'
+        elif spacing == 'regular':
+            self.spd.line_spacing = '1.2'
+        elif spacing == 'wide':
+            self.spd.line_spacing = '1.5'
 
-            self.gui.fill_values(self.spd.get_record_data())
-            self.spd.write_line_spacing_changes()
+        self.gui.apply_line_spacing()
+        self.spd.write_line_spacing_changes()
 
     def press_ctrl_z(self):
         """
@@ -857,15 +833,10 @@ class ShowHelp(QTabWidget):
     """
     Method to create a QTabbedWidget to hold the different help topics.
     """
-    def __init__(self, background_color, accent_color, font_family, font_size, spd):
+    def __init__(self, gui, spd):
         super().__init__()
-        self.background_color = background_color
-        self.accent_color = accent_color
-        self.font_family = font_family
-        self.font_size = font_size
+        self.gui = gui
         self.spd = spd
-        self.bold_font = QFont(self.font_family, self.font_size, QFont.Weight.Bold)
-        self.plain_font = QFont(self.font_family, self.font_size)
 
         self.resize(1200, 800)
         self.make_intro()
@@ -889,6 +860,7 @@ class ShowHelp(QTabWidget):
         intro_layout.addWidget(intro_label)
 
         intro_text = QTextBrowser()
+        intro_text.setFont(self.gui.standard_font)
         intro_text.setText(
             u'Thank-you for trying out this Sermon Prep Database. Its purpose is to provide an easy-to-use program to '
             'organize and store the many different facets of the sermon preparation process. Whatever information you '
@@ -922,7 +894,7 @@ class ShowHelp(QTabWidget):
         menu_widget.setLayout(menu_layout)
 
         menu_label = QLabel('Menu Bar')
-        menu_label.setFont(self.bold_font)
+        menu_label.setFont(self.gui.bold_font)
         menu_layout.addWidget(menu_label)
         menu_pic = QPixmap('resources/menuPic.png')
         menu_pic_label = QLabel()
@@ -990,7 +962,7 @@ class ShowHelp(QTabWidget):
             'Deleting a record cannot be undone, so you will be prompted to make sure you really want to delete the '
             'current record.'
         )
-        menu_text.setFont(self.plain_font)
+        menu_text.setFont(self.gui.standard_font)
         menu_text.setReadOnly(True)
         menu_text.setOpenExternalLinks(True)
         menu_layout.addWidget(menu_text)
@@ -1006,7 +978,7 @@ class ShowHelp(QTabWidget):
         tool_widget.setLayout(tool_layout)
 
         tool_label = QLabel('Toolbar')
-        tool_label.setFont(self.bold_font)
+        tool_label.setFont(self.gui.bold_font)
         tool_layout.addWidget(tool_label)
 
         tool_text = QTextEdit()
@@ -1039,7 +1011,7 @@ class ShowHelp(QTabWidget):
             'while the print button will print a basic hard-copy of the information you have for the currently '
             'showing sermon.'
         )
-        tool_text.setFont(self.plain_font)
+        tool_text.setFont(self.gui.standard_font)
         tool_text.setReadOnly(True)
         tool_layout.addWidget(tool_text)
 
@@ -1053,7 +1025,7 @@ class ShowHelp(QTabWidget):
         scripture_layout = QVBoxLayout()
         scripture_widget.setLayout(scripture_layout)
         scripture_label = QLabel('Scripture Tab')
-        scripture_label.setFont(self.bold_font)
+        scripture_label.setFont(self.gui.bold_font)
         scripture_layout.addWidget(scripture_label)
 
         scripture_text = QTextEdit()
@@ -1068,7 +1040,7 @@ class ShowHelp(QTabWidget):
             'XML bible file, the text of the passage you typed in will be automatically filled in. To turn this '
             'feature off, simply uncheck the box labeled "Auto-fill ' + self.spd.user_settings[8] + '".'
         )
-        scripture_text.setFont(self.plain_font)
+        scripture_text.setFont(self.gui.standard_font)
         scripture_text.setReadOnly(True)
         scripture_layout.addWidget(scripture_text)
 
@@ -1082,7 +1054,7 @@ class ShowHelp(QTabWidget):
         exeg_layout = QVBoxLayout()
         exeg_widget.setLayout(exeg_layout)
         exeg_label = QLabel('Exegesis Tab')
-        exeg_label.setFont(self.bold_font)
+        exeg_label.setFont(self.gui.bold_font)
         exeg_layout.addWidget(exeg_label)
 
         exeg_text = QTextEdit()
@@ -1099,7 +1071,7 @@ class ShowHelp(QTabWidget):
             'congregation. What is the sin problem that the sermon will address? What is the gospel answer to that '
             'sin problem? What is the big idea that your sermon is going to convey?'
         )
-        exeg_text.setFont(self.plain_font)
+        exeg_text.setFont(self.gui.standard_font)
         exeg_text.setReadOnly(True)
         exeg_layout.addWidget(exeg_text)
 
@@ -1114,7 +1086,7 @@ class ShowHelp(QTabWidget):
         outline_widget.setLayout(outline_layout)
 
         outline_label = QLabel('Outline Tab')
-        outline_label.setFont(self.bold_font)
+        outline_label.setFont(self.gui.bold_font)
         outline_layout.addWidget(outline_label)
 
         outline_text = QTextEdit()
@@ -1122,7 +1094,7 @@ class ShowHelp(QTabWidget):
             'In the outline tab, you can record outlines for the sermon text as well as for your sermon. You can also '
             'save any illustration ideas that come up as you study'
         )
-        outline_text.setFont(self.plain_font)
+        outline_text.setFont(self.gui.standard_font)
         outline_text.setReadOnly(True)
         outline_layout.addWidget(outline_text)
 
@@ -1137,14 +1109,14 @@ class ShowHelp(QTabWidget):
         research_widget.setLayout(research_layout)
 
         research_label = QLabel('Research Tab')
-        research_label.setFont(self.bold_font)
+        research_label.setFont(self.gui.bold_font)
         research_layout.addWidget(research_label)
 
         research_text = QTextEdit()
         research_text.setHtml('In the research tab, you can jot down notes as you do research on the text for your '
                                'sermon.<br><br>You are able to use basic formatting as you record your notes: bold, '
                                'underline, italic, and bullet points.')
-        research_text.setFont(self.plain_font)
+        research_text.setFont(self.gui.standard_font)
         research_text.setReadOnly(True)
         research_layout.addWidget(research_text)
 
@@ -1158,7 +1130,7 @@ class ShowHelp(QTabWidget):
         sermon_layout = QVBoxLayout()
         sermon_widget.setLayout(sermon_layout)
         sermon_label = QLabel('Sermon Tab')
-        sermon_label.setFont(self.bold_font)
+        sermon_label.setFont(self.gui.bold_font)
         sermon_layout.addWidget(sermon_label)
 
         sermon_text = QTextEdit()
@@ -1170,8 +1142,35 @@ class ShowHelp(QTabWidget):
             'like in the research tab, you are able to format the text of your sermon manuscript with bold, italic, '
             'and underline fonts as you need to.'
         )
-        sermon_text.setFont(self.plain_font)
+        sermon_text.setFont(self.gui.standard_font)
         sermon_text.setReadOnly(True)
         sermon_layout.addWidget(sermon_text)
 
         self.addTab(sermon_widget, 'Sermon Tab')
+        
+        
+class FontFaceComboBox(QComboBox):
+    """
+    Creates a custom QComboBox that displays all fonts on the system in their own style.
+    :param gui.GUI gui: The current instance of GUI
+    """
+    def __init__(self, gui):
+        """
+        :param gui.GUI gui: The current instance of GUI
+        """
+        super().__init__()
+        self.gui = gui
+        self.populate_widget()
+
+    def populate_widget(self):
+        try:
+            row = 0
+            model = self.model()
+            families = QFontDatabase.families()
+            for font in families:
+                self.addItem(font)
+                model.setData(model.index(row, 0), QFont(font, 14), Qt.ItemDataRole.FontRole)
+                row += 1
+
+        except Exception:
+            self.gui.spd.error_log()

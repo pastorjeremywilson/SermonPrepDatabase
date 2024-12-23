@@ -7,7 +7,7 @@
 
 Sermon Prep Database is a program to organize - and store for easy retrieval - your thoughts and research when preparing a sermon.
 
-# What's New in v.5.0.1?
+# What's New in v.5.0.2?
 Minor bug fix - Fixed crash when right-clicking inside an empty text edit area.
 
 # Why Sermon Prep Database?
@@ -17,7 +17,7 @@ When preparing a sermon for your congregation, you probably find yourself in the
 # Installation
 
 Currently, Sermon Prep Database is available for the Microsoft Windows operating
-system only. Download the current SPD installer (v.5.0.1) and run
+system only. Download the current SPD installer (v.5.0.2) and run
 it on your computer.
 
 # Using Sermon Prep Database
@@ -147,12 +147,6 @@ There are a few Shortcut Keys that can be used when using the program:
 <div>
     <img src='https://github.com/pastorjeremywilson/public/blob/main/Qt-logo-neon.png?raw=true' height=40px align='right' />
     Sermon Prep Database uses <a href="https://www.qt.io/product/framework" target="_blank">Qt</a> (PyQt6) for the user interface.
-</div>
-<br>
-
-<div>
-    <img src='https://github.com/pastorjeremywilson/public/blob/main/ghostscript-plus-text.png?raw=true' height=40px align='right' />
-    Printing made possible with the help of Artifex Software's <a href="https://www.ghostscript.com" target="_blank">Ghostscript</a>.
 </div>
 <br>
 All trademarks (c) their respective owners.

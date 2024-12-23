@@ -3,7 +3,8 @@ Author: Jeremy G. Wilson
 
 Copyright: 2024 Jeremy G. Wilson
 
-This file is a part of the Sermon Prep Database program (v.5.0.1)
+This file, and the files contained in the distribution are parts of
+the Sermon Prep Database program (v.5.0.2)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -17,10 +18,6 @@ GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-The Sermon Prep Database program includes Artifex Software's GhostScript,
-licensed under the GNU Affero General Public License (GNU AGPL). See
-https://www.ghostscript.com/licensing/index.html for more information.
 """
 
 import os
@@ -93,7 +90,7 @@ class SermonPrepDatabase:
             if not exists(self.app_dir):
                 os.mkdir(self.app_dir)
 
-            self.write_to_log('application version is v.5.0.1')
+            self.write_to_log('application version is v.5.0.2')
             self.write_to_log('platform is ' + self.platform)
             self.write_to_log('current working directory is ' + os.path.dirname(__file__))
             self.write_to_log('application directory is ' + self.app_dir)
