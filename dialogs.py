@@ -1,4 +1,5 @@
 from PyQt6.QtCore import QSize, Qt, QTimer
+from PyQt6.QtGui import QFont
 from PyQt6.QtWidgets import QDialog, QGridLayout, QLabel, QPushButton, QVBoxLayout, QWidget, QHBoxLayout, QListWidget
 
 
@@ -77,25 +78,31 @@ def yes_no_cancel_box(*args):
     return response
 
 
-def timed_popup(message, millis, bg):
+def timed_popup(gui, message, millis):
     """
     Function to show a timed popup message.
 
+    :param GUI gui: The current instance of GUI
     :param str message: The message of the popup
     :param int millis: The time, in milliseconds, to display the message
-    :param str bg: The background color of the message
     """
     dialog = QDialog()
+    dialog.setObjectName('timed_popup')
+    dialog.setParent(gui)
     dialog.setWindowFlag(Qt.WindowType.FramelessWindowHint)
-    dialog.setWindowOpacity(0.75)
-    dialog.setBaseSize(QSize(200, 75))
     dialog.setModal(True)
 
     layout = QVBoxLayout()
     dialog.setLayout(layout)
 
     label = QLabel(message)
-    layout.addWidget(label)
+    label.setObjectName('timed_popup')
+    label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    label.setFont(QFont(gui.font_family, 24))
+    label.adjustSize()
+    dialog.setFixedSize(label.width() + 40, label.height() + 20)
+
+    layout.addWidget(label, Qt.AlignmentFlag.AlignCenter)
 
     timer = QTimer()
     timer.singleShot(millis, lambda: dialog.done(0))

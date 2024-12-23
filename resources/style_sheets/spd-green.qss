@@ -69,6 +69,12 @@ QMenu::item:pressed {
     background: #d5e0d5;
 }
 
+/*-------------------- QDialog --------------------*/
+QDialog {
+    background-color: #355535;
+    color: #ffffff;
+}
+
 /*-------------------- QTabWidget --------------------*/
 QTabWidget {
     background-color: #d5e0d5;

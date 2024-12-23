@@ -69,6 +69,12 @@ QMenu::item:pressed {
     background: #f0f0ff;
 }
 
+/*-------------------- QDialog --------------------*/
+QWidget#timed_popup {
+    background-color: #353550;
+    color: #ffffff;
+}
+
 /*-------------------- QTabWidget --------------------*/
 QTabWidget {
     background-color: #f0f0ff;

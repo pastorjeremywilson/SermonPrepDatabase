@@ -574,7 +574,7 @@ class SermonPrepDatabase:
             conn.close()
 
             from dialogs import timed_popup
-            timed_popup('Record Saved', 1000, self.gui.accent_color)
+            timed_popup(self.gui, 'Record Saved', 1000)
             self.write_to_log('Database saved - ' + self.db_loc)
 
             self.gui.changes = False

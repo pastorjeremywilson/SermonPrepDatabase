@@ -6,10 +6,6 @@ General Theme Colors:
     background color: #303030
     font color: #000000
     text background: #ffffff
-            self.gui.accent_color = 'rgb(0, 0, 0)'
-            self.gui.background_color = 'rgb(80, 80, 80)'
-            self.gui.font_color = 'rgb(200, 200, 200)'
-            self.gui.text_background = 'rgb(50, 50, 50)'
 */
 
 QWidget [objectName="tab_container"] {
@@ -71,6 +67,12 @@ QMenu::item:selected {
 }
 QMenu::item:pressed {
     background: #303030;
+}
+
+/*-------------------- QDialog --------------------*/
+QDialog {
+    background-color: #303030;
+    color: #ffffff;
 }
 
 /*-------------------- QTabWidget --------------------*/
