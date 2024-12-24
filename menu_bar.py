@@ -200,7 +200,6 @@ class MenuBar:
 
     def print_rec(self):
         # get all text values from the GUI
-        print('print_rec')
         all_data = []
         for i in range(self.gui.scripture_frame_layout.count()):
             component = self.gui.scripture_frame_layout.itemAt(i).widget()
@@ -256,7 +255,7 @@ class MenuBar:
                 text_with_headers.append(
                     f'<header>'
                     f'<p style="font-weight: bold; {standard_style}">'
-                    f'<u>{self.spd.user_settings[i + 5]}</u>'
+                    f'<u>{self.spd.user_settings["label" + str(i + 1)]}</u>'
                     f'</p>'
                 )
                 text_with_headers.append(all_data[i])
@@ -414,7 +413,7 @@ class MenuBar:
         GetFromDocx.
         """
         QMessageBox.information(
-            self.gui.win,
+            self.gui,
             'Import from Files',
             'For best results, the files you are importing should be named according to this syntax:\n\n'
             'YYYY-MM-DD.book.chapter.verse-verse\n\n'
@@ -429,7 +428,7 @@ class MenuBar:
         Method to import and save a user's xml bible for use in the program.
         """
         file = QFileDialog.getOpenFileName(
-            self.gui.win,
+            self.gui,
             'Choose Bible File',
             os.path.expanduser('~'),
             'XML Bible File (*.xml)'
@@ -446,7 +445,7 @@ class MenuBar:
 
                 if not passage or passage == -1 or passage == '':
                     QMessageBox.warning(
-                        self.gui.win,
+                        self.gui,
                         'Bad Format',
                         'There is a problem with your XML bible: ' + file[0] + '. Try downloading it again or ensuring '
                         'that it is formatted according to Zefania standards.',
@@ -458,7 +457,7 @@ class MenuBar:
                         os.remove(self.spd.app_dir + '/my_bible.xml')
                 else:
                     QMessageBox.information(
-                        self.gui.win,
+                        self.gui,
                         'Import Complete',
                         'Bible file has been successfully imported',
                         QMessageBox.StandardButton.Ok
@@ -476,7 +475,7 @@ class MenuBar:
         except Exception as ex:
             self.spd.write_to_log(str(ex))
             QMessageBox.warning(
-                self.gui.win,
+                self.gui,
                 'Import Error',
                 'An error occurred while importing the file ' + file[0] + ':\n\n' + str(ex),
                 QMessageBox.StandardButton.Ok
@@ -503,13 +502,12 @@ class MenuBar:
         # provide two columns in the QTableView; one that will contain the labels as they are, the other to provide
         # an area to change the label's name
         model = QStandardItemModel(len(self.spd.user_settings), 2)
-        for i in range(len(self.spd.user_settings) - 3):
-            if i > 4:
-                item = QStandardItem(self.spd.user_settings[i])
-                item.setEditable(False)
-                model.setItem(i - 5, 0, item)
-                item2 = QStandardItem(self.spd.user_settings[i])
-                model.setItem(i - 5, 1, item2)
+        for i in range(1, 22):
+            item = QStandardItem(self.spd.user_settings[f'label{i}'])
+            item.setEditable(False)
+            model.setItem(i, 0, item)
+            item2 = QStandardItem(self.spd.user_settings[f'label{i}'])
+            model.setItem(i, 1, item2)
         model.setHeaderData(0, Qt.Orientation.Horizontal, 'Current Label')
         model.setHeaderData(1, Qt.Orientation.Horizontal, 'New Label')
 
@@ -532,11 +530,14 @@ class MenuBar:
 
         :param QStandardItemModel model: The QStandardItemModel that contains the user's new label names.
         """
-        new_labels = []
         for i in range(model.rowCount()):
-            new_labels.append(model.data(model.index(i, 1)))
+            self.spd.user_settings[f'label{i + 1}'] = model.data(model.index(i, 1))
+        print(self.spd.user_settings)
+        return
+        self.spd.save_user_settings()
+
         self.rename_widget.destroy()
-        self.spd.write_label_changes(new_labels)
+
         for widget in self.gui.main_widget.children():
             if isinstance(widget, QWidget):
                 self.gui.layout.removeWidget(widget)
@@ -600,6 +601,8 @@ class MenuBar:
             self.gui.toolbar.new_rec_button.setIcon(QIcon('resources/svg/spNewIconDark.svg'))
             self.gui.toolbar.save_button.setIcon(QIcon('resources/svg/spSaveIconDark.svg'))
             self.gui.toolbar.print_button.setIcon(QIcon('resources/svg/spPrintIconDark.svg'))
+            for i in range(self.gui.tabbed_frame.count()):
+                self.gui.tabbed_frame.setTabIcon(i, self.gui.light_tab_icons[i])
         else:
             self.gui.toolbar.undo_button.setIcon(QIcon('resources/svg/spUndoIcon.svg'))
             self.gui.toolbar.redo_button.setIcon(QIcon('resources/svg/spRedoIcon.svg'))
@@ -615,16 +618,19 @@ class MenuBar:
             self.gui.toolbar.new_rec_button.setIcon(QIcon('resources/svg/spNewIcon.svg'))
             self.gui.toolbar.save_button.setIcon(QIcon('resources/svg/spSaveIcon.svg'))
             self.gui.toolbar.print_button.setIcon(QIcon('resources/svg/spPrintIcon.svg'))
+            for i in range(self.gui.tabbed_frame.count()):
+                self.gui.tabbed_frame.setTabIcon(i, self.gui.dark_tab_icons[i])
 
-        self.spd.write_color_changes(type)
+        self.spd.user_settings['theme'] = type
+        self.spd.save_user_settings()
 
     def disable_spell_check(self):
         """
         Method to turn on or off the spell checking capabilities of the CustomTextEdit.
         """
         if self.disable_spell_check_action.isChecked():
-            self.gui.spell_check = 1
-            self.spd.write_spell_check_changes()
+            self.spd.user_settings['disable_spell_check'] = True
+            self.spd.save_user_settings()
 
             # remove any red formatting created by spell check
             for widget in self.gui.tabbed_frame.findChildren(QTextEdit, 'custom_text_edit'):
@@ -644,11 +650,11 @@ class MenuBar:
 
         else:
             # if spell check is enabled after having been disabled at startup, the dictionary will need to be loaded
-            self.gui.spell_check = 0
             if not self.spd.sym_spell:
                 ld = LoadDictionary(self.spd)
                 self.spd.load_dictionary_thread_pool.start(ld)
-            self.spd.write_spell_check_changes()
+            self.spd.user_settings['disable_spell_check'] = False
+            self.spd.save_user_settings()
 
             # run spell check on all CustomTextEdits
             for widget in self.gui.tabbed_frame.findChildren(QTextEdit, 'custom_text_edit'):
@@ -728,8 +734,8 @@ class MenuBar:
         Method to provide a font choosing widget to the user by obtaining a list of all the fonts available to
         the system.
         """
-        current_font = self.gui.font_family
-        current_size = self.gui.font_size
+        current_font = self.spd.user_settings['font_family']
+        current_size = self.spd.user_settings['font_size']
 
         global font_chooser
         font_chooser = QWidget()
@@ -751,9 +757,9 @@ class MenuBar:
         sizes = ['10', '12', '14', '16', '18', '20', '24', '28', '32']
         size_combo_box.addItems(sizes)
         size_combo_box.currentIndexChanged.connect(
-            lambda: self.gui.apply_font(self.gui.font_family, size_combo_box.currentText()))
+            lambda: self.gui.apply_font(family_combo_box.currentText(), size_combo_box.currentText()))
         top_layout.addWidget(size_combo_box)
-        size_combo_box.setCurrentText(self.gui.font_size)
+        size_combo_box.setCurrentText(current_size)
 
         bottom_panel = QWidget()
         bottom_layout = QHBoxLayout()
@@ -762,7 +768,7 @@ class MenuBar:
 
         ok_button = QPushButton('OK')
         ok_button.clicked.connect(
-            lambda: self.gui.apply_font(family_combo_box.currentText(), size_combo_box.currentText(), font_chooser))
+            lambda: self.gui.apply_font(family_combo_box.currentText(), size_combo_box.currentText(), font_chooser, True))
         bottom_layout.addWidget(ok_button)
 
         cancel_button = QPushButton('Cancel')
@@ -777,14 +783,14 @@ class MenuBar:
         to be effected, ask for save first.
         """
         if spacing == 'compact':
-            self.spd.line_spacing = '1.0'
+            self.spd.user_settings['line_spacing'] = '1.0'
         elif spacing == 'regular':
-            self.spd.line_spacing = '1.2'
+            self.spd.user_settings['line_spacing'] = '1.2'
         elif spacing == 'wide':
-            self.spd.line_spacing = '1.5'
+            self.spd.user_settings['line_spacing'] = '1.5'
 
         self.gui.apply_line_spacing()
-        self.spd.write_line_spacing_changes()
+        self.spd.save_user_settings()
 
     def press_ctrl_z(self):
         """

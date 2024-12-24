@@ -80,7 +80,7 @@ class GetFromDocx:
         if folder:
             # give the option to also recurse subdirectories of the user's folder
             response = QMessageBox.question(
-                self.gui.win,
+                self.gui,
                 'Search Subdirectories',
                 'Also search subdirectories of this folder?\n(Choose "No" to only import files from this folder)',
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel

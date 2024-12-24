@@ -9,6 +9,8 @@ General Theme Colors:
 */
 
 QWidget [objectName="tab_container"] {
+    background-color: #ffe0d0;
+    border: none;
     border-top: 2px solid #ffffff;
 }
 
@@ -69,38 +71,44 @@ QMenu::item:pressed {
     background: #ffe0d0;
 }
 
-/*-------------------- QDialog --------------------*/
-QDialog {
-    background-color: #554535;
-    color: #ffffff;
-}
-
 /*-------------------- QTabWidget --------------------*/
 QTabWidget {
-    background-color: #ffe0d0;
+    background-color: #ffffff;
 }
 QTabWidget::pane {
     padding: 20px;
     background-color: #ffe0d0;
     border: none;
 }
+
+/*-------------------- QTabBar --------------------*/
 QTabBar::tab {
     background-color: #554535;
-    color: #ffe0d0;
+    color: #ffffff;
     font-weight: normal;
-    width: 50px;
-    height: 120px;
-    padding: 10px;
-    border-bottom: 2px solid #ffe0d0;
+    min-width: 120px;
+    min-height: 32px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    border-right: 2px solid #ffe0d0;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+QTabBar::tab:icon {
+    padding-left: 10px;
+}
+QTabBar::tab:label {
+    padding-right: 10px;
 }
 QTabBar::tab:selected {
-    color: #000000;
+    color: #554535;
     background-color: #ffe0d0;
     font-weight: bold;
-    width: 50px;
+    border-top: 3px solid #554535;
+    padding-top: 2px;
 }
 QTabBar::tab:last {
-    border-bottom: none;
+    border-right: none;
 }
 
 /*-------------------- QTabBar help_tab_widget--------------------*/
@@ -190,7 +198,7 @@ QLineEdit:focus, QDateEdit:focus {
 
 /*-------------------- QTextEdit --------------------*/
 QTextEdit {
-    background: #ffffff;
+    background-color: #ffffff;
     color: #000000;
     border: 1px solid #554535;
 }
@@ -200,12 +208,12 @@ QTextEdit:focus {
 
 /*-------------------- QMessageBox --------------------*/
 QMessageBox {
-    background: #ffe0d0;
+    background-color: #ffe0d0;
     color: #000000;
 }
 
 /*-------------------- QDialog --------------------*/
 QDialog {
-    background: #ffe0d0;
+    background-color: #ffe0d0;
     color: #000000;
 }

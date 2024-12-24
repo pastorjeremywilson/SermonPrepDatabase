@@ -9,6 +9,8 @@ General Theme Colors:
 */
 
 QWidget [objectName="tab_container"] {
+    background-color: #e0d5d5;
+    border: none;
     border-top: 2px solid #ffffff;
 }
 
@@ -77,30 +79,42 @@ QDialog {
 
 /*-------------------- QTabWidget --------------------*/
 QTabWidget {
-    background-color: #e0d5d5;
+    background-color: #ffffff;
 }
 QTabWidget::pane {
     padding: 20px;
     background-color: #e0d5d5;
     border: none;
 }
+
+/*-------------------- QTabBar --------------------*/
 QTabBar::tab {
     background-color: #503535;
-    color: #e0d5d5;
+    color: #ffffff;
     font-weight: normal;
-    width: 50px;
-    height: 120px;
-    padding: 10px;
-    border-bottom: 2px solid #e0d5d5;
+    min-width: 120px;
+    min-height: 32px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    border-right: 2px solid #e0d5d5;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+QTabBar::tab:icon {
+    padding-left: 10px;
+}
+QTabBar::tab:label {
+    padding-right: 10px;
 }
 QTabBar::tab:selected {
-    color: #000000;
+    color: #503535;
     background-color: #e0d5d5;
     font-weight: bold;
-    width: 50px;
+    border-top: 3px solid #503535;
+    padding-top: 2px;
 }
 QTabBar::tab:last {
-    border-bottom: none;
+    border-right: none;
 }
 
 /*-------------------- QTabBar help_tab_widget--------------------*/

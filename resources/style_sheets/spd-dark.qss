@@ -9,7 +9,9 @@ General Theme Colors:
 */
 
 QWidget [objectName="tab_container"] {
-    border-top: 2px solid #f0f0f0;
+    background-color: #303030;
+    border: none;
+    border-top: 2px solid #ffffff;
 }
 
 QWidget [objectName="text_box"] {
@@ -69,12 +71,6 @@ QMenu::item:pressed {
     background: #303030;
 }
 
-/*-------------------- QDialog --------------------*/
-QDialog {
-    background-color: #303030;
-    color: #ffffff;
-}
-
 /*-------------------- QTabWidget --------------------*/
 QTabWidget {
     background-color: #303030;
@@ -84,23 +80,35 @@ QTabWidget::pane {
     background-color: #303030;
     border: none;
 }
+
+/*-------------------- QTabBar --------------------*/
 QTabBar::tab {
     background-color: #000000;
     color: #ffffff;
     font-weight: normal;
-    width: 50px;
-    height: 120px;
-    padding: 10px;
-    border-bottom: 2px solid #303030;
+    min-width: 120px;
+    min-height: 32px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    border-right: 2px solid #303030;
+    border-top-left-radius: 10px;
+    border-top-right-radius: 10px;
+}
+QTabBar::tab:icon {
+    padding-left: 10px;
+}
+QTabBar::tab:label {
+    padding-right: 10px;
 }
 QTabBar::tab:selected {
     color: #ffffff;
     background-color: #303030;
     font-weight: bold;
-    width: 50px;
+    border-top: 3px solid #000000;
+    padding-top: 2px;
 }
 QTabBar::tab:last {
-    border-bottom: none;
+    border-right: none;
 }
 
 /*-------------------- QTabBar help_tab_widget--------------------*/
@@ -155,18 +163,20 @@ QPushButton:unchecked {
 
 /*-------------------- QComboBox --------------------*/
 QComboBox {
-    background: #f0f0f0;
+    background: #000000;
     color: #ffffff;
-    selection-background-color: #303030;
-    selection-color: #ffffff;
     border: 1px solid #ffffff;
 }
 QComboBox::item {
-    background: #f0f0f0;
+    background: #000000;
     color: #ffffff;
 }
 QComboBox::item:hover {
     background: #303030;
+}
+QComboBox::item:selected {
+    background-color: #303030;
+    color: #ffffff;
 }
 
 /*-------------------- QScrollBar --------------------*/

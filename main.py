@@ -19,7 +19,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-
+import json
 import os
 import re
 import shutil
@@ -96,6 +96,8 @@ class SermonPrepDatabase:
             self.write_to_log('application directory is ' + self.app_dir)
             self.write_to_log('database location is ' + self.db_loc)
 
+            self.check_for_db()
+
             if not exists(self.app_dir + '/custom_words.txt'):
                 with open(self.app_dir + '/custom_words.txt', 'w'):
                     pass
@@ -103,15 +105,63 @@ class SermonPrepDatabase:
             if exists(self.app_dir + '/my_bible.xml'):
                 self.bible_file = self.app_dir + '/my_bible.xml'
 
-            if exists(self.db_loc):
-                self.disable_spell_check = self.check_spell_check()
-                self.auto_fill = self.check_auto_fill()
-                self.line_spacing = self.check_line_spacing()
-            else:
-                self.disable_spell_check = 1
+            if not exists(self.app_dir + '/config.json'):
+                self.check_spell_check()
+                self.check_auto_fill()
+                self.check_line_spacing()
+                self.create_config()
 
         except Exception as ex:
             self.write_to_log(str(ex), True)
+
+    def create_config(self):
+        conn = sqlite3.connect(self.db_loc)
+        cursor = conn.cursor()
+        result = cursor.execute('SELECT * FROM user_settings').fetchall()[0]
+        conn.close()
+
+        config_dict = {
+            'theme': result[1],
+            'font_family': result[3],
+            'font_size': result[4],
+            'label1': result[5],
+            'label2': result[6],
+            'label3': result[7],
+            'label4': result[8],
+            'label5': result[9],
+            'label6': result[10],
+            'label7': result[11],
+            'label8': result[12],
+            'label9': result[13],
+            'label10': result[14],
+            'label11': result[15],
+            'label12': result[16],
+            'label13': result[17],
+            'label14': result[18],
+            'label15': result[19],
+            'label16': result[20],
+            'label17': result[21],
+            'label18': result[22],
+            'label19': result[23],
+            'label20': result[24],
+            'label21': result[25],
+            'line_spacing': result[28]
+        }
+        if '#' in config_dict['theme']:
+            config_dict['theme'] = 'blue'
+
+        if result[26] == 0:
+            config_dict['disable_spell_check'] = False
+        else:
+            config_dict['disable_spell_check'] = True
+
+        if result[27] == 0:
+            config_dict['auto_fill'] = False
+        else:
+            config_dict['auto_fill'] = True
+
+        with open(self.app_dir + '/config.json', 'w') as file:
+            file.write(json.dumps(config_dict, indent=4))
 
     def check_for_db(self):
         """
@@ -138,7 +188,7 @@ class SermonPrepDatabase:
                                         QMessageBox.StandardButton.Ok)
                 self.gui.app.processEvents()
             else:
-                quit(0)
+                sys.exit(0)
         else:
             # check that the existing database is in the new format
             result = self.check_for_old_version()
@@ -162,8 +212,6 @@ class SermonPrepDatabase:
                 self.check_spell_check()
                 self.check_auto_fill()
                 self.check_line_spacing()
-                self.check_font_color()
-                self.check_text_background()
 
         self.write_to_log('checkForDB completed')
 
@@ -177,18 +225,12 @@ class SermonPrepDatabase:
             cursor = conn.cursor()
             result = cursor.execute('SELECT disable_spell_check FROM user_settings').fetchone()
             conn.close()
-
-            if int(result[0]) == 0:
-                return False
-            else:
-                return True
         except OperationalError:
             cursor.execute('ALTER TABLE user_settings ADD disable_spell_check TEXT;')
             conn.commit()
             cursor.execute('UPDATE user_settings SET disable_spell_check=0 WHERE ID="1";')
             conn.commit()
             conn.close()
-            return False
 
     def check_auto_fill(self):
         """
@@ -200,18 +242,12 @@ class SermonPrepDatabase:
             cursor = conn.cursor()
             result = cursor.execute('SELECT auto_fill FROM user_settings').fetchone()
             conn.close()
-
-            if int(result[0]) == 0:
-                return False
-            else:
-                return True
         except OperationalError:
             cursor.execute('ALTER TABLE user_settings ADD auto_fill TEXT;')
             conn.commit()
             cursor.execute('UPDATE user_settings SET auto_fill=0 WHERE ID="1";')
             conn.commit()
             conn.close()
-            return False
 
     def check_line_spacing(self):
         """
@@ -223,55 +259,12 @@ class SermonPrepDatabase:
             cursor = conn.cursor()
             result = cursor.execute('SELECT line_spacing FROM user_settings').fetchone()
             conn.close()
-
-            return str(result[0])
         except OperationalError:
             cursor.execute('ALTER TABLE user_settings ADD line_spacing TEXT;')
             conn.commit()
             cursor.execute('UPDATE user_settings SET line_spacing=1.0 WHERE ID="1";')
             conn.commit()
             conn.close()
-            return False
-
-    def check_font_color(self):
-        """
-        Attempt to get the font_color value from the user's database. Create a font_color
-        column if OperationalError is thrown.
-        """
-        try:
-            conn = sqlite3.connect(self.db_loc)
-            cursor = conn.cursor()
-            result = cursor.execute('SELECT font_color FROM user_settings').fetchone()
-            conn.close()
-
-            return str(result[0])
-        except OperationalError:
-            cursor.execute('ALTER TABLE user_settings ADD font_color TEXT;')
-            conn.commit()
-            cursor.execute('UPDATE user_settings SET font_color="black" WHERE ID="1";')
-            conn.commit()
-            conn.close()
-            return False
-
-    def check_text_background(self):
-        """
-        Attempt to get the text_background value from the user's database. Create a text_background
-        column if OperationalError is thrown.
-        """
-        try:
-            conn = sqlite3.connect(self.db_loc)
-            cursor = conn.cursor()
-            result = cursor.execute('SELECT text_background FROM user_settings').fetchone()
-            conn.close()
-
-            return str(result[0])
-        except OperationalError:
-            cursor.execute('ALTER TABLE user_settings ADD text_background TEXT;')
-            conn.commit()
-            cursor.execute('UPDATE user_settings SET text_background="white" WHERE ID="1";')
-            conn.commit()
-            conn.close()
-            return False
 
     def check_for_old_version(self):
         try:
@@ -282,42 +275,6 @@ class SermonPrepDatabase:
         except OperationalError:
             conn.close()
             return -1
-
-    def write_spell_check_changes(self):
-        """
-        Method to set the disable_spell_check value upon user input.
-        """
-        conn = sqlite3.connect(self.db_loc)
-        cursor = conn.cursor()
-        if str(self.gui.spell_check) == '1':
-            cursor.execute('UPDATE user_settings SET disable_spell_check=1 WHERE ID="1";')
-        else:
-            cursor.execute('UPDATE user_settings SET disable_spell_check=0 WHERE ID="1";')
-        conn.commit()
-        conn.close()
-
-    def write_auto_fill_changes(self):
-        """
-        Method to set the auto_fill value upon user input.
-        """
-        conn = sqlite3.connect(self.db_loc)
-        cursor = conn.cursor()
-        if self.auto_fill:
-            cursor.execute('UPDATE user_settings SET auto_fill=1 WHERE ID="1";')
-        else:
-            cursor.execute('UPDATE user_settings SET auto_fill=0 WHERE ID="1";')
-        conn.commit()
-        conn.close()
-
-    def write_line_spacing_changes(self):
-        """
-        Method to write user's line spacing choice to the database.
-        """
-        conn = sqlite3.connect(self.db_loc)
-        cursor = conn.cursor()
-        cursor.execute('UPDATE user_settings SET line_spacing=' + self.line_spacing + ' WHERE ID="1";')
-        conn.commit()
-        conn.close()
 
     def add_to_dictionary(self, widget, word):
         """
@@ -376,10 +333,11 @@ class SermonPrepDatabase:
         """
         Method to retrieve all user settings from the user's database.
         """
-        conn = sqlite3.connect(self.db_loc)
-        cur = conn.cursor()
-        self.user_settings = cur.execute('SELECT * FROM user_settings').fetchall()[0]
-        conn.close()
+        self.user_settings = json.loads(open(self.app_dir + '/config.json').read())
+
+    def save_user_settings(self):
+        with open(self.app_dir + '/config.json', 'w') as file:
+            file.write(json.dumps(self.user_settings, indent=4))
 
     def backup_db(self):
         """
@@ -403,19 +361,6 @@ class SermonPrepDatabase:
         shutil.copy(self.db_loc, backup_file)
         self.write_to_log('New backup file created at ' + backup_file)
 
-    def write_color_changes(self, type):
-        """
-        Method to save the user's color changes to the database.
-        """
-        sql = ('UPDATE user_settings SET bgcolor = "' + type + '" WHERE ID = 1;')
-        conn = sqlite3.connect(self.db_loc)
-        cur = conn.cursor()
-        cur.execute(sql)
-        conn.commit()
-        conn.close()
-
-        self.get_user_settings()
-
     def write_font_changes(self, family, size):
         """
         Method to save the user's font changes to the database.
@@ -424,25 +369,6 @@ class SermonPrepDatabase:
         :param str size: Size of the font.
         """
         sql = 'UPDATE user_settings SET font_family = "' + family + '", font_size = "' + size + '" WHERE ID = 1;'
-        conn = sqlite3.connect(self.db_loc)
-        cur = conn.cursor()
-        cur.execute(sql)
-        conn.commit()
-        conn.close()
-
-        self.get_user_settings()
-
-    def write_label_changes(self, new_labels):
-        """
-        Save the header label changes based on user input.
-        :param list of str new_labels: The list of new label names.
-        """
-        sql = 'UPDATE user_settings SET '
-        for i in range(1, 22):
-            if i == 21:
-                sql += 'l' + str(i) + ' = "' + new_labels[i - 1] + '" WHERE ID = 1;'
-            else:
-                sql += 'l' + str(i) + ' = "' + new_labels[i - 1] + '",'
         conn = sqlite3.connect(self.db_loc)
         cur = conn.cursor()
         cur.execute(sql)
@@ -782,7 +708,7 @@ class SermonPrepDatabase:
         Finish by loading the last record into the GUI.
         """
         response = QMessageBox.question(
-            self.gui.win,
+            self.gui,
             'Really Delete?',
             'Really delete the current record?\nThis action cannot be undone',
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
@@ -818,7 +744,7 @@ class SermonPrepDatabase:
         Method to ask the user if they would like to save their work before continuing with their recent action.
         """
         response = QMessageBox.question(
-            self.gui.win,
+            self.gui,
             'Save Changes?',
             'Changes have been made. Save changes?',
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
@@ -906,7 +832,7 @@ class SermonPrepDatabase:
             if len(errors) > 0:
                 message += ' Error(s) occurred while importing. Would you like to view them now?'
                 result = QMessageBox.question(
-                    self.gui.win,
+                    self.gui,
                     'Import Complete',
                     message,
                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
@@ -922,14 +848,14 @@ class SermonPrepDatabase:
                     dialog.setLayout(layout)
 
                     label = QLabel('Errors:')
-                    label.setFont(QFont(self.user_settings[3], int(self.user_settings[4]), QFont.Weight.Bold))
+                    label.setFont(QFont(self.user_settings['font_family'], int(self.user_settings['font_size']), QFont.Weight.Bold))
                     layout.addWidget(label)
 
                     text_edit = QTextEdit()
                     text_edit.setReadOnly(True)
                     text_edit.setMinimumWidth(1000)
                     text_edit.setLineWrapMode(QTextEdit.NoWrap)
-                    text_edit.setFont(QFont(self.user_settings[3], int(self.user_settings[4])))
+                    text_edit.setFont(QFont(self.user_settings['font_family'], int(self.user_settings['font_size'])))
                     text_edit.setText(error_text)
                     layout.addWidget(text_edit)
                     dialog.exec()
@@ -937,7 +863,7 @@ class SermonPrepDatabase:
                 QMessageBox.information(None, 'Import Complete', message, QMessageBox.StandardButton.Ok)
         except Exception as ex:
             QMessageBox.critical(
-                self.gui.win,
+                self.gui,
                 'Error Occurred', 'An error occurred while importing:\n\n' + str(ex),
                 QMessageBox.StandardButton.Ok
             )
