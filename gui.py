@@ -1,12 +1,15 @@
 import re
 from os.path import exists
 
-from PyQt6.QtCore import Qt, QSize, QDate, QDateTime, QObject, QRunnable, pyqtSignal, QPoint
+from PyQt6.QtCore import Qt, QSize, QDate, QDateTime, QObject, QRunnable, pyqtSignal, QPoint, QThread, QSizeF, QRectF, \
+    QRect
 from PyQt6.QtGui import QIcon, QFont, QStandardItemModel, QStandardItem, QPixmap, QColor, QPalette, \
-    QCloseEvent, QAction, QUndoStack, QTextCursor, QPainter
+    QCloseEvent, QAction, QUndoStack, QTextCursor, QPainter, QTextCharFormat, QTextDocument, QTextOption, \
+    QPagedPaintDevice, QPageSize
+from PyQt6.QtPrintSupport import QPrinter
 from PyQt6.QtWidgets import QWidget, QTabWidget, QGridLayout, QLabel, QLineEdit, \
     QCheckBox, QDateEdit, QTextEdit, QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QTableView, QDialog, \
-    QApplication, QProgressBar, QTabBar
+    QApplication, QProgressBar, QTabBar, QScrollArea
 
 from get_scripture import GetScripture
 from menu_bar import MenuBar
@@ -96,13 +99,13 @@ class GUI(QMainWindow):
         self.build_research_tab()
         self.build_sermon_tab()
 
-        self.apply_font(self.spd.user_settings['font_family'], self.spd.user_settings['font_size'])
         self.menu_bar.color_change(self.spd.user_settings['theme'])
 
         self.showMaximized()
 
         self.spd.current_rec_index = len(self.spd.ids) - 1
         self.spd.get_by_index(self.spd.current_rec_index)
+        self.apply_font(self.spd.user_settings['font_family'], self.spd.user_settings['font_size'])
         self.apply_line_spacing()
     
     def build_tabbed_frame(self):
@@ -337,58 +340,64 @@ class GUI(QMainWindow):
         self.sermon_frame = QWidget()
         self.sermon_frame_layout = QGridLayout()
         self.sermon_frame.setLayout(self.sermon_frame_layout)
-        self.sermon_frame_layout.setColumnMinimumWidth(2, 20)
-        self.sermon_frame_layout.setColumnMinimumWidth(5, 20)
-        self.sermon_frame_layout.setColumnMinimumWidth(8, 20)
-        self.sermon_frame_layout.setRowMinimumHeight(2, 20)
-        self.sermon_frame_layout.setRowMinimumHeight(5, 20)
+        self.sermon_frame_layout.setColumnStretch(0, 5)
+        self.sermon_frame_layout.setColumnStretch(1, 2)
+        self.sermon_frame_layout.setColumnStretch(2, 5)
+        self.sermon_frame_layout.setColumnStretch(3, 2)
         
         sermon_title_label = QLabel(self.spd.user_settings['label16'])
-        self.sermon_frame_layout.addWidget(sermon_title_label, 0, 0, 1, 2)
+        self.sermon_frame_layout.addWidget(sermon_title_label, 0, 0)
         
         sermon_title_field = QLineEdit()
         sermon_title_field.textEdited.connect(self.changes_detected)
-        self.sermon_frame_layout.addWidget(sermon_title_field, 1, 0, 1, 2)
+        self.sermon_frame_layout.addWidget(sermon_title_field, 1, 0)
         
         sermon_date_label = QLabel(self.spd.user_settings['label17'])
-        self.sermon_frame_layout.addWidget(sermon_date_label, 0, 3, 1, 2)
+        self.sermon_frame_layout.addWidget(sermon_date_label, 0, 1)
 
         self.sermon_date_edit = QDateEdit()
         self.sermon_date_edit.setCalendarPopup(True)
         self.sermon_date_edit.setMinimumHeight(30)
         self.sermon_date_edit.dateChanged.connect(self.date_changes)
-        self.sermon_frame_layout.addWidget(self.sermon_date_edit, 1, 3, 1, 2)
+        self.sermon_frame_layout.addWidget(self.sermon_date_edit, 1, 1)
         
         sermon_location_label = QLabel(self.spd.user_settings['label18'])
-        self.sermon_frame_layout.addWidget(sermon_location_label, 0, 6, 1, 2)
+        self.sermon_frame_layout.addWidget(sermon_location_label, 0, 2)
         
         sermon_location_field = QLineEdit()
         sermon_location_field.textEdited.connect(self.changes_detected)
-        self.sermon_frame_layout.addWidget(sermon_location_field, 1, 6, 1, 2)
+        self.sermon_frame_layout.addWidget(sermon_location_field, 1, 2)
         
         ctw_label = QLabel(self.spd.user_settings['label19'])
-        self.sermon_frame_layout.addWidget(ctw_label, 3, 0, 1, 2)
+        self.sermon_frame_layout.addWidget(ctw_label, 2, 0)
         
         ctw_field = QLineEdit()
         ctw_field.textEdited.connect(self.changes_detected)
-        self.sermon_frame_layout.addWidget(ctw_field, 4, 0, 1, 2)
+        self.sermon_frame_layout.addWidget(ctw_field, 3, 0)
         
         hr_label = QLabel(self.spd.user_settings['label20'])
-        self.sermon_frame_layout.addWidget(hr_label, 3, 6, 1, 2)
+        self.sermon_frame_layout.addWidget(hr_label, 2, 2)
         
         hr_field = QLineEdit()
         hr_field.textEdited.connect(self.changes_detected)
-        self.sermon_frame_layout.addWidget(hr_field, 4, 6, 1, 2)
-        
-        sermon_label = QLabel(self.spd.user_settings['label21'])
-        self.sermon_frame_layout.addWidget(sermon_label, 6, 0)
-        
+        self.sermon_frame_layout.addWidget(hr_field, 3, 2)
+
         sermon_text = CustomTextEdit(self)
         sermon_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(sermon_text))
-        self.sermon_frame_layout.addWidget(sermon_text, 7, 0, 1, 8)
+        self.sermon_frame_layout.addWidget(sermon_text, 5, 0, 1, 4)
+
+        sermon_view_button = QPushButton()
+        sermon_view_button.setIcon(QIcon('resources/svg/spSermonViewIcon.svg'))
+        sermon_view_button.setIconSize(QSize(36, 36))
+        sermon_view_button.setToolTip('Open a window that shows your sermon')
+        sermon_view_button.released.connect(lambda: SermonView(self, sermon_text.toSimplifiedHtml()))
+        self.sermon_frame_layout.addWidget(sermon_view_button, 0, 3, 4, 1)
+        
+        sermon_label = QLabel(self.spd.user_settings['label21'])
+        self.sermon_frame_layout.addWidget(sermon_label, 4, 0)
 
         scripture_box = ScriptureBox()
-        self.sermon_frame_layout.addWidget(scripture_box, 0, 9, 8, 1)
+        self.sermon_frame_layout.addWidget(scripture_box, 0, 5, 6, 1)
         
         self.tabbed_frame.addTab(self.sermon_frame, self.light_tab_icons[4], 'Sermon')
 
@@ -404,15 +413,27 @@ class GUI(QMainWindow):
         :param int size: The font size the user chose.
         :param boolean close: True if this was called when the user clicked 'OK', so close fontChooser.
         """
+        current_changes_status = self.changes
+
         self.spd.user_settings['font_family'] = font_family
         self.spd.user_settings['font_size'] = font_size
+        self.standard_font = QFont(font_family, int(font_size))
+        self.bold_font = QFont(font_family, int(font_size), QFont.Weight.Bold)
         font = QFont(self.spd.user_settings['font_family'], int(self.spd.user_settings['font_size']))
         for label in self.findChildren(QLabel):
             label.setFont(font)
         for line_edit in self.findChildren(QLineEdit):
             line_edit.setFont(font)
-        for text_edit in self.findChildren(QTextEdit):
-            text_edit.setFont(font)
+        for text_edit in self.findChildren(CustomTextEdit):
+            html = text_edit.toSimplifiedHtml()
+            text_edit.document().setDefaultStyleSheet(
+                'p {'
+                'font-family: ' + self.spd.user_settings['font_family'] + ';'
+                'font-size: ' + self.spd.user_settings['font_size'] + 'pt;'
+                'line-height: ' + self.spd.user_settings['line_spacing'] + ';'
+                '}'
+            )
+            text_edit.setHtml(html)
         for tab_bar in self.findChildren(QTabBar):
             tab_bar.setFont(QFont(self.spd.user_settings['font_family'], int(self.spd.user_settings['font_size']) + 2))
 
@@ -422,17 +443,24 @@ class GUI(QMainWindow):
         if save_config:
             self.spd.save_user_settings()
 
+        self.changes = current_changes_status
+
     def apply_line_spacing(self):
         current_changes_status = self.changes
-        for text_edit in self.findChildren(QTextEdit):
-            line_height = self.spd.user_settings['line_spacing']
-            text_edit_html = text_edit.toHtml()
-            text_edit_html = re.sub(
-                '<p.*?>', f'<p style="line-height: {line_height}">', text_edit_html)
-            text_edit.setHtml(text_edit_html)
-            self.menuBar().findChild(QAction, 'compact').setChecked(str(line_height) == '1.0')
-            self.menuBar().findChild(QAction, 'regular').setChecked(str(line_height) == '1.2')
-            self.menuBar().findChild(QAction, 'wide').setChecked(str(line_height) == '1.5')
+        line_height = self.spd.user_settings['line_spacing']
+        for text_edit in self.findChildren(CustomTextEdit):
+            html = text_edit.toSimplifiedHtml()
+            text_edit.document().setDefaultStyleSheet(
+                'p {'
+                'font-family: ' + self.spd.user_settings['font_family'] + ';'
+                'font-size: ' + self.spd.user_settings['font_size'] + 'pt;'
+                'line-height: ' + self.spd.user_settings['line_spacing'] + ';'
+                '}'
+            )
+            text_edit.setHtml(html)
+        self.menuBar().findChild(QAction, 'compact').setChecked(str(line_height) == '1.0')
+        self.menuBar().findChild(QAction, 'regular').setChecked(str(line_height) == '1.2')
+        self.menuBar().findChild(QAction, 'wide').setChecked(str(line_height) == '1.5')
         self.changes = current_changes_status
 
     def set_style_buttons(self, component):
@@ -875,6 +903,14 @@ class CustomTextEdit(QTextEdit):
         self.setObjectName('custom_text_edit')
         self.gui = gui
         self.full_spell_check_done = False
+        self.document().setDefaultStyleSheet(
+            'p {'
+            'font-family: ' + self.gui.spd.user_settings['font_family'] + ';'
+            'font-size: ' + self.gui.spd.user_settings['font_size'] + 'pt;'
+            'line-height: ' + self.gui.spd.user_settings['line_spacing'] + ';'
+            '}'
+        )
+
         self.textChanged.connect(self.text_changed)
         self.word_spell_check = SpellCheck(self, 'previous', self.gui)
         self.word_spell_check.setAutoDelete(False)
@@ -1193,3 +1229,156 @@ class SearchBox(QWidget):
         self.gui.tabbed_frame.removeTab(5)
         self.gui.tabbed_frame.setCurrentWidget(self.gui.tabbed_frame.widget(0))
         self.destroy()
+
+
+class SermonView(QWidget):
+    def __init__(self, gui, text):
+        super().__init__()
+        self.gui = gui
+        self.text = text
+        self.button_bar = QWidget()
+        self.next_page_button = QPushButton('next')
+        self.previous_page_button = QPushButton('previous')
+        self.sermon_label = QLabel()
+        self.num_pages = 0
+        self.current_page = 0
+        self.current_font = QFont(
+            self.gui.spd.user_settings['font_family'], int(self.gui.spd.user_settings['font_size']))
+
+        self.init_components()
+        self.showMaximized()
+        self.gui.spd.app.processEvents()
+
+        self.page_width = self.width() - 40
+        self.page_height = self.height() - self.button_bar.height() - 40
+
+        self.page_pixmaps = []
+        self.create_document_pages()
+        self.set_page()
+
+        self.previous_page_button.setEnabled(False)
+        if len(self.page_pixmaps) < 2:
+            self.next_page_button.setEnabled(False)
+        self.add_page_buttons()
+
+    def init_components(self):
+        self.setParent(self.gui)
+        self.setWindowFlag(Qt.WindowType.Window)
+        self.setWindowTitle('Sermon Viewer')
+
+        layout = QVBoxLayout(self)
+
+        button_layout = QHBoxLayout(self.button_bar)
+        layout.addWidget(self.button_bar)
+
+        zoom_out_button = QPushButton()
+        zoom_out_button.setObjectName('zoom_out')
+        zoom_out_button.setIcon(QIcon('resources/svg/spZoomOut.svg'))
+        zoom_out_button.setIconSize(QSize(36, 36))
+        zoom_out_button.pressed.connect(self.zoom)
+        button_layout.addWidget(zoom_out_button)
+        button_layout.addSpacing(20)
+
+        zoom_in_button = QPushButton()
+        zoom_in_button.setObjectName('zoom_in')
+        zoom_in_button.setIcon(QIcon('resources/svg/spZoomIn.svg'))
+        zoom_in_button.setIconSize(QSize(36, 36))
+        zoom_in_button.pressed.connect(self.zoom)
+        button_layout.addWidget(zoom_in_button)
+        button_layout.addStretch()
+
+        self.page_label = QLabel()
+        self.page_label.setFont(self.gui.bold_font)
+        button_layout.addWidget(self.page_label)
+        button_layout.addStretch()
+
+        layout.addWidget(self.sermon_label)
+        layout.addStretch()
+
+    def add_page_buttons(self):
+        page_button_stylesheet = (
+            'QPushButton {'
+            '   border: none;'
+            '   background: transparent;'
+            '   color: #00000000;'
+            '}'
+            'QPushButton:hover {'
+            '   background-color: rgba(255, 255, 255, 150);'
+            '   background-image: url("resources/svg/spNextPageIcon.svg");'
+            '   background-repeat: no-repeat;'
+            '}'
+            'QPushButton:pressed {'
+            '   background-color: #ffffff;'
+            '   color: #000000;'
+            '}'
+        )
+
+        self.previous_page_button.setParent(self)
+        self.previous_page_button.setObjectName('previous')
+        self.previous_page_button.setGeometry(
+            0, self.height() - self.page_height - 20, 200, self.page_height)
+        self.previous_page_button.setStyleSheet(page_button_stylesheet)
+        self.previous_page_button.pressed.connect(self.set_page)
+        self.previous_page_button.show()
+
+        self.next_page_button.setParent(self)
+        self.next_page_button.setObjectName('next')
+        self.next_page_button.setGeometry(self.width() - 200, self.height() - self.page_height - 20, 200, self.page_height)
+        self.next_page_button.setStyleSheet(page_button_stylesheet)
+        self.next_page_button.pressed.connect(self.set_page)
+        self.next_page_button.show()
+
+    def create_document_pages(self):
+        document = QTextDocument()
+        document.setPageSize(QSizeF(self.page_width, self.page_height))
+        document.setDefaultFont(self.current_font)
+
+        text_option = QTextOption()
+        text_option.setWrapMode(QTextOption.WrapMode.WordWrap)
+        document.setDefaultTextOption(text_option)
+
+        document.setHtml(self.text)
+
+        self.page_pixmaps = []
+        current_y = 0
+        painter = QPainter()
+        self.num_pages = document.pageCount()
+        for i in range(document.pageCount()):
+            pixmap = QPixmap(self.page_width, self.page_height)
+            pixmap.fill(Qt.GlobalColor.white)
+
+            painter.begin(pixmap)
+            painter.translate(0, -current_y)
+            document.drawContents(painter)
+            painter.end()
+
+            self.page_pixmaps.append(pixmap)
+            current_y += self.page_height
+
+    def zoom(self):
+        if self.sender().objectName() == 'zoom_in':
+            self.current_font.setPointSize(self.current_font.pointSize() + 2)
+        else:
+            self.current_font.setPointSize(self.current_font.pointSize() - 2)
+        self.create_document_pages()
+        self.set_page()
+
+    def set_page(self):
+        if self.sender().objectName() == 'next':
+            self.current_page += 1
+        elif self.sender().objectName() == 'previous':
+            self.current_page -= 1
+
+        if self.current_page == 0:
+            self.previous_page_button.setEnabled(False)
+        else:
+            self.previous_page_button.setEnabled(True)
+
+        if self.current_page >= len(self.page_pixmaps) - 1:
+            self.current_page = len(self.page_pixmaps) - 1
+            self.next_page_button.setEnabled(False)
+        else:
+            self.next_page_button.setEnabled(True)
+
+        self.sermon_label.setPixmap(self.page_pixmaps[self.current_page])
+        self.page_label.setText(f'Page {self.current_page + 1} of {self.num_pages}')

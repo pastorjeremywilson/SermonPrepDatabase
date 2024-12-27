@@ -137,7 +137,7 @@ QPushButton {
 	padding-right: 10px;
 	padding-top: 5px;
 	padding-bottom: 5px;
-	border-style: outset;
+	border-style: none;
 }
 QPushButton:hover {
 	background: #554535;
@@ -209,11 +209,9 @@ QTextEdit:focus {
 /*-------------------- QMessageBox --------------------*/
 QMessageBox {
     background-color: #ffe0d0;
-    color: #000000;
 }
 
 /*-------------------- QDialog --------------------*/
 QDialog {
     background-color: #ffe0d0;
-    color: #000000;
 }

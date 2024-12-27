@@ -71,12 +71,6 @@ QMenu::item:pressed {
     background: #efeaf5;
 }
 
-/*-------------------- QDialog --------------------*/
-QDialog {
-    background-color: #503565;
-    color: #ffffff;
-}
-
 /*-------------------- QTabWidget --------------------*/
 QTabWidget {
     background-color: #ffffff;
@@ -215,11 +209,9 @@ QTextEdit:focus {
 /*-------------------- QMessageBox --------------------*/
 QMessageBox {
     background: #efeaf5;
-    color: #000000;
 }
 
 /*-------------------- QDialog --------------------*/
 QDialog {
     background: #efeaf5;
-    color: #000000;
 }

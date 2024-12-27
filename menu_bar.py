@@ -6,12 +6,13 @@ import sys
 from os.path import exists
 
 import wmi
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QSizeF, QRectF
 from PyQt6.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap, QTextCursor, QFont, QIcon, \
-    QAction
-from PyQt6.QtPrintSupport import QPrinter
+    QAction, QTextDocument, QTextOption, QPainter, QTextCharFormat, QTextDocumentWriter
+from PyQt6.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
 from PyQt6.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableView, QPushButton, QColorDialog, \
-    QTabWidget, QHBoxLayout, QComboBox, QTextBrowser, QLineEdit, QTextEdit, QDateEdit, QMessageBox, QTabBar, QMenuBar
+    QTabWidget, QHBoxLayout, QComboBox, QTextBrowser, QLineEdit, QTextEdit, QDateEdit, QMessageBox, QTabBar, QMenuBar, \
+    QSpinBox
 from pynput.keyboard import Key, Controller
 
 from runnables import LoadDictionary, SpellCheck
@@ -199,121 +200,7 @@ class MenuBar:
         about_action.triggered.connect(self.show_about)
 
     def print_rec(self):
-        # get all text values from the GUI
-        all_data = []
-        for i in range(self.gui.scripture_frame_layout.count()):
-            component = self.gui.scripture_frame_layout.itemAt(i).widget()
-
-            if isinstance(component, QLineEdit):
-                all_data.append(component.text())
-            elif isinstance(component, QTextEdit):
-                all_data.append(component.toSimplifiedHtml())
-
-        for i in range(self.gui.exegesis_frame_layout.count()):
-            component = self.gui.exegesis_frame_layout.itemAt(i).widget()
-
-            if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                all_data.append(component.toSimplifiedHtml())
-
-        for i in range(self.gui.outline_frame_layout.count()):
-            component = self.gui.outline_frame_layout.itemAt(i).widget()
-
-            if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                all_data.append(component.toSimplifiedHtml())
-
-        for i in range(self.gui.research_frame_layout.count()):
-            component = self.gui.research_frame_layout.itemAt(i).widget()
-
-            if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                all_data.append(component.toSimplifiedHtml())
-
-        for i in range(self.gui.sermon_frame_layout.count()):
-            component = self.gui.sermon_frame_layout.itemAt(i).widget()
-
-            if isinstance(component, QLineEdit) or isinstance(component, QDateEdit):
-                if isinstance(component, QLineEdit):
-                    all_data.append(component.text())
-                else:
-                    all_data.append(component.date().toString('yyyy-MM-dd'))
-            elif isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
-                all_data.append(component.toSimplifiedHtml())
-
-        text_with_headers = []
-        standard_style = 'font-family: times; font-size: 12pt;'
-        for i in range(len(all_data)):
-            if '<p>' not in all_data[i]:
-                all_data[i] = f'<p style="{standard_style}">{all_data[i]}</p>'
-            all_data[i] = all_data[i].replace('<p>', f'<p style="{standard_style}">')
-            all_data[i] = all_data[i].replace('<li>', f'<li style="{standard_style}">')
-
-            has_contents = False
-            this_string = re.sub('<.*?>', '', all_data[i]).strip()
-            if len(this_string) > 0:
-                has_contents = True
-
-            if has_contents:
-                text_with_headers.append(
-                    f'<header>'
-                    f'<p style="font-weight: bold; {standard_style}">'
-                    f'<u>{self.spd.user_settings["label" + str(i + 1)]}</u>'
-                    f'</p>'
-                )
-                text_with_headers.append(all_data[i])
-
-        html = '\n'.join(text_with_headers)
-
-        self.print_widget = QWidget()
-        self.print_widget.setWindowFlag(Qt.WindowType.Window)
-        print_layout = QHBoxLayout(self.print_widget)
-
-        text_edit = QTextEdit()
-        text_edit.setHtml(html)
-        print_layout.addWidget(text_edit)
-
-        options_box = QWidget()
-        options_layout = QVBoxLayout(options_box)
-        print_layout.addWidget(options_box)
-
-        print_to_label = QLabel('Print to:')
-        print_to_label.setFont(self.gui.bold_font)
-        options_layout.addWidget(print_to_label)
-
-        win_management = wmi.WMI()
-        printers = win_management.Win32_Printer()
-        printer_combobox = QComboBox()
-        printer_combobox.setFont(self.gui.standard_font)
-        default = ''
-        for printer in printers:
-            if not printer.Hidden:
-                printer_combobox.addItem(printer.Name)
-            if printer.Default:
-                default = printer.Name
-        printer_combobox.setCurrentText(default)
-        options_layout.addWidget(printer_combobox)
-
-        button_box = QWidget()
-        button_layout = QHBoxLayout(button_box)
-        options_layout.addWidget(button_box)
-
-        ok_button = QPushButton('Ok')
-        ok_button.pressed.connect(lambda: self.do_print(printer_combobox.currentText(), text_edit))
-        ok_button.setFont(self.gui.standard_font)
-        button_layout.addWidget(ok_button)
-
-        cancel_button = QPushButton('Cancel')
-        cancel_button.pressed.connect(self.print_widget.close)
-        cancel_button.setFont(self.gui.standard_font)
-        button_layout.addWidget(cancel_button)
-
-        options_layout.addStretch()
-        self.print_widget.show()
-
-    def do_print(self, printer_name, text_edit):
-        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
-        printer.setDocName('Sermon Prep Database')
-        printer.setPrinterName(printer_name)
-        text_edit.print(printer)
-        self.print_widget.close()
+        PrintHandler(self.gui)
 
     def do_backup(self):
         """
@@ -601,8 +488,6 @@ class MenuBar:
             self.gui.toolbar.new_rec_button.setIcon(QIcon('resources/svg/spNewIconDark.svg'))
             self.gui.toolbar.save_button.setIcon(QIcon('resources/svg/spSaveIconDark.svg'))
             self.gui.toolbar.print_button.setIcon(QIcon('resources/svg/spPrintIconDark.svg'))
-            for i in range(self.gui.tabbed_frame.count()):
-                self.gui.tabbed_frame.setTabIcon(i, self.gui.light_tab_icons[i])
         else:
             self.gui.toolbar.undo_button.setIcon(QIcon('resources/svg/spUndoIcon.svg'))
             self.gui.toolbar.redo_button.setIcon(QIcon('resources/svg/spRedoIcon.svg'))
@@ -618,8 +503,11 @@ class MenuBar:
             self.gui.toolbar.new_rec_button.setIcon(QIcon('resources/svg/spNewIcon.svg'))
             self.gui.toolbar.save_button.setIcon(QIcon('resources/svg/spSaveIcon.svg'))
             self.gui.toolbar.print_button.setIcon(QIcon('resources/svg/spPrintIcon.svg'))
-            for i in range(self.gui.tabbed_frame.count()):
+        for i in range(self.gui.tabbed_frame.count()):
+            if i == self.gui.tabbed_frame.currentIndex() and not type == 'dark':
                 self.gui.tabbed_frame.setTabIcon(i, self.gui.dark_tab_icons[i])
+            else:
+                self.gui.tabbed_frame.setTabIcon(i, self.gui.light_tab_icons[i])
 
         self.spd.user_settings['theme'] = type
         self.spd.save_user_settings()
@@ -673,7 +561,7 @@ class MenuBar:
         help_layout = QVBoxLayout(self.help_widget)
 
         help_label = QLabel('Help Topics')
-        help_label.setFont(QFont(self.gui.font_family, 20))
+        help_label.setFont(QFont(self.gui.spd.user_settings['font_family'], 20))
         help_layout.addWidget(help_label)
 
         sh = ShowHelp(self.gui, self.spd)
@@ -750,7 +638,7 @@ class MenuBar:
         family_combo_box = FontFaceComboBox(self.gui)
         family_combo_box.setCurrentText(current_font)
         family_combo_box.currentIndexChanged.connect(
-            lambda: self.gui.apply_font(family_combo_box.currentText(), self.gui.font_size))
+            lambda: self.gui.apply_font(family_combo_box.currentText(), size_combo_box.currentText()))
         top_layout.addWidget(family_combo_box)
 
         size_combo_box = QComboBox()
@@ -1196,3 +1084,281 @@ class FontFaceComboBox(QComboBox):
 
         except Exception:
             self.gui.spd.error_log()
+
+
+class PrintHandler(QWidget):
+    def __init__(self, gui):
+        super().__init__()
+        self.gui = gui
+        self.print_font = self.gui.standard_font
+        self.print_font.setPointSize(self.gui.standard_font.pixelSize())
+        self.line_height = 1.14
+        self.html = self.get_all_data()
+        self.printer = QPrinter()
+        self.make_print_widget()
+        self.show()
+
+    def get_all_data(self):
+        # get all text values from the GUI
+        all_data = []
+        for i in range(self.gui.scripture_frame_layout.count()):
+            component = self.gui.scripture_frame_layout.itemAt(i).widget()
+
+            if isinstance(component, QLineEdit):
+                all_data.append(component.text())
+            elif isinstance(component, QTextEdit):
+                all_data.append(component.toSimplifiedHtml())
+
+        for i in range(self.gui.exegesis_frame_layout.count()):
+            component = self.gui.exegesis_frame_layout.itemAt(i).widget()
+
+            if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                all_data.append(component.toSimplifiedHtml())
+
+        for i in range(self.gui.outline_frame_layout.count()):
+            component = self.gui.outline_frame_layout.itemAt(i).widget()
+
+            if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                all_data.append(component.toSimplifiedHtml())
+
+        for i in range(self.gui.research_frame_layout.count()):
+            component = self.gui.research_frame_layout.itemAt(i).widget()
+
+            if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                all_data.append(component.toSimplifiedHtml())
+
+        for i in range(self.gui.sermon_frame_layout.count()):
+            component = self.gui.sermon_frame_layout.itemAt(i).widget()
+
+            if isinstance(component, QLineEdit) or isinstance(component, QDateEdit):
+                if isinstance(component, QLineEdit):
+                    all_data.append(component.text())
+                else:
+                    all_data.append(component.date().toString('yyyy-MM-dd'))
+            elif isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                all_data.append(component.toSimplifiedHtml())
+
+        text_with_headers = []
+        for i in range(len(all_data)):
+            if '<p>' not in all_data[i]:
+                all_data[i] = f'<p>{all_data[i]}</p>'
+
+            has_contents = False
+            this_string = re.sub('<.*?>', '', all_data[i]).strip()
+            if len(this_string) > 0:
+                has_contents = True
+
+            if has_contents:
+                text_with_headers.append(
+                    f'<b><u>{self.gui.spd.user_settings["label" + str(i + 1)]}</u></b>'
+                )
+                text_with_headers.append(all_data[i])
+
+        html = '\n'.join(text_with_headers)
+        return html
+
+    def make_document(self):
+        printer_page_rect_inch = self.printer.pageRect(QPrinter.Unit.Inch)
+        page_rect = QRectF(
+            printer_page_rect_inch.x() * 96,
+            printer_page_rect_inch.y() * 96,
+            printer_page_rect_inch.width() * 96,
+            printer_page_rect_inch.height() * 96
+        )
+
+        document = QTextDocument()
+        text_option = QTextOption()
+        text_option.setWrapMode(QTextOption.WrapMode.WordWrap)
+        document.setDefaultTextOption(text_option)
+        document.setDefaultFont(self.print_font)
+        document.setPageSize(QSizeF(page_rect.width(), page_rect.height()))
+        document.setDocumentMargin(page_rect.width() * (0.5 / 8.5))
+        document.setDefaultStyleSheet(
+            'p { '
+            'font-family: "' + self.print_font.family() + '";'
+            'font-size: ' + str(self.print_font.pointSize()) + 'pt;'
+            'line-height: ' + str(self.line_height) + ';'
+            '}'
+        )
+        document.setHtml(self.html)
+
+        page_pixmaps = []
+        current_y = 0
+        painter = QPainter()
+        painter.setFont(self.print_font)
+        self.num_pages = document.pageCount()
+        for i in range(document.pageCount()):
+            pixmap = QPixmap(int(page_rect.width()), int(page_rect.height()))
+            pixmap.fill(Qt.GlobalColor.white)
+
+            painter.begin(pixmap)
+            painter.translate(0, -current_y)
+            document.drawContents(painter)
+            painter.end()
+
+            page_pixmaps.append(pixmap)
+            current_y += int(page_rect.height())
+
+        return document, page_pixmaps
+
+    def make_print_widget(self):
+        self.setWindowTitle('Print Record')
+        self.setWindowFlag(Qt.WindowType.Window)
+
+        print_layout = QHBoxLayout(self)
+
+        preview_widget = QWidget()
+        print_layout.addWidget(preview_widget)
+        preview_layout = QVBoxLayout(preview_widget)
+
+        self.preview_label = QLabel()
+        preview_layout.addWidget(self.preview_label)
+
+        page_widget = QWidget()
+        preview_layout.addWidget(page_widget)
+        page_layout = QHBoxLayout(page_widget)
+
+        previous_button = QPushButton('<')
+        previous_button.setObjectName('previous')
+        previous_button.setFont(self.gui.bold_font)
+        previous_button.pressed.connect(self.change_page)
+        page_layout.addStretch()
+        page_layout.addWidget(previous_button)
+
+        self.page_label = QLabel()
+        self.page_label.setFont(self.gui.bold_font)
+        page_layout.addSpacing(20)
+        page_layout.addWidget(self.page_label)
+        page_layout.addSpacing(20)
+
+        next_button = QPushButton('>')
+        next_button.setObjectName('next')
+        next_button.setFont(self.gui.bold_font)
+        next_button.pressed.connect(self.change_page)
+        page_layout.addWidget(next_button)
+        page_layout.addStretch()
+
+        options_box = QWidget()
+        options_layout = QVBoxLayout(options_box)
+        print_layout.addWidget(options_box)
+
+        print_to_label = QLabel('Print to:')
+        print_to_label.setFont(self.gui.bold_font)
+        options_layout.addWidget(print_to_label)
+
+        win_management = wmi.WMI()
+        printers = win_management.Win32_Printer()
+        printer_combobox = QComboBox()
+        printer_combobox.setFont(self.gui.standard_font)
+        default = ''
+        for printer in printers:
+            if not printer.Hidden:
+                printer_combobox.addItem(printer.Name)
+            if printer.Default:
+                default = printer.Name
+        printer_combobox.setCurrentText(default)
+        printer_combobox.currentIndexChanged.connect(lambda: self.printer_change(printer_combobox.currentText()))
+        options_layout.addWidget(printer_combobox)
+
+        self.printer_change(default)
+
+        text_options_widget = QWidget()
+        options_layout.addWidget(text_options_widget)
+        text_options_layout = QHBoxLayout(text_options_widget)
+
+        font_size_label = QLabel('Font Size:')
+        font_size_label.setFont(self.gui.bold_font)
+        text_options_layout.addWidget(font_size_label)
+
+        font_size_spinbox = QSpinBox()
+        font_size_spinbox.setObjectName('font_size')
+        font_size_spinbox.setSingleStep(2)
+        font_size_spinbox.setFont(self.gui.standard_font)
+        font_size_spinbox.setValue(self.print_font.pointSize())
+        font_size_spinbox.valueChanged.connect(self.change_text_options)
+        text_options_layout.addWidget(font_size_spinbox)
+
+        point_label = QLabel('pt')
+        point_label.setFont(self.gui.standard_font)
+        text_options_layout.addWidget(point_label)
+        text_options_layout.addSpacing(20)
+
+        line_spacing_label = QLabel('Line spacing:')
+        line_spacing_label.setFont(self.gui.bold_font)
+        text_options_layout.addWidget(line_spacing_label)
+
+        line_spacing_combobox = QComboBox()
+        line_spacing_combobox.setObjectName('line_spacing')
+        line_spacing_options = [
+            'Single',
+            '1.14',
+            '1.5',
+            'Double'
+        ]
+        line_spacing_combobox.addItems(line_spacing_options)
+        line_spacing_combobox.setCurrentIndex(1)
+        line_spacing_combobox.setFont(self.gui.standard_font)
+        line_spacing_combobox.currentIndexChanged.connect(self.change_text_options)
+        text_options_layout.addWidget(line_spacing_combobox)
+
+        button_box = QWidget()
+        button_layout = QHBoxLayout(button_box)
+        options_layout.addWidget(button_box)
+
+        ok_button = QPushButton('Ok')
+        ok_button.pressed.connect(self.do_print)
+        ok_button.setFont(self.gui.standard_font)
+        button_layout.addWidget(ok_button)
+
+        cancel_button = QPushButton('Cancel')
+        cancel_button.pressed.connect(self.deleteLater)
+        cancel_button.setFont(self.gui.standard_font)
+        button_layout.addWidget(cancel_button)
+
+        options_layout.addStretch()
+
+    def printer_change(self, printer_name):
+        self.printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+        self.printer.setPrinterName(printer_name)
+
+        self.document, self.page_pixmaps = self.make_document()
+        self.preview_label.setPixmap(
+            self.page_pixmaps[0].scaledToWidth(400, Qt.TransformationMode.SmoothTransformation))
+        self.current_page = 0
+        self.page_label.setText(f'Page {self.current_page + 1} of {len(self.page_pixmaps)}')
+
+    def change_text_options(self):
+        if self.sender().objectName() == 'font_size':
+            self.print_font.setPointSize(self.sender().value())
+        else:
+            if self.sender().currentText() == 'Single':
+                self.line_height = 1
+            elif self.sender().currentText() == 'Double':
+                self.line_height = 2
+            elif self.sender().currentText() == '1.14':
+                self.line_height = 1.14
+            elif self.sender().currentText() == '1.5':
+                self.line_height = 1.5
+        self.document, self.page_pixmaps = self.make_document()
+        self.preview_label.setPixmap(
+            self.page_pixmaps[0].scaledToWidth(400, Qt.TransformationMode.SmoothTransformation))
+        self.current_page = 0
+        self.page_label.setText(f'Page {self.current_page + 1} of {len(self.page_pixmaps)}')
+
+    def change_page(self):
+        if self.sender().objectName() == 'previous':
+            self.current_page -= 1
+            if self.current_page < 0:
+                self.current_page = 0
+        elif self.sender().objectName() == 'next':
+            self.current_page += 1
+            if self.current_page == len(self.page_pixmaps):
+                self.current_page = len(self.page_pixmaps) - 1
+
+        self.preview_label.setPixmap(
+            self.page_pixmaps[self.current_page].scaledToWidth(400, Qt.TransformationMode.SmoothTransformation))
+        self.page_label.setText(f'Page {self.current_page + 1} of {len(self.page_pixmaps)}')
+
+    def do_print(self):
+        self.document.print(self.printer)
+        self.deleteLater()

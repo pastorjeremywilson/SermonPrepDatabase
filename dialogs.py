@@ -98,7 +98,7 @@ def timed_popup(gui, message, millis):
     label = QLabel(message)
     label.setObjectName('timed_popup')
     label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    label.setFont(QFont(gui.font_family, 24))
+    label.setFont(QFont(gui.spd.user_settings['font_family'], 24))
     label.adjustSize()
     dialog.setFixedSize(label.width() + 40, label.height() + 20)
 

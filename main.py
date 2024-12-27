@@ -184,6 +184,7 @@ class SermonPrepDatabase:
             elif response == QMessageBox.StandardButton.No:
                 # Create a new database in the user's App Data directory by copying the existing database template
                 shutil.copy('resources/database_template.db', self.db_loc)
+                shutil.copy('resources/config.json', self.app_dir)
                 QMessageBox.information(None, 'Database Created', 'A new database has been created.',
                                         QMessageBox.StandardButton.Ok)
                 self.gui.app.processEvents()
@@ -517,7 +518,7 @@ class SermonPrepDatabase:
         string = string.strip()
         if '<p>' not in string:
             string_split = string.split('\n\n')
-            string = '<p>' + '</p>\n<p>'.join(string_split) + '</p>'
+            string = '<p>' + '</p><p>'.join(string_split) + '</p>'
         # replace any antiquated &quots without the semicolon
         string = re.sub(r'&amp;quot(?!;)', '"', string)
         string = re.sub(r'&quot(?!;)', '"', string)
@@ -879,16 +880,16 @@ class SermonPrepDatabase:
         self.widget.setLayout(layout)
 
         importing_label = QLabel('Importing...')
-        importing_label.setFont(QFont(self.gui.font_family, int(self.gui.font_size), QFont.Weight.Bold))
+        importing_label.setFont(QFont(self.gui.spd.user_settings['font_family'], int(self.gui.spd.user_settings['font_size']), QFont.Weight.Bold))
         layout.addWidget(importing_label)
         layout.addSpacing(50)
 
         self.dir_label = QLabel('Looking in...')
-        self.dir_label.setFont(QFont(self.gui.font_family, int(self.gui.font_size)))
+        self.dir_label.setFont(QFont(self.gui.spd.user_settings['font_family'], int(self.gui.spd.user_settings['font_size'])))
         layout.addWidget(self.dir_label)
 
         self.file_label = QLabel('Examining...')
-        self.file_label.setFont(QFont(self.gui.font_family, int(self.gui.font_size)))
+        self.file_label.setFont(QFont(self.gui.spd.user_settings['font_family'], int(self.gui.spd.user_settings['font_size'])))
         layout.addWidget(self.file_label)
 
         self.widget.setWindowModality(Qt.WindowModality.WindowModal)

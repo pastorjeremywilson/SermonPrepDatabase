@@ -209,11 +209,9 @@ QTextEdit:focus {
 /*-------------------- QMessageBox --------------------*/
 QMessageBox {
     background: #f0f0ff;
-    color: #000000;
 }
 
 /*-------------------- QDialog --------------------*/
 QDialog {
     background: #f0f0ff;
-    color: #000000;
 }
