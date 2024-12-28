@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Sermon Prep Database"
-#define MyAppVersion "v.4.2.4"
+#define MyAppVersion "v.5.0.0"
 #define MyAppURL "https://sourceforge.net/projects/sermon-prep-database"
 #define MyAppExeName "SermonPrepDatabase.exe"
 #define OutputLocation "C:\Users\pasto\Desktop\output\SermonPrepDatabase"
@@ -20,13 +20,13 @@ AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
-LicenseFile={#OutputLocation}\_internal\gpl-3.0.rtf
+LicenseFile={#ResourceLocation}\gpl-3.0.rtf
 WizardImageFile={#ResourceLocation}\installImage.bmp
 WizardSmallImageFile = {#ResourceLocation}\installImageSmall.bmp
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-OutputDir="C:\Users\pasto\Desktop\output\Sermon Prep Database"
+OutputDir="C:\Users\pasto\Desktop\output\SermonPrepDatabase\installer\"
 OutputBaseFilename=Setup_SPD_{#MyAppVersion}
 SetupIconFile={#ResourceLocation}\icons.ico
 Compression=lzma

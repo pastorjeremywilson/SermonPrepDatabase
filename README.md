@@ -7,8 +7,12 @@
 
 Sermon Prep Database is a program to organize - and store for easy retrieval - your thoughts and research when preparing a sermon.
 
-# What's New in v.4.2.4?
-Minor bug fix - Fixed crash when right-clicking inside an empty text edit area.
+# What's New in v.5.0.0?
+- Standardized all text handling across each widget. <span style='color: rgb(180, 0, 0);'>_Note: This change may cause the loss of some formatting in older
+	databases (text styling and paragraph breaks)._</span>
+- Many improvements to the spell-checking functions, preventing a newly-developed crash and increasing speed and reliability
+- Improved the printing functions.
+- Other improvements and bug fixes under the hood.
 
 # Why Sermon Prep Database?
 
@@ -17,7 +21,7 @@ When preparing a sermon for your congregation, you probably find yourself in the
 # Installation
 
 Currently, Sermon Prep Database is available for the Microsoft Windows operating
-system only. Download the current SPD installer (v.4.2.4) and run
+system only. Download the current SPD installer (v.5.0.0) and run
 it on your computer.
 
 # Using Sermon Prep Database
@@ -146,13 +150,7 @@ There are a few Shortcut Keys that can be used when using the program:
 
 <div>
     <img src='https://github.com/pastorjeremywilson/public/blob/main/Qt-logo-neon.png?raw=true' height=40px align='right' />
-    Sermon Prep Database uses <a href="https://www.qt.io/product/framework" target="_blank">Qt</a> (PyQt5) for the user interface.
-</div>
-<br>
-
-<div>
-    <img src='https://github.com/pastorjeremywilson/public/blob/main/ghostscript-plus-text.png?raw=true' height=40px align='right' />
-    Printing made possible with the help of Artifex Software's <a href="https://www.ghostscript.com" target="_blank">Ghostscript</a>.
+    Sermon Prep Database uses <a href="https://www.qt.io/product/framework" target="_blank">Qt</a> (PyQt6) for the user interface.
 </div>
 <br>
 All trademarks (c) their respective owners.

@@ -1,0 +1,14 @@
+DONE
+    "Flatten" directory structure and fix relative paths
+    Switch all text edit handling to html
+    Improved stability of spell-checking
+    Change printing away from pdf
+    Stop selecting text when mouse leaves CustomTextEdit
+    Use representative font widget when choosing font
+    Switch to unified stylesheets
+    Move user config to json file and create one main config dictionary to pull data from
+    Implement a 'sermon view' window
+
+
+TO DO
+    Switch date recognition to native Python date parsing.
