@@ -1,15 +1,12 @@
 import re
 from os.path import exists
 
-from PyQt6.QtCore import Qt, QSize, QDate, QDateTime, QObject, QRunnable, pyqtSignal, QPoint, QThread, QSizeF, QRectF, \
-    QRect
-from PyQt6.QtGui import QIcon, QFont, QStandardItemModel, QStandardItem, QPixmap, QColor, QPalette, \
-    QCloseEvent, QAction, QUndoStack, QTextCursor, QPainter, QTextCharFormat, QTextDocument, QTextOption, \
-    QPagedPaintDevice, QPageSize
-from PyQt6.QtPrintSupport import QPrinter
+from PyQt6.QtCore import Qt, QSize, QDate, QDateTime, QObject, QRunnable, pyqtSignal, QSizeF
+from PyQt6.QtGui import QIcon, QFont, QStandardItemModel, QStandardItem, QPixmap, QColor, \
+    QCloseEvent, QAction, QUndoStack, QTextCursor, QPainter, QTextDocument, QTextOption
 from PyQt6.QtWidgets import QWidget, QTabWidget, QGridLayout, QLabel, QLineEdit, \
     QCheckBox, QDateEdit, QTextEdit, QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QTableView, QDialog, \
-    QApplication, QProgressBar, QTabBar, QScrollArea
+    QApplication, QProgressBar, QTabBar
 
 from get_scripture import GetScripture
 from menu_bar import MenuBar
@@ -18,12 +15,6 @@ from runnables import SpellCheck, LoadDictionary
 
 
 class GUI(QMainWindow):
-    """
-    GUI handles all the operations from the user interface. It builds the QT window and elements and requires the
-    SermonPrepDatabase object in order to access its methods.
-
-    :param SermonPrepDatabase spd: SermonPrepDatabase object
-    """
     spd = None
     undo_stack = None
     changes = False
@@ -37,7 +28,8 @@ class GUI(QMainWindow):
     
     def __init__(self):
         """
-        Attach SermonPrepDatabase object to self, run a check on the database file, and initiate the QT GUI
+        GUI handles all the operations from the user interface. It builds the QT window and elements and requires the
+        SermonPrepDatabase object in order to access its methods.
         """
 
         super().__init__()
@@ -46,6 +38,28 @@ class GUI(QMainWindow):
         self.set_text_cursor_signal.connect(self.set_text_cursor)
         self.set_text_color_signal.connect(self.set_text_color)
         self.reset_cursor_color_signal.connect(self.reset_cursor_color)
+
+        self.standard_font = None
+        self.bold_font = None
+        self.main_widget = None
+        self.layout = None
+        self.menu_bar = None
+        self.toolbar = None
+        self.tabbed_frame = None
+        self.scripture_frame = None
+        self.scripture_frame_layout = None
+        self.sermon_reference_field = None
+        self.auto_fill_checkbox = None
+        self.sermon_text_edit = None
+        self.exegesis_frame = None
+        self.exegesis_frame_layout = None
+        self.outline_frame = None
+        self.outline_frame_layout = None
+        self.research_frame = None
+        self.research_frame_layout = None
+        self.sermon_frame = None
+        self.sermon_frame_layout = None
+        self.sermon_date_edit = None
 
         self.light_tab_icons = [
             QIcon('resources/svg/spScriptureIcon.svg'),
@@ -120,7 +134,6 @@ class GUI(QMainWindow):
         self.layout.addWidget(tab_container)
 
         self.tabbed_frame = QTabWidget()
-        #self.tabbed_frame.setTabPosition(QTabWidget.TabPosition.West)
         self.tabbed_frame.setAutoFillBackground(True)
         self.tabbed_frame.setIconSize(QSize(24, 24))
         self.tabbed_frame.tabBar().currentChanged.connect(self.current_tab_changed)
@@ -386,12 +399,16 @@ class GUI(QMainWindow):
         sermon_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(sermon_text))
         self.sermon_frame_layout.addWidget(sermon_text, 5, 0, 1, 4)
 
-        sermon_view_button = QPushButton()
-        sermon_view_button.setIcon(QIcon('resources/svg/spSermonViewIcon.svg'))
-        sermon_view_button.setIconSize(QSize(36, 36))
-        sermon_view_button.setToolTip('Open a window that shows your sermon')
-        sermon_view_button.released.connect(lambda: SermonView(self, sermon_text.toSimplifiedHtml()))
-        self.sermon_frame_layout.addWidget(sermon_view_button, 0, 3, 4, 1)
+        self.sermon_view_button = QPushButton()
+        if self.spd.user_settings['theme'] == 'dark':
+            self.sermon_view_button.setIcon(QIcon('resources/svg/spSermonViewIconLight.svg'))
+        else:
+            self.sermon_view_button.setIcon(QIcon('resources/svg/spSermonViewIconDark.svg'))
+        self.sermon_view_button.setIconSize(QSize(36, 36))
+        self.sermon_view_button.setFixedSize(QSize(56, 56))
+        self.sermon_view_button.setToolTip('Open a window that shows your sermon')
+        self.sermon_view_button.released.connect(lambda: SermonView(self, sermon_text.toSimplifiedHtml()))
+        self.sermon_frame_layout.addWidget(self.sermon_view_button, 0, 3, 4, 1)
         
         sermon_label = QLabel(self.spd.user_settings['label21'])
         self.sermon_frame_layout.addWidget(sermon_label, 4, 0)
@@ -408,10 +425,10 @@ class GUI(QMainWindow):
         """
         Method to apply the user's font changes to the GUI
 
-        :param QWidget fontChooser: The widget created in the change_font method.
-        :param str family: The family name of the font the user chose.
-        :param int size: The font size the user chose.
-        :param boolean close: True if this was called when the user clicked 'OK', so close fontChooser.
+        :param str font_family: The family name of the font the user chose.
+        :param int font_size: The font size the user chose.
+        :param QWidget font_chooser: The widget created in the change_font method.
+        :param boolean save_config: True if this was called when the user clicked 'OK', so close fontChooser.
         """
         current_changes_status = self.changes
 
@@ -427,13 +444,21 @@ class GUI(QMainWindow):
         for text_edit in self.findChildren(CustomTextEdit):
             html = text_edit.toSimplifiedHtml()
             text_edit.document().setDefaultStyleSheet(
-                'p {'
+                'p, li {'
                 'font-family: ' + self.spd.user_settings['font_family'] + ';'
                 'font-size: ' + self.spd.user_settings['font_size'] + 'pt;'
                 'line-height: ' + self.spd.user_settings['line_spacing'] + ';'
                 '}'
             )
             text_edit.setHtml(html)
+
+            cursor = text_edit.textCursor()
+            char_format = cursor.charFormat()
+            cursor.select(cursor.SelectionType.Document)
+            char_format.setFont(QFont(self.spd.user_settings['font_family'], int(self.spd.user_settings['font_size'])))
+            cursor.setCharFormat(char_format)
+            cursor.clearSelection()
+            text_edit.setTextCursor(cursor)
         for tab_bar in self.findChildren(QTabBar):
             tab_bar.setFont(QFont(self.spd.user_settings['font_family'], int(self.spd.user_settings['font_size']) + 2))
 
@@ -451,13 +476,21 @@ class GUI(QMainWindow):
         for text_edit in self.findChildren(CustomTextEdit):
             html = text_edit.toSimplifiedHtml()
             text_edit.document().setDefaultStyleSheet(
-                'p {'
+                'p, li {'
                 'font-family: ' + self.spd.user_settings['font_family'] + ';'
                 'font-size: ' + self.spd.user_settings['font_size'] + 'pt;'
                 'line-height: ' + self.spd.user_settings['line_spacing'] + ';'
                 '}'
             )
             text_edit.setHtml(html)
+
+            cursor = text_edit.textCursor()
+            char_format = cursor.charFormat()
+            cursor.select(cursor.SelectionType.Document)
+            char_format.setFont(QFont(self.spd.user_settings['font_family'], int(self.spd.user_settings['font_size'])))
+            cursor.setCharFormat(char_format)
+            cursor.clearSelection()
+            text_edit.setTextCursor(cursor)
         self.menuBar().findChild(QAction, 'compact').setChecked(str(line_height) == '1.0')
         self.menuBar().findChild(QAction, 'regular').setChecked(str(line_height) == '1.2')
         self.menuBar().findChild(QAction, 'wide').setChecked(str(line_height) == '1.5')
@@ -592,7 +625,7 @@ class GUI(QMainWindow):
                 if not unusable_date:
                     if int(date_split[0]) > 31:
                         component.setDate(QDate(int(date_split[0]), int(date_split[1]), int(date_split[2])))
-                    elif date_split[2] > 31:
+                    elif int(date_split[2]) > 31:
                         component.setDate(QDate(int(date_split[2]), int(date_split[0]), int(date_split[1])))
 
                 else:
@@ -788,7 +821,7 @@ class GUI(QMainWindow):
         elif event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_P:
             self.menu_bar.print_rec()
         elif event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_Q:
-            self.do_exit()
+            self.close()
         event.accept()
 
 
@@ -796,7 +829,7 @@ class InitialStartup(QRunnable):
     """
     QDialog class that shows the user the process of starting up the application.
 
-    :param QApplication gui: The GUI class.
+    :param GUI gui: The GUI class.
     """
     def __init__(self, gui):
         super().__init__()
@@ -895,7 +928,6 @@ class CustomTextEdit(QTextEdit):
     whole text. Also modifies the standard context menu to include spell check suggestions and an option to remove
     extra white space from the text.
 
-    :param QMainWindow win: GUI's Main Window
     :param GUI gui: The GUI object
     """
     def __init__(self, gui):
@@ -940,9 +972,7 @@ class CustomTextEdit(QTextEdit):
             cursor.select(QTextCursor.SelectionType.WordUnderCursor)
             word = cursor.selection().toPlainText()
 
-            if len(word) == 0:
-                next_menu_index = 0
-            else:
+            if len(word) > 0:
                 upper = False
                 if word[0].isupper():
                     upper = True
@@ -979,8 +1009,6 @@ class CustomTextEdit(QTextEdit):
     def toSimplifiedHtml(self):
         """
         Method to strip unneeded html tags and convert others to simpler tags
-
-        :param str string: The string to reformat.
         """
         string = self.toHtml()
 
@@ -1088,8 +1116,6 @@ class CustomTextEdit(QTextEdit):
 class ScriptureBox(QWidget):
     """
     Creates an independent QWidget that can be added or removed from layouts based on user's input.
-
-    :param str bgcolor: User's chosen background color
     """
     def __init__(self):
         super().__init__()
@@ -1244,6 +1270,7 @@ class SermonView(QWidget):
         self.current_page = 0
         self.current_font = QFont(
             self.gui.spd.user_settings['font_family'], int(self.gui.spd.user_settings['font_size']))
+        self.page_label = None
 
         self.init_components()
         self.showMaximized()

@@ -7,12 +7,11 @@ from os.path import exists
 
 import wmi
 from PyQt6.QtCore import Qt, QSizeF, QRectF
-from PyQt6.QtGui import QStandardItemModel, QColor, QFontDatabase, QStandardItem, QPixmap, QTextCursor, QFont, QIcon, \
-    QAction, QTextDocument, QTextOption, QPainter, QTextCharFormat, QTextDocumentWriter
-from PyQt6.QtPrintSupport import QPrinter, QPrintDialog, QPrintPreviewDialog
-from PyQt6.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableView, QPushButton, QColorDialog, \
-    QTabWidget, QHBoxLayout, QComboBox, QTextBrowser, QLineEdit, QTextEdit, QDateEdit, QMessageBox, QTabBar, QMenuBar, \
-    QSpinBox
+from PyQt6.QtGui import QStandardItemModel, QFontDatabase, QStandardItem, QPixmap, QTextCursor, QFont, QIcon, \
+    QTextDocument, QTextOption, QPainter
+from PyQt6.QtPrintSupport import QPrinter
+from PyQt6.QtWidgets import QFileDialog, QWidget, QVBoxLayout, QLabel, QTableView, QPushButton, \
+    QTabWidget, QHBoxLayout, QComboBox, QTextBrowser, QLineEdit, QTextEdit, QDateEdit, QMessageBox, QSpinBox
 from pynput.keyboard import Key, Controller
 
 from runnables import LoadDictionary, SpellCheck
@@ -488,6 +487,7 @@ class MenuBar:
             self.gui.toolbar.new_rec_button.setIcon(QIcon('resources/svg/spNewIconDark.svg'))
             self.gui.toolbar.save_button.setIcon(QIcon('resources/svg/spSaveIconDark.svg'))
             self.gui.toolbar.print_button.setIcon(QIcon('resources/svg/spPrintIconDark.svg'))
+            self.gui.sermon_view_button.setIcon(QIcon('resources/svg/spSermonViewIconLight.svg'))
         else:
             self.gui.toolbar.undo_button.setIcon(QIcon('resources/svg/spUndoIcon.svg'))
             self.gui.toolbar.redo_button.setIcon(QIcon('resources/svg/spRedoIcon.svg'))
@@ -503,6 +503,7 @@ class MenuBar:
             self.gui.toolbar.new_rec_button.setIcon(QIcon('resources/svg/spNewIcon.svg'))
             self.gui.toolbar.save_button.setIcon(QIcon('resources/svg/spSaveIcon.svg'))
             self.gui.toolbar.print_button.setIcon(QIcon('resources/svg/spPrintIcon.svg'))
+            self.gui.sermon_view_button.setIcon(QIcon('resources/svg/spSermonViewIconDark.svg'))
         for i in range(self.gui.tabbed_frame.count()):
             if i == self.gui.tabbed_frame.currentIndex() and not type == 'dark':
                 self.gui.tabbed_frame.setTabIcon(i, self.gui.dark_tab_icons[i])
@@ -577,7 +578,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         self.about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.5.0.3')
+        about_label = QLabel('Sermon Prep Database v.5.0.0.005')
         about_layout.addWidget(about_label)
 
         about_text = QTextBrowser()
