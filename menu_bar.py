@@ -578,7 +578,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         self.about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.5.0.0.005')
+        about_label = QLabel('Sermon Prep Database v.5.0.0')
         about_layout.addWidget(about_label)
 
         about_text = QTextBrowser()
@@ -1088,6 +1088,13 @@ class FontFaceComboBox(QComboBox):
 
 
 class PrintHandler(QWidget):
+    """
+    QWidget that handles printing of the current record's data. Pulls and organizes the various inputs and adds
+    headings, creates and formats a QTextDocument for printing, creates QPixmaps based on the pages of that document,
+    and shows itself with various formatting funcions and a printer chooser combobox.
+
+    :param GUI gui: the current instance of GUI
+    """
     def __init__(self, gui):
         super().__init__()
         self.gui = gui
@@ -1100,7 +1107,9 @@ class PrintHandler(QWidget):
         self.show()
 
     def get_all_data(self):
-        # get all text values from the GUI
+        """
+        Gets all text values from the GUI and adds html-formatted headers
+        """
         all_data = []
         for i in range(self.gui.scripture_frame_layout.count()):
             component = self.gui.scripture_frame_layout.itemAt(i).widget()
@@ -1139,6 +1148,7 @@ class PrintHandler(QWidget):
             elif isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
                 all_data.append(component.toSimplifiedHtml())
 
+        # add headers based on the user's chosen field names
         text_with_headers = []
         for i in range(len(all_data)):
             if '<p>' not in all_data[i]:
@@ -1155,11 +1165,17 @@ class PrintHandler(QWidget):
                 )
                 text_with_headers.append(all_data[i])
 
+        # concatenate the text_with_headers lsit
         html = '\n'.join(text_with_headers)
         return html
 
     def make_document(self):
+        """
+        Uses the currently selected printer to create a page rect for the QTextDocument. Returns the document as well
+        as the pixmaps based on each page of the document.
+        """
         printer_page_rect_inch = self.printer.pageRect(QPrinter.Unit.Inch)
+        # convert the printer's page rect to a standard 96-dpi resolution
         page_rect = QRectF(
             printer_page_rect_inch.x() * 96,
             printer_page_rect_inch.y() * 96,
@@ -1167,6 +1183,7 @@ class PrintHandler(QWidget):
             printer_page_rect_inch.height() * 96
         )
 
+        # create the document
         document = QTextDocument()
         text_option = QTextOption()
         text_option.setWrapMode(QTextOption.WrapMode.WordWrap)
@@ -1183,6 +1200,7 @@ class PrintHandler(QWidget):
         )
         document.setHtml(self.html)
 
+        # create pixmaps from each page of the document
         page_pixmaps = []
         current_y = 0
         painter = QPainter()
@@ -1193,7 +1211,7 @@ class PrintHandler(QWidget):
             pixmap.fill(Qt.GlobalColor.white)
 
             painter.begin(pixmap)
-            painter.translate(0, -current_y)
+            painter.translate(0, -current_y) # translates the pixmap to the y position of the current page
             document.drawContents(painter)
             painter.end()
 
@@ -1203,6 +1221,9 @@ class PrintHandler(QWidget):
         return document, page_pixmaps
 
     def make_print_widget(self):
+        """
+        Lays out all of the individual widgets to be shown to the user.
+        """
         self.setWindowTitle('Print Record')
         self.setWindowFlag(Qt.WindowType.Window)
 
@@ -1319,6 +1340,11 @@ class PrintHandler(QWidget):
         options_layout.addStretch()
 
     def printer_change(self, printer_name):
+        """
+        Calls for the document to be recreated based on the user's selected printer.
+
+        :param str printer_name: the system's name for the currently selected printer
+        """
         self.printer = QPrinter(QPrinter.PrinterMode.HighResolution)
         self.printer.setPrinterName(printer_name)
 
@@ -1329,6 +1355,9 @@ class PrintHandler(QWidget):
         self.page_label.setText(f'Page {self.current_page + 1} of {len(self.page_pixmaps)}')
 
     def change_text_options(self):
+        """
+        Calls for the document to be recreated based on the user's changes to the line height or font
+        """
         if self.sender().objectName() == 'font_size':
             self.print_font.setPointSize(self.sender().value())
         else:
@@ -1347,6 +1376,9 @@ class PrintHandler(QWidget):
         self.page_label.setText(f'Page {self.current_page + 1} of {len(self.page_pixmaps)}')
 
     def change_page(self):
+        """
+        Shows the next or previous page's pixmap based on user input
+        """
         if self.sender().objectName() == 'previous':
             self.current_page -= 1
             if self.current_page < 0:
@@ -1361,5 +1393,9 @@ class PrintHandler(QWidget):
         self.page_label.setText(f'Page {self.current_page + 1} of {len(self.page_pixmaps)}')
 
     def do_print(self):
+        """
+        Uses the QTextDocument's own print function to draw the document to the user's selected printer and deletes
+        this widget.
+        """
         self.document.print(self.printer)
         self.deleteLater()

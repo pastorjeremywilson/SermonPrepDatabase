@@ -4,7 +4,7 @@ Author: Jeremy G. Wilson
 Copyright: 2024 Jeremy G. Wilson
 
 This file, and the files contained in the distribution are parts of
-the Sermon Prep Database program (v.5.0.0.005)
+the Sermon Prep Database program (v.5.0.0)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -91,7 +91,7 @@ class SermonPrepDatabase:
             if not exists(self.app_dir):
                 os.mkdir(self.app_dir)
 
-            self.write_to_log('application version is v.5.0.0.005')
+            self.write_to_log('application version is v.5.0.0')
             self.write_to_log('platform is ' + self.platform)
             self.write_to_log('current working directory is ' + os.path.dirname(__file__))
             self.write_to_log('application directory is ' + self.app_dir)
