@@ -1323,7 +1323,7 @@ class SermonView(QWidget):
         layout.addStretch()
 
     def add_page_buttons(self):
-        page_button_stylesheet = (
+        page_button_next_stylesheet = (
             'QPushButton {'
             '   border: none;'
             '   background: transparent;'
@@ -1333,6 +1333,24 @@ class SermonView(QWidget):
             '   background-color: rgba(255, 255, 255, 150);'
             '   background-image: url("resources/svg/spNextPageIcon.svg");'
             '   background-repeat: no-repeat;'
+            '   background-position: center;'
+            '}'
+            'QPushButton:pressed {'
+            '   background-color: #ffffff;'
+            '   color: #000000;'
+            '}'
+        )
+        page_button_previous_stylesheet = (
+            'QPushButton {'
+            '   border: none;'
+            '   background: transparent;'
+            '   color: #00000000;'
+            '}'
+            'QPushButton:hover {'
+            '   background-color: rgba(255, 255, 255, 150);'
+            '   background-image: url("resources/svg/spPrevPageIcon.svg");'
+            '   background-repeat: no-repeat;'
+            '   background-position: center;'
             '}'
             'QPushButton:pressed {'
             '   background-color: #ffffff;'
@@ -1344,14 +1362,14 @@ class SermonView(QWidget):
         self.previous_page_button.setObjectName('previous')
         self.previous_page_button.setGeometry(
             0, self.height() - self.page_height - 20, 200, self.page_height)
-        self.previous_page_button.setStyleSheet(page_button_stylesheet)
+        self.previous_page_button.setStyleSheet(page_button_previous_stylesheet)
         self.previous_page_button.pressed.connect(self.set_page)
         self.previous_page_button.show()
 
         self.next_page_button.setParent(self)
         self.next_page_button.setObjectName('next')
         self.next_page_button.setGeometry(self.width() - 200, self.height() - self.page_height - 20, 200, self.page_height)
-        self.next_page_button.setStyleSheet(page_button_stylesheet)
+        self.next_page_button.setStyleSheet(page_button_next_stylesheet)
         self.next_page_button.pressed.connect(self.set_page)
         self.next_page_button.show()
 
