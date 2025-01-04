@@ -180,6 +180,7 @@ class GUI(QMainWindow):
         self.scripture_frame_layout.addWidget(sermon_reference_label, 0, 1)
 
         self.sermon_reference_field = QLineEdit()
+        self.sermon_reference_field.textEdited.connect(self.reference_changes)
 
         if exists(self.spd.app_dir + '/my_bible.xml'):
             self.scripture_frame_layout.addWidget(self.sermon_reference_field, 1, 1)
@@ -187,7 +188,7 @@ class GUI(QMainWindow):
             self.auto_fill_checkbox = QCheckBox('Auto-fill ' + self.spd.user_settings['label4'])
             self.auto_fill_checkbox.setChecked(True)
             self.scripture_frame_layout.addWidget(self.auto_fill_checkbox, 1, 2)
-            if self.spd.auto_fill:
+            if self.spd.user_settings['auto_fill']:
                 self.auto_fill_checkbox.setChecked(True)
             else:
                 self.auto_fill_checkbox.setChecked(False)
@@ -686,7 +687,7 @@ class GUI(QMainWindow):
                     text_title = widget.findChild(QLabel, 'text_title')
                     text_title.setText(self.sermon_reference_field.text())
 
-            if self.spd.auto_fill:
+            if self.spd.user_settings['auto_fill']:
                 if not self.gs: # only create one instance of GetScripture
                     self.gs = GetScripture(self.spd)
 
@@ -705,6 +706,8 @@ class GUI(QMainWindow):
         """
         self.spd.user_settings['auto_fill'] = self.auto_fill_checkbox.isChecked()
         self.spd.save_user_settings()
+        if self.auto_fill_checkbox.isChecked():
+            self.reference_changes()
 
     def text_changes(self):
         """

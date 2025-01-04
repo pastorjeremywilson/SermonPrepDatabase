@@ -578,7 +578,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         self.about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.5.0.1')
+        about_label = QLabel('Sermon Prep Database v.5.0.2')
         about_layout.addWidget(about_label)
 
         about_text = QTextBrowser()
@@ -832,7 +832,7 @@ class ShowHelp(QTabWidget):
             'should start with the date in <strong>YYYY-MM-DD</strong> format folowed by a period. After the period, '
             'the scripture reference follows in the format book.chapter.verse-verse. Finally is the proper suffix '
             'for your file type (.docx, .odt, or .txt).<br><br>For example, a sermon preached on Sunday, March 19th, '
-            '2024 on Mark 9:1-12, saved as a Microsoft Word document would have the file name <strong>2024-03-19.mark.'
+            '2025 on Mark 9:1-12, saved as a Microsoft Word document would have the file name <strong>2025-03-19.mark.'
             '9.1-12.docx</strong>. If the file names aren\'t renamed in this way, the program can still import your '
             'sermons, it just won\'t be able to automatically save the corresponding date and reference information '
             'as well<br><br>Next, if you have your favorite bible downloaded as a Zefaniah XML file '
