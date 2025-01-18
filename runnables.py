@@ -26,7 +26,6 @@ class SpellCheck(QRunnable):
         if self.type == 'whole':
             self.check_whole_text()
         elif self.type == 'previous':
-            print('calling check_word(\'previous\')')
             self.check_word('previous')
         elif self.type == 'current':
             self.check_word('current')
@@ -134,18 +133,14 @@ class SpellCheck(QRunnable):
         if len(cleaned_word) > 0 and not any(c.isnumeric() for c in cleaned_word):
             suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
                                                             include_unknown=True)
-            print(f'len(suggestions){len(suggestions)}')
             word_index = [self.cursor.selectionStart()]
             if suggestions:
                 # if the first suggestion is the same as the word, then it's not spelled wrong
                 if suggestions[0].term == cleaned_word:
-                    print('emitting black')
                     self.gui.set_text_color_signal.emit(self.widget, word_index, Qt.GlobalColor.black)
                 else:
-                    print('emitting red')
                     self.gui.set_text_color_signal.emit(self.widget, word_index, Qt.GlobalColor.red)
             else: # if no suggestions, word is obviously misspelled
-                print('emitting red')
                 self.gui.set_text_color_signal.emit(self.widget, word_index, Qt.GlobalColor.red)
 
         self.cursor.clearSelection()

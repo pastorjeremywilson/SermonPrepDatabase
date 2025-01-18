@@ -959,7 +959,6 @@ class CustomTextEdit(QTextEdit):
                 or evt.key() == Qt.Key.Key_Return
                 or evt.key() == Qt.Key.Key_Enter):
             if not self.gui.spd.user_settings['disable_spell_check']:
-                print('checking previous word')
                 self.word_spell_check.type = 'previous'
                 self.gui.spd.spell_check_thread_pool.start(self.word_spell_check)
 
