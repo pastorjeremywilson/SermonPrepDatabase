@@ -26,7 +26,10 @@ class SpellCheck(QRunnable):
         if self.type == 'whole':
             self.check_whole_text()
         elif self.type == 'previous':
-            self.check_previous_word()
+            print('calling check_word(\'previous\')')
+            self.check_word('previous')
+        elif self.type == 'current':
+            self.check_word('current')
 
     def check_whole_text(self):
         """
@@ -82,15 +85,29 @@ class SpellCheck(QRunnable):
         self.gui.set_text_color_signal.emit(self.widget, marked_word_indices, Qt.GlobalColor.red)
         self.gui.clear_changes_signal.emit()
 
-    def check_previous_word(self):
+    def check_word(self, word_type):
         """
-        Method to spell-check the word previous to the user's cursor. Skips over punctuation if that is the first
-        previous "word" found.
+        Method to spell-check a single word, either previous to the user's cursor or at the user's current cursor.
+        Skips over punctuation if that is the first previous "word" found.
         """
-        punctuations = [',', '.', '?', '!', ')', ';', ':', '-']
+        punctuations = [',', '.', '?', '!', ')', ';', ':', '-', '\n', ' ']
 
-        self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord)
-        self.cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+        if not self.widget:
+            return
+        self.cursor = self.widget.textCursor()
+        if word_type == 'previous':
+            self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord)
+            self.cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+            while (self.cursor.selection().toPlainText() in punctuations
+                   or len(self.cursor.selection().toPlainText()) == 0):
+                self.cursor.clearSelection()
+                self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord)
+                self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord)
+                self.cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+                if self.cursor.position() == 0:
+                    break
+        else:
+            self.cursor.select(QTextCursor.SelectionType.WordUnderCursor)
 
         word = self.cursor.selection().toPlainText()
         for punctuation in punctuations:
@@ -115,25 +132,26 @@ class SpellCheck(QRunnable):
 
         suggestions = None
         if len(cleaned_word) > 0 and not any(c.isnumeric() for c in cleaned_word):
-            if any(h.isalpha() for h in cleaned_word):
-                suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+            suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
                                                             include_unknown=True)
-
+            print(f'len(suggestions){len(suggestions)}')
+            word_index = [self.cursor.selectionStart()]
             if suggestions:
-                word_index = [self.cursor.selectionStart()]
                 # if the first suggestion is the same as the word, then it's not spelled wrong
-                if not suggestions[0].term == cleaned_word:
-                    self.gui.set_text_color_signal.emit(self.widget, word_index, Qt.GlobalColor.red)
-                else:
-                    # TODO: Windows fatal exception: access violation thrown here
-                    # Probably has to do with working with widgets and cursors outside of the QApplication loop
-                    # Change to signals and slots so see if this fixes the problem
-                    # self.cursor.mergeCharFormat(char_format)
+                if suggestions[0].term == cleaned_word:
+                    print('emitting black')
                     self.gui.set_text_color_signal.emit(self.widget, word_index, Qt.GlobalColor.black)
+                else:
+                    print('emitting red')
+                    self.gui.set_text_color_signal.emit(self.widget, word_index, Qt.GlobalColor.red)
+            else: # if no suggestions, word is obviously misspelled
+                print('emitting red')
+                self.gui.set_text_color_signal.emit(self.widget, word_index, Qt.GlobalColor.red)
 
         self.cursor.clearSelection()
-        self.cursor.movePosition(QTextCursor.MoveOperation.NextWord)
-        self.gui.reset_cursor_color_signal.emit(self.widget)
+        if 'previous' in word_type:
+            self.cursor.movePosition(QTextCursor.MoveOperation.End)
+            self.gui.reset_cursor_color_signal.emit(self.widget)
 
     def check_single_word(self, word):
         cleaned_word = self.clean_word(word)

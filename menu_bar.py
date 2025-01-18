@@ -578,7 +578,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         self.about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.5.0.2')
+        about_label = QLabel('Sermon Prep Database v.5.0.2.002')
         about_layout.addWidget(about_label)
 
         about_text = QTextBrowser()

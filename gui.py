@@ -3,7 +3,7 @@ from os.path import exists
 
 from PyQt6.QtCore import Qt, QSize, QDate, QDateTime, QObject, QRunnable, pyqtSignal, QSizeF
 from PyQt6.QtGui import QIcon, QFont, QStandardItemModel, QStandardItem, QPixmap, QColor, \
-    QCloseEvent, QAction, QUndoStack, QTextCursor, QPainter, QTextDocument, QTextOption
+    QCloseEvent, QAction, QUndoStack, QTextCursor, QPainter, QTextDocument, QTextOption, QTextCharFormat
 from PyQt6.QtWidgets import QWidget, QTabWidget, QGridLayout, QLabel, QLineEdit, \
     QCheckBox, QDateEdit, QTextEdit, QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QTableView, QDialog, \
     QApplication, QProgressBar, QTabBar
@@ -744,7 +744,7 @@ class GUI(QMainWindow):
                 char_format.setForeground(color)
                 cursor.mergeCharFormat(char_format)
                 cursor.clearSelection()
-                char_format.setForeground(Qt.GlobalColor.black)
+                char_format.setForeground(color)
                 cursor.mergeCharFormat(char_format)
         except Exception as ex:
             print(str(ex))
@@ -951,11 +951,23 @@ class CustomTextEdit(QTextEdit):
         self.word_spell_check.setAutoDelete(False)
 
     def keyReleaseEvent(self, evt):
-        if ((evt.key() == Qt.Key.Key_Space
-                or evt.key() == Qt.Key.Key_Return
-                or evt.key() == Qt.Key.Key_Enter)
-                and str(self.gui.spell_check) == '0'):
+        cursor = self.textCursor()
+        if cursor.charFormat().foreground() == Qt.GlobalColor.red:
+            self.word_spell_check.type = 'current'
             self.gui.spd.spell_check_thread_pool.start(self.word_spell_check)
+        elif (evt.key() == Qt.Key.Key_Space
+                or evt.key() == Qt.Key.Key_Return
+                or evt.key() == Qt.Key.Key_Enter):
+            if not self.gui.spd.user_settings['disable_spell_check']:
+                print('checking previous word')
+                self.word_spell_check.type = 'previous'
+                self.gui.spd.spell_check_thread_pool.start(self.word_spell_check)
+
+    def keyPressEvent(self, evt):
+        if evt.key() == Qt.Key.Key_Enter or evt.key() == Qt.Key.Key_Return:
+            self.append('')
+        else:
+            super().keyPressEvent(evt)
 
     def contextMenuEvent(self, evt):
         """
