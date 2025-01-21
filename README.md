@@ -7,7 +7,7 @@
 
 Sermon Prep Database is a program to organize - and store for easy retrieval - your thoughts and research when preparing a sermon.
 
-# What's New in v.5.0.2.002?
+# What's New in v.5.0.3?
 - Fixed a problem with the scripture auto-fill
 
 # What was new in v.5.0.1?
@@ -34,7 +34,7 @@ When preparing a sermon for your congregation, you probably find yourself in the
 # Installation
 
 Currently, Sermon Prep Database is available for the Microsoft Windows operating
-system only. Download the current SPD installer (v.5.0.2.002) and run
+system only. Download the current SPD installer (v.5.0.3) and run
 it on your computer.
 
 # Using Sermon Prep Database

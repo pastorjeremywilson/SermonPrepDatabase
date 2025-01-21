@@ -94,59 +94,41 @@ class SpellCheck(QRunnable):
         if not self.widget:
             return
         self.cursor = self.widget.textCursor()
+
+        word = ''
         if word_type == 'previous':
             self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord)
-            self.cursor.select(QTextCursor.SelectionType.WordUnderCursor)
-            while (self.cursor.selection().toPlainText() in punctuations
-                   or len(self.cursor.selection().toPlainText()) == 0):
-                self.cursor.clearSelection()
-                self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord)
-                self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord)
-                self.cursor.select(QTextCursor.SelectionType.WordUnderCursor)
-                if self.cursor.position() == 0:
-                    break
+            self.cursor.movePosition(QTextCursor.MoveOperation.EndOfWord)
+            while not word.startswith(' ') and not word.startswith('\n'):
+                self.cursor.movePosition(QTextCursor.MoveOperation.PreviousCharacter, QTextCursor.MoveMode.KeepAnchor)
+                word = self.cursor.selection().toPlainText()
         else:
-            self.cursor.select(QTextCursor.SelectionType.WordUnderCursor)
-
-        word = self.cursor.selection().toPlainText()
-        for punctuation in punctuations:
-            if word == punctuation:
-                self.cursor.clearSelection()
-                self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord)
-                self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord)
-                self.cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+            while not word.startswith(' ') and not word.startswith('\n'):
+                self.cursor.movePosition(QTextCursor.MoveOperation.PreviousCharacter, QTextCursor.MoveMode.KeepAnchor)
                 word = self.cursor.selection().toPlainText()
-                break
-
-        # if there's an apostrophe, check the next two characters for contraction letters
-        if self.cursor.selection().toPlainText().endswith('\''):
-            self.cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor)
-            if re.search('[a-z]$', self.cursor.selection().toPlainText()):
-                word = self.cursor.selection().toPlainText()
+            self.cursor.movePosition(QTextCursor.MoveOperation.NextWord)
+            while not word.endswith(' ') and not word.endswith('\n'):
                 self.cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor)
-                if re.search('[a-z]$', self.cursor.selection().toPlainText()):
-                    word = self.cursor.selection().toPlainText()
+                word = self.cursor.selection().toPlainText()
 
-        cleaned_word = self.clean_word(word)
+        cleaned_word = self.clean_word(word.strip())
 
         suggestions = None
         if len(cleaned_word) > 0 and not any(c.isnumeric() for c in cleaned_word):
             suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
-                                                            include_unknown=True)
+                                                        include_unknown=True)
             word_index = [self.cursor.selectionStart()]
             if suggestions:
                 # if the first suggestion is the same as the word, then it's not spelled wrong
                 if suggestions[0].term == cleaned_word:
-                    self.gui.set_text_color_signal.emit(self.widget, word_index, Qt.GlobalColor.black)
+                    self.gui.selection_color_signal.emit(self.widget, self.cursor.selectionStart(), self.cursor.selectionEnd(), Qt.GlobalColor.black)
                 else:
-                    self.gui.set_text_color_signal.emit(self.widget, word_index, Qt.GlobalColor.red)
+                    self.gui.selection_color_signal.emit(self.widget, self.cursor.selectionStart(), self.cursor.selectionEnd(), Qt.GlobalColor.red)
             else: # if no suggestions, word is obviously misspelled
-                self.gui.set_text_color_signal.emit(self.widget, word_index, Qt.GlobalColor.red)
+                self.gui.selection_color_signal.emit(self.widget, self.cursor.selectionStart(), self.cursor.selectionEnd(), Qt.GlobalColor.red)
 
-        self.cursor.clearSelection()
-        if 'previous' in word_type:
-            self.cursor.movePosition(QTextCursor.MoveOperation.End)
-            self.gui.reset_cursor_color_signal.emit(self.widget)
+        #self.cursor.clearSelection()
+        #self.gui.reset_cursor_color_signal.emit(self.widget)
 
     def check_single_word(self, word):
         cleaned_word = self.clean_word(word)

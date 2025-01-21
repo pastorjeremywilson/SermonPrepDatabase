@@ -23,6 +23,7 @@ class GUI(QMainWindow):
     clear_changes_signal = pyqtSignal()
     set_text_cursor_signal = pyqtSignal(QWidget, QTextCursor)
     set_text_color_signal = pyqtSignal(QTextEdit, list, QColor)
+    selection_color_signal = pyqtSignal(QTextEdit, int, int, QColor)
     reset_cursor_color_signal = pyqtSignal(QTextEdit)
     spell_check = None
     
@@ -36,7 +37,7 @@ class GUI(QMainWindow):
         self.create_main_gui.connect(self.create_gui)
         self.clear_changes_signal.connect(self.clear_changes)
         self.set_text_cursor_signal.connect(self.set_text_cursor)
-        self.set_text_color_signal.connect(self.set_text_color)
+        self.selection_color_signal.connect(self.set_text_color_on_selection)
         self.reset_cursor_color_signal.connect(self.reset_cursor_color)
 
         self.standard_font = None
@@ -734,20 +735,12 @@ class GUI(QMainWindow):
     def set_text_cursor(self, widget, cursor):
         widget.setTextCursor(cursor)
 
-    def set_text_color(self, widget, indices, color):
-        try:
-            for index in indices:
-                cursor = widget.textCursor()
-                cursor.setPosition(index, QTextCursor.MoveMode.MoveAnchor)
-                cursor.select(QTextCursor.SelectionType.WordUnderCursor)
-                char_format = cursor.charFormat()
-                char_format.setForeground(color)
-                cursor.mergeCharFormat(char_format)
-                cursor.clearSelection()
-                char_format.setForeground(color)
-                cursor.mergeCharFormat(char_format)
-        except Exception as ex:
-            print(str(ex))
+    def set_text_color_on_selection(self, widget, selection_start, selection_end, color):
+        this_cursor = widget.textCursor()
+        this_cursor.setPosition(selection_start)
+        this_cursor.setPosition(selection_end, QTextCursor.MoveMode.KeepAnchor)
+        char_format = this_cursor.charFormat()
+        char_format.setForeground(color)
 
     def reset_cursor_color(self, widget):
         cursor = widget.textCursor()
@@ -940,9 +933,9 @@ class CustomTextEdit(QTextEdit):
         self.full_spell_check_done = False
         self.document().setDefaultStyleSheet(
             'p {'
-            'font-family: ' + self.gui.spd.user_settings['font_family'] + ';'
-            'font-size: ' + self.gui.spd.user_settings['font_size'] + 'pt;'
-            'line-height: ' + self.gui.spd.user_settings['line_spacing'] + ';'
+                'font-family: ' + self.gui.spd.user_settings['font_family'] + ';'
+                'font-size: ' + self.gui.spd.user_settings['font_size'] + 'pt;'
+                'line-height: ' + self.gui.spd.user_settings['line_spacing'] + ';'
             '}'
         )
 
@@ -961,10 +954,12 @@ class CustomTextEdit(QTextEdit):
             if not self.gui.spd.user_settings['disable_spell_check']:
                 self.word_spell_check.type = 'previous'
                 self.gui.spd.spell_check_thread_pool.start(self.word_spell_check)
+        else:
+            super().keyReleaseEvent(evt)
 
     def keyPressEvent(self, evt):
         if evt.key() == Qt.Key.Key_Enter or evt.key() == Qt.Key.Key_Return:
-            self.append('')
+            self.insertPlainText('\n')
         else:
             super().keyPressEvent(evt)
 
