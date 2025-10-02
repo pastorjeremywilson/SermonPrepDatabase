@@ -1,9 +1,9 @@
 import re
 from os.path import exists
 
-from PyQt6.QtCore import Qt, QSize, QDate, QDateTime, QObject, QRunnable, pyqtSignal, QSizeF
+from PyQt6.QtCore import Qt, QSize, QDate, QDateTime, QRunnable, pyqtSignal, QSizeF, QThreadPool
 from PyQt6.QtGui import QIcon, QFont, QStandardItemModel, QStandardItem, QPixmap, QColor, \
-    QCloseEvent, QAction, QUndoStack, QTextCursor, QPainter, QTextDocument, QTextOption, QTextCharFormat
+    QCloseEvent, QAction, QUndoStack, QTextCursor, QPainter, QTextDocument, QTextOption, QTextBlockFormat
 from PyQt6.QtWidgets import QWidget, QTabWidget, QGridLayout, QLabel, QLineEdit, \
     QCheckBox, QDateEdit, QTextEdit, QMainWindow, QVBoxLayout, QHBoxLayout, QPushButton, QTableView, QDialog, \
     QApplication, QProgressBar, QTabBar
@@ -13,9 +13,9 @@ from menu_bar import MenuBar
 from toolbar import Toolbar
 from runnables import SpellCheck, LoadDictionary
 
-
+# ToDo: Fix popup buttons
 class GUI(QMainWindow):
-    spd = None
+    main = None
     undo_stack = None
     changes = False
     gs = None
@@ -27,13 +27,15 @@ class GUI(QMainWindow):
     reset_cursor_color_signal = pyqtSignal(QTextEdit)
     spell_check = None
     
-    def __init__(self):
+    def __init__(self, main):
         """
         GUI handles all the operations from the user interface. It builds the QT window and elements and requires the
         SermonPrepDatabase object in order to access its methods.
         """
 
         super().__init__()
+        self.main = main
+
         self.create_main_gui.connect(self.create_gui)
         self.clear_changes_signal.connect(self.clear_changes)
         self.set_text_cursor_signal.connect(self.set_text_cursor)
@@ -77,11 +79,9 @@ class GUI(QMainWindow):
             QIcon('resources/svg/spSermonIconDark.svg')
         ]
 
-        from main import SermonPrepDatabase
-        self.spd = SermonPrepDatabase(self)
-
         initial_startup = InitialStartup(self)
-        self.spd.spell_check_thread_pool.start(initial_startup)
+        startup_thread_pool = QThreadPool()
+        startup_thread_pool.start(initial_startup)
 
     def create_gui(self):
         """
@@ -89,10 +89,10 @@ class GUI(QMainWindow):
         """
         self.setWindowTitle('Sermon Prep Database')
 
-        self.standard_font = QFont(self.spd.user_settings['font_family'], int(self.spd.user_settings['font_size']))
+        self.standard_font = QFont(self.main.user_settings['font_family'], int(self.main.user_settings['font_size']))
         self.bold_font = QFont(
-            self.spd.user_settings['font_family'], int(self.spd.user_settings['font_size']), QFont.Weight.Bold)
-        self.spd.line_spacing = str(self.spd.user_settings['line_spacing'])
+            self.main.user_settings['font_family'], int(self.main.user_settings['font_size']), QFont.Weight.Bold)
+        self.main.line_spacing = str(self.main.user_settings['line_spacing'])
 
         icon_pixmap = QPixmap('resources/svg/spIcon.svg')
         self.setWindowIcon(QIcon(icon_pixmap))
@@ -103,8 +103,8 @@ class GUI(QMainWindow):
 
         self.undo_stack = QUndoStack(self.main_widget)
 
-        self.menu_bar = MenuBar(self, self.spd)
-        self.toolbar = Toolbar(self, self.spd)
+        self.menu_bar = MenuBar(self, self.main)
+        self.toolbar = Toolbar(self, self.main)
         self.layout.addWidget(self.toolbar)
 
         self.build_tabbed_frame()
@@ -114,14 +114,14 @@ class GUI(QMainWindow):
         self.build_research_tab()
         self.build_sermon_tab()
 
-        self.menu_bar.color_change(self.spd.user_settings['theme'])
+        self.menu_bar.color_change(self.main.user_settings['theme'])
+
+        self.main.current_rec_index = len(self.main.ids) - 1
+        self.main.get_by_index(self.main.current_rec_index)
+        self.apply_font(self.main.user_settings['font_family'], self.main.user_settings['font_size'])
+        self.apply_line_spacing()
 
         self.showMaximized()
-
-        self.spd.current_rec_index = len(self.spd.ids) - 1
-        self.spd.get_by_index(self.spd.current_rec_index)
-        self.apply_font(self.spd.user_settings['font_family'], self.spd.user_settings['font_size'])
-        self.apply_line_spacing()
     
     def build_tabbed_frame(self):
         """
@@ -141,7 +141,7 @@ class GUI(QMainWindow):
         tab_container_layout.addWidget(self.tabbed_frame)
 
     def current_tab_changed(self):
-        if self.spd.user_settings['theme'] == 'dark':
+        if self.main.user_settings['theme'] == 'dark':
             return
         index = self.sender().currentIndex()
         for i in range(5):
@@ -163,33 +163,33 @@ class GUI(QMainWindow):
         self.scripture_frame_layout.setColumnStretch(2, 0)
         self.scripture_frame.setLayout(self.scripture_frame_layout)
         
-        pericope_label = QLabel(self.spd.user_settings['label1'])
+        pericope_label = QLabel(self.main.user_settings['label1'])
         self.scripture_frame_layout.addWidget(pericope_label, 0, 0)
         
         pericope_field = QLineEdit()
         pericope_field.textEdited.connect(self.changes_detected)
         self.scripture_frame_layout.addWidget(pericope_field, 1, 0)
         
-        pericope_text_label = QLabel(self.spd.user_settings['label2'])
+        pericope_text_label = QLabel(self.main.user_settings['label2'])
         self.scripture_frame_layout.addWidget(pericope_text_label, 2, 0)
 
         pericope_text_edit = CustomTextEdit(self)
-        pericope_text_edit.cursorPositionChanged.connect(lambda: self.set_style_buttons(pericope_text_edit))
+        pericope_text_edit.cursorPositionChanged.connect(self.set_style_buttons)
         self.scripture_frame_layout.addWidget(pericope_text_edit, 3, 0)
         
-        sermon_reference_label = QLabel(self.spd.user_settings['label3'])
+        sermon_reference_label = QLabel(self.main.user_settings['label3'])
         self.scripture_frame_layout.addWidget(sermon_reference_label, 0, 1)
 
         self.sermon_reference_field = QLineEdit()
         self.sermon_reference_field.textEdited.connect(self.reference_changes)
 
-        if exists(self.spd.app_dir + '/my_bible.xml'):
+        if exists(self.main.app_dir + '/my_bible.xml'):
             self.scripture_frame_layout.addWidget(self.sermon_reference_field, 1, 1)
 
-            self.auto_fill_checkbox = QCheckBox('Auto-fill ' + self.spd.user_settings['label4'])
+            self.auto_fill_checkbox = QCheckBox('Auto-fill ' + self.main.user_settings['label4'])
             self.auto_fill_checkbox.setChecked(True)
             self.scripture_frame_layout.addWidget(self.auto_fill_checkbox, 1, 2)
-            if self.spd.user_settings['auto_fill']:
+            if self.main.user_settings['auto_fill']:
                 self.auto_fill_checkbox.setChecked(True)
             else:
                 self.auto_fill_checkbox.setChecked(False)
@@ -197,11 +197,11 @@ class GUI(QMainWindow):
         else:
             self.scripture_frame_layout.addWidget(self.sermon_reference_field, 1, 1, 1, 2)
         
-        sermon_text_label = QLabel(self.spd.user_settings['label4'])
+        sermon_text_label = QLabel(self.main.user_settings['label4'])
         self.scripture_frame_layout.addWidget(sermon_text_label, 2, 1, 1, 2)
         
         self.sermon_text_edit = CustomTextEdit(self)
-        self.sermon_text_edit.cursorPositionChanged.connect(lambda: self.set_style_buttons(self.sermon_text_edit))
+        self.sermon_text_edit.cursorPositionChanged.connect(self.set_style_buttons)
         self.scripture_frame_layout.addWidget(self.sermon_text_edit, 3, 1, 1, 2)
 
         self.sermon_reference_field.textChanged.connect(self.reference_changes)
@@ -235,53 +235,53 @@ class GUI(QMainWindow):
         self.exegesis_frame_layout.setRowStretch(8, 100)
         self.exegesis_frame.setLayout(self.exegesis_frame_layout)
         
-        fcft_label = QLabel(self.spd.user_settings['label5'])
+        fcft_label = QLabel(self.main.user_settings['label5'])
         self.exegesis_frame_layout.addWidget(fcft_label, 0, 0)
         
         fcft_text = CustomTextEdit(self)
-        fcft_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(fcft_text))
+        fcft_text.cursorPositionChanged.connect(self.set_style_buttons)
         self.exegesis_frame_layout.addWidget(fcft_text, 1, 0)
         
-        gat_label = QLabel(self.spd.user_settings['label6'])
+        gat_label = QLabel(self.main.user_settings['label6'])
         self.exegesis_frame_layout.addWidget(gat_label, 3, 0)
         
         gat_text = CustomTextEdit(self)
-        gat_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(gat_text))
+        gat_text.cursorPositionChanged.connect(self.set_style_buttons)
         self.exegesis_frame_layout.addWidget(gat_text, 4, 0)
         
-        cpt_label = QLabel(self.spd.user_settings['label7'])
+        cpt_label = QLabel(self.main.user_settings['label7'])
         self.exegesis_frame_layout.addWidget(cpt_label, 6, 0)
         
         cpt_text = CustomTextEdit(self)
-        cpt_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(cpt_text))
+        cpt_text.cursorPositionChanged.connect(self.set_style_buttons)
         self.exegesis_frame_layout.addWidget(cpt_text, 7, 0)
         
-        pb_label = QLabel(self.spd.user_settings['label8'])
+        pb_label = QLabel(self.main.user_settings['label8'])
         self.exegesis_frame_layout.addWidget(pb_label, 3, 2)
         
         pb_text = CustomTextEdit(self)
-        pb_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(pb_text))
+        pb_text.cursorPositionChanged.connect(self.set_style_buttons)
         self.exegesis_frame_layout.addWidget(pb_text, 4, 2)
         
-        fcfs_label = QLabel(self.spd.user_settings['label9'])
+        fcfs_label = QLabel(self.main.user_settings['label9'])
         self.exegesis_frame_layout.addWidget(fcfs_label, 0, 4)
         
         fcfs_text = CustomTextEdit(self)
-        fcfs_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(fcfs_text))
+        fcfs_text.cursorPositionChanged.connect(self.set_style_buttons)
         self.exegesis_frame_layout.addWidget(fcfs_text, 1, 4)
         
-        gas_label = QLabel(self.spd.user_settings['label10'])
+        gas_label = QLabel(self.main.user_settings['label10'])
         self.exegesis_frame_layout.addWidget(gas_label, 3, 4)
         
         gas_text = CustomTextEdit(self)
-        gas_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(gas_text))
+        gas_text.cursorPositionChanged.connect(self.set_style_buttons)
         self.exegesis_frame_layout.addWidget(gas_text, 4, 4)
         
-        cps_label = QLabel(self.spd.user_settings['label11'])
+        cps_label = QLabel(self.main.user_settings['label11'])
         self.exegesis_frame_layout.addWidget(cps_label, 6, 4)
         
         cps_text = CustomTextEdit(self)
-        cps_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(cps_text))
+        cps_text.cursorPositionChanged.connect(self.set_style_buttons)
         self.exegesis_frame_layout.addWidget(cps_text, 7, 4)
 
         scripture_box = ScriptureBox()
@@ -300,25 +300,25 @@ class GUI(QMainWindow):
         self.outline_frame_layout.setColumnMinimumWidth(5, 20)
         self.outline_frame.setLayout(self.outline_frame_layout)
         
-        scripture_outline_label = QLabel(self.spd.user_settings['label12'])
+        scripture_outline_label = QLabel(self.main.user_settings['label12'])
         self.outline_frame_layout.addWidget(scripture_outline_label, 0, 0)
         
         scripture_outline_text = CustomTextEdit(self)
-        scripture_outline_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(scripture_outline_text))
+        scripture_outline_text.cursorPositionChanged.connect(self.set_style_buttons)
         self.outline_frame_layout.addWidget(scripture_outline_text, 1, 0)
         
-        sermon_outline_label = QLabel(self.spd.user_settings['label13'])
+        sermon_outline_label = QLabel(self.main.user_settings['label13'])
         self.outline_frame_layout.addWidget(sermon_outline_label, 0, 2)
         
         sermon_outline_text = CustomTextEdit(self)
-        sermon_outline_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(sermon_outline_text))
+        sermon_outline_text.cursorPositionChanged.connect(self.set_style_buttons)
         self.outline_frame_layout.addWidget(sermon_outline_text, 1, 2)
         
-        illustration_label = QLabel(self.spd.user_settings['label14'])
+        illustration_label = QLabel(self.main.user_settings['label14'])
         self.outline_frame_layout.addWidget(illustration_label, 0, 4)
         
         illustration_text = CustomTextEdit(self)
-        illustration_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(illustration_text))
+        illustration_text.cursorPositionChanged.connect(self.set_style_buttons)
         self.outline_frame_layout.addWidget(illustration_text, 1, 4)
 
         scripture_box = ScriptureBox()
@@ -335,12 +335,12 @@ class GUI(QMainWindow):
         self.research_frame.setLayout(self.research_frame_layout)
         self.research_frame_layout.setColumnMinimumWidth(1, 20)
         
-        research_label = QLabel(self.spd.user_settings['label15'])
+        research_label = QLabel(self.main.user_settings['label15'])
         self.research_frame_layout.addWidget(research_label, 0, 0)
         
         research_text = CustomTextEdit(self)
         research_text.setObjectName('custom_text_edit')
-        research_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(research_text))
+        research_text.cursorPositionChanged.connect(self.set_style_buttons)
         self.research_frame_layout.addWidget(research_text, 1, 0)
 
         scripture_box = ScriptureBox()
@@ -360,14 +360,14 @@ class GUI(QMainWindow):
         self.sermon_frame_layout.setColumnStretch(2, 5)
         self.sermon_frame_layout.setColumnStretch(3, 2)
         
-        sermon_title_label = QLabel(self.spd.user_settings['label16'])
+        sermon_title_label = QLabel(self.main.user_settings['label16'])
         self.sermon_frame_layout.addWidget(sermon_title_label, 0, 0)
         
         sermon_title_field = QLineEdit()
         sermon_title_field.textEdited.connect(self.changes_detected)
         self.sermon_frame_layout.addWidget(sermon_title_field, 1, 0)
         
-        sermon_date_label = QLabel(self.spd.user_settings['label17'])
+        sermon_date_label = QLabel(self.main.user_settings['label17'])
         self.sermon_frame_layout.addWidget(sermon_date_label, 0, 1)
 
         self.sermon_date_edit = QDateEdit()
@@ -376,21 +376,21 @@ class GUI(QMainWindow):
         self.sermon_date_edit.dateChanged.connect(self.date_changes)
         self.sermon_frame_layout.addWidget(self.sermon_date_edit, 1, 1)
         
-        sermon_location_label = QLabel(self.spd.user_settings['label18'])
+        sermon_location_label = QLabel(self.main.user_settings['label18'])
         self.sermon_frame_layout.addWidget(sermon_location_label, 0, 2)
         
         sermon_location_field = QLineEdit()
         sermon_location_field.textEdited.connect(self.changes_detected)
         self.sermon_frame_layout.addWidget(sermon_location_field, 1, 2)
         
-        ctw_label = QLabel(self.spd.user_settings['label19'])
+        ctw_label = QLabel(self.main.user_settings['label19'])
         self.sermon_frame_layout.addWidget(ctw_label, 2, 0)
         
         ctw_field = QLineEdit()
         ctw_field.textEdited.connect(self.changes_detected)
         self.sermon_frame_layout.addWidget(ctw_field, 3, 0)
         
-        hr_label = QLabel(self.spd.user_settings['label20'])
+        hr_label = QLabel(self.main.user_settings['label20'])
         self.sermon_frame_layout.addWidget(hr_label, 2, 2)
         
         hr_field = QLineEdit()
@@ -398,11 +398,11 @@ class GUI(QMainWindow):
         self.sermon_frame_layout.addWidget(hr_field, 3, 2)
 
         sermon_text = CustomTextEdit(self)
-        sermon_text.cursorPositionChanged.connect(lambda: self.set_style_buttons(sermon_text))
+        sermon_text.cursorPositionChanged.connect(self.set_style_buttons)
         self.sermon_frame_layout.addWidget(sermon_text, 5, 0, 1, 4)
 
         self.sermon_view_button = QPushButton()
-        if self.spd.user_settings['theme'] == 'dark':
+        if self.main.user_settings['theme'] == 'dark':
             self.sermon_view_button.setIcon(QIcon('resources/svg/spSermonViewIconLight.svg'))
         else:
             self.sermon_view_button.setIcon(QIcon('resources/svg/spSermonViewIconDark.svg'))
@@ -412,7 +412,7 @@ class GUI(QMainWindow):
         self.sermon_view_button.released.connect(lambda: SermonView(self, sermon_text.toSimplifiedHtml()))
         self.sermon_frame_layout.addWidget(self.sermon_view_button, 0, 3, 4, 1)
         
-        sermon_label = QLabel(self.spd.user_settings['label21'])
+        sermon_label = QLabel(self.main.user_settings['label21'])
         self.sermon_frame_layout.addWidget(sermon_label, 4, 0)
 
         scripture_box = ScriptureBox()
@@ -434,78 +434,70 @@ class GUI(QMainWindow):
         """
         current_changes_status = self.changes
 
-        self.spd.user_settings['font_family'] = font_family
-        self.spd.user_settings['font_size'] = font_size
+        self.main.user_settings['font_family'] = font_family
+        self.main.user_settings['font_size'] = font_size
         self.standard_font = QFont(font_family, int(font_size))
         self.bold_font = QFont(font_family, int(font_size), QFont.Weight.Bold)
-        font = QFont(self.spd.user_settings['font_family'], int(self.spd.user_settings['font_size']))
+        font = QFont(self.main.user_settings['font_family'], int(self.main.user_settings['font_size']))
         for label in self.findChildren(QLabel):
             label.setFont(font)
         for line_edit in self.findChildren(QLineEdit):
             line_edit.setFont(font)
         for text_edit in self.findChildren(CustomTextEdit):
             html = text_edit.toSimplifiedHtml()
+            text_edit.setFont(font)
             text_edit.document().setDefaultStyleSheet(
                 'p, li {'
-                'font-family: ' + self.spd.user_settings['font_family'] + ';'
-                'font-size: ' + self.spd.user_settings['font_size'] + 'pt;'
-                'line-height: ' + self.spd.user_settings['line_spacing'] + ';'
+                'font-family: ' + self.main.user_settings['font_family'] + ';'
+                'font-size: ' + self.main.user_settings['font_size'] + 'pt;'
+                'line-height: ' + self.main.user_settings['line_spacing'] + ';'
                 '}'
             )
             text_edit.setHtml(html)
 
-            cursor = text_edit.textCursor()
-            char_format = cursor.charFormat()
-            cursor.select(cursor.SelectionType.Document)
-            char_format.setFont(QFont(self.spd.user_settings['font_family'], int(self.spd.user_settings['font_size'])))
-            cursor.setCharFormat(char_format)
-            cursor.clearSelection()
-            text_edit.setTextCursor(cursor)
         for tab_bar in self.findChildren(QTabBar):
-            tab_bar.setFont(QFont(self.spd.user_settings['font_family'], int(self.spd.user_settings['font_size']) + 2))
+            tab_bar.setFont(QFont(self.main.user_settings['font_family'], int(self.main.user_settings['font_size']) + 2))
 
         if font_chooser:
             font_chooser.deleteLater()
 
         if save_config:
-            self.spd.save_user_settings()
+            self.main.save_user_settings()
 
         self.changes = current_changes_status
 
     def apply_line_spacing(self):
         current_changes_status = self.changes
-        line_height = self.spd.user_settings['line_spacing']
+        line_height = self.main.user_settings['line_spacing']
         for text_edit in self.findChildren(CustomTextEdit):
-            html = text_edit.toSimplifiedHtml()
-            text_edit.document().setDefaultStyleSheet(
-                'p, li {'
-                'font-family: ' + self.spd.user_settings['font_family'] + ';'
-                'font-size: ' + self.spd.user_settings['font_size'] + 'pt;'
-                'line-height: ' + self.spd.user_settings['line_spacing'] + ';'
-                '}'
-            )
-            text_edit.setHtml(html)
-
+            block = text_edit.document().begin()
+            font_metrics = text_edit.fontMetrics()
+            font_height = font_metrics.height()
+            line_height_pixels = font_height * float(line_height)
             cursor = text_edit.textCursor()
-            char_format = cursor.charFormat()
-            cursor.select(cursor.SelectionType.Document)
-            char_format.setFont(QFont(self.spd.user_settings['font_family'], int(self.spd.user_settings['font_size'])))
-            cursor.setCharFormat(char_format)
-            cursor.clearSelection()
-            text_edit.setTextCursor(cursor)
+            while block.isValid():
+                block_format = block.blockFormat()
+                block_format.setLineHeight(line_height_pixels, QTextBlockFormat.LineHeightTypes.FixedHeight.value)
+                block_format.setBottomMargin(line_height_pixels / 2)
+
+                # Apply the format using a cursor
+                cursor.setPosition(block.position())
+                cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
+                cursor.setBlockFormat(block_format)
+
+                block = block.next()
+
         self.menuBar().findChild(QAction, 'compact').setChecked(str(line_height) == '1.0')
         self.menuBar().findChild(QAction, 'regular').setChecked(str(line_height) == '1.2')
         self.menuBar().findChild(QAction, 'wide').setChecked(str(line_height) == '1.5')
         self.changes = current_changes_status
 
-    def set_style_buttons(self, component):
+    def set_style_buttons(self):
         """
         Method for changing the GUI's style buttons (bold, italic, underline, bullets) based on where the cursor is
         located.
-
-        :param QObject component: the QObject (CustomTextEdit) that is currently being used.
         """
-        cursor = component.textCursor()
+        cursor = self.sender().textCursor()
         font = cursor.charFormat().font()
         if font.weight() == QFont.Weight.Normal:
             self.toolbar.bold_button.setChecked(False)
@@ -550,9 +542,7 @@ class GUI(QMainWindow):
                 component.full_spell_check_done = False
 
                 if record[0][index]:
-                    component.setHtml(self.spd.reformat_string_for_load(record[0][index]))
-                    """spell_check = SpellCheck(component, 'whole', self)
-                    self.spd.spell_check_thread_pool.start(spell_check)"""
+                    component.setHtml(self.main.reformat_string_for_load(record[0][index]))
 
                 index += 1
 
@@ -564,7 +554,7 @@ class GUI(QMainWindow):
                 component.full_spell_check_done = False
 
                 if record[0][index]:
-                    component.setHtml(self.spd.reformat_string_for_load(record[0][index]))
+                    component.setHtml(self.main.reformat_string_for_load(record[0][index]))
                     """spell_check = SpellCheck(component, 'whole', self)
                     self.spd.spell_check_thread_pool.start(spell_check)"""
 
@@ -578,7 +568,7 @@ class GUI(QMainWindow):
                 component.full_spell_check_done = False
 
                 if record[0][index]:
-                    component.setHtml(self.spd.reformat_string_for_load(record[0][index]))
+                    component.setHtml(self.main.reformat_string_for_load(record[0][index]))
                     """spell_check = SpellCheck(component, 'whole', self)
                     self.spd.spell_check_thread_pool.start(spell_check)"""
 
@@ -592,7 +582,7 @@ class GUI(QMainWindow):
                 component.full_spell_check_done = False
 
                 if record[0][index]:
-                    component.setHtml(self.spd.reformat_string_for_load(record[0][index]))
+                    component.setHtml(self.main.reformat_string_for_load(record[0][index]))
                     """spell_check = SpellCheck(component, 'whole', self)
                     self.spd.spell_check_thread_pool.start(spell_check)"""
 
@@ -631,7 +621,7 @@ class GUI(QMainWindow):
                         component.setDate(QDate(int(date_split[2]), int(date_split[0]), int(date_split[1])))
 
                 else:
-                    self.spd.write_to_log('unusable date in record #' + str(record[0][0]))
+                    self.main.write_to_log('unusable date in record #' + str(record[0][0]))
                     component.setDate(QDateTime.currentDateTime().date())
                 index += 1
 
@@ -640,9 +630,7 @@ class GUI(QMainWindow):
                 component.full_spell_check_done = False
 
                 if record[0][index]:
-                    component.setHtml(self.spd.reformat_string_for_load(record[0][index]))
-                    """spell_check = SpellCheck(component, 'whole', self)
-                    self.spd.spell_check_thread_pool.start(spell_check)"""
+                    component.setHtml(self.main.reformat_string_for_load(record[0][index]))
 
                 index += 1
 
@@ -661,6 +649,8 @@ class GUI(QMainWindow):
                 text_title.setText(self.sermon_reference_field.text())
 
         self.toolbar.id_label.setText('ID: ' + str(record[0][0]))
+
+        self.apply_line_spacing()
 
         self.changes = False
 
@@ -688,9 +678,9 @@ class GUI(QMainWindow):
                     text_title = widget.findChild(QLabel, 'text_title')
                     text_title.setText(self.sermon_reference_field.text())
 
-            if self.spd.user_settings['auto_fill']:
+            if self.main.user_settings['auto_fill']:
                 if not self.gs: # only create one instance of GetScripture
-                    self.gs = GetScripture(self.spd)
+                    self.gs = GetScripture(self.main)
 
                 if ':' in self.sermon_reference_field.text(): # only attempt to get the text if there's enough to work with
                     passage = self.gs.get_passage(self.sermon_reference_field.text())
@@ -699,14 +689,14 @@ class GUI(QMainWindow):
 
             self.changes = True
         except Exception as ex:
-            self.spd.write_to_log(str(ex))
+            self.main.write_to_log(str(ex))
 
     def auto_fill(self):
         """
         Method to change the self.spd.auto_fill value based on user input then save that change to the database.
         """
-        self.spd.user_settings['auto_fill'] = self.auto_fill_checkbox.isChecked()
-        self.spd.save_user_settings()
+        self.main.user_settings['auto_fill'] = self.auto_fill_checkbox.isChecked()
+        self.main.save_user_settings()
         if self.auto_fill_checkbox.isChecked():
             self.reference_changes()
 
@@ -754,7 +744,7 @@ class GUI(QMainWindow):
         """
         goon = True
         if self.changes:
-            goon = self.spd.ask_save()
+            goon = self.main.ask_save()
         if goon:
             self.deleteLater()
             evt.accept()
@@ -813,7 +803,7 @@ class GUI(QMainWindow):
                 self.toolbar.underline_button.setChecked(True)
             self.toolbar.underline_button.blockSignals(False)
         elif event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_S:
-            self.spd.save_rec()
+            self.main.save_rec()
         elif event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_P:
             self.menu_bar.print_rec()
         elif event.modifiers() & Qt.KeyboardModifier.ControlModifier and event.key() == Qt.Key.Key_Q:
@@ -835,20 +825,23 @@ class InitialStartup(QRunnable):
 
     def run(self):
         self.startup_splash.update_text.emit('Getting System Info')
-        self.gui.spd.get_system_info()
+        self.gui.main.get_system_info()
 
         self.startup_splash.update_text.emit('Getting User Settings')
-        self.gui.spd.get_user_settings()
+        self.gui.main.get_user_settings()
 
         self.startup_splash.update_text.emit('Loading Dictionaries')
-        ld = LoadDictionary(self.gui.spd)
-        self.gui.spd.load_dictionary_thread_pool.start(ld)
+        self.gui.main.spell_check_thread_pool = QThreadPool()
+        self.gui.main.spell_check_thread_pool.setStackSize(256000000)
+        self.gui.main.load_dictionary_thread_pool = QThreadPool()
+        ld = LoadDictionary(self.gui.main)
+        self.gui.main.load_dictionary_thread_pool.start(ld)
 
         self.startup_splash.update_text.emit('Getting Indices')
-        self.gui.spd.get_ids()
-        self.gui.spd.get_date_list()
-        self.gui.spd.get_scripture_list()
-        self.gui.spd.backup_db()
+        self.gui.main.get_ids()
+        self.gui.main.get_date_list()
+        self.gui.main.get_scripture_list()
+        self.gui.main.backup_db()
 
         self.startup_splash.update_text.emit('Finishing Up')
         self.gui.create_main_gui.emit()
@@ -878,10 +871,7 @@ class StartupSplash(QDialog):
         self.working_label = QLabel()
         self.working_label.setAutoFillBackground(False)
         self.working_label.setPixmap(QPixmap('resources/icon.png'))
-        #movie = QMovie('resources/waitIcon.webp')
-        #self.working_label.setMovie(movie)
         layout.addWidget(self.working_label, 0, 0, Qt.AlignmentFlag.AlignHCenter)
-        #movie.start()
 
         self.status_label = QLabel('Starting...')
         self.status_label.setFont(QFont('Helvetica', 16, QFont.Weight.Bold))
@@ -933,9 +923,9 @@ class CustomTextEdit(QTextEdit):
         self.full_spell_check_done = False
         self.document().setDefaultStyleSheet(
             'p {'
-                'font-family: ' + self.gui.spd.user_settings['font_family'] + ';'
-                'font-size: ' + self.gui.spd.user_settings['font_size'] + 'pt;'
-                'line-height: ' + self.gui.spd.user_settings['line_spacing'] + ';'
+                'font-family: ' + self.gui.main.user_settings['font_family'] + ';'
+                'font-size: ' + self.gui.main.user_settings['font_size'] + 'pt;'
+                'line-height: ' + self.gui.main.user_settings['line_spacing'] + ';'
             '}'
         )
 
@@ -947,13 +937,13 @@ class CustomTextEdit(QTextEdit):
         cursor = self.textCursor()
         if cursor.charFormat().foreground() == Qt.GlobalColor.red:
             self.word_spell_check.type = 'current'
-            self.gui.spd.spell_check_thread_pool.start(self.word_spell_check)
+            self.gui.main.spell_check_thread_pool.start(self.word_spell_check)
         elif (evt.key() == Qt.Key.Key_Space
                 or evt.key() == Qt.Key.Key_Return
                 or evt.key() == Qt.Key.Key_Enter):
-            if not self.gui.spd.user_settings['disable_spell_check']:
+            if not self.gui.main.user_settings['disable_spell_check']:
                 self.word_spell_check.type = 'previous'
-                self.gui.spd.spell_check_thread_pool.start(self.word_spell_check)
+                self.gui.main.spell_check_thread_pool.start(self.word_spell_check)
         else:
             super().keyReleaseEvent(evt)
 
@@ -976,7 +966,7 @@ class CustomTextEdit(QTextEdit):
         menu.insertAction(menu.actions()[0], clean_whitespace_action)
         menu.insertSeparator(menu.actions()[1])
 
-        if not self.gui.spd.disable_spell_check:
+        if not self.gui.main.disable_spell_check:
             cursor = self.cursorForPosition(evt.pos())
             cursor.select(QTextCursor.SelectionType.WordUnderCursor)
             word = cursor.selection().toPlainText()
@@ -1008,7 +998,7 @@ class CustomTextEdit(QTextEdit):
 
                 menu.insertSeparator(menu.actions()[next_menu_index])
                 action = QAction('Add to dictionary')
-                action.triggered.connect(lambda: self.gui.spd.add_to_dictionary(self, spell_check.clean_word(word)))
+                action.triggered.connect(lambda: self.gui.main.add_to_dictionary(self, spell_check.clean_word(word)))
                 menu.insertAction(menu.actions()[next_menu_index + 2], action)
                 menu.insertSeparator(menu.actions()[next_menu_index + 3])
 
@@ -1020,7 +1010,6 @@ class CustomTextEdit(QTextEdit):
         Method to strip unneeded html tags and convert others to simpler tags
         """
         string = self.toHtml()
-
         string = re.split('<body.*?>', string)[1]
 
         # preserve any desired tags from getting removed during the wholesale <.*?> removal
@@ -1034,25 +1023,49 @@ class CustomTextEdit(QTextEdit):
         bold_texts = re.findall('<span.*?font-weight.*?</span>', string)
         for text in bold_texts:
             new_text = re.sub('<.*?>', '', text)
-            new_text = '{b}' + new_text + '{/b}'
+            # keep spaces on the outside of formatting marks
+            if new_text.startswith(' '):
+                new_text = ' {b}' + new_text[1:]
+            else:
+                new_text = '{b}' + new_text
+            if new_text.endswith(' '):
+                new_text = new_text[:-1] + '{/b} '
+            else:
+                new_text = new_text + '{/b}'
             string = string.replace(text, new_text)
 
         italic_texts = re.findall('<span.*?font-style.*?</span>', string)
         for text in italic_texts:
             new_text = re.sub('<.*?>', '', text)
-            new_text = '{i}' + new_text + '{/i}'
+            # keep spaces on the outside of formatting marks
+            if new_text.startswith(' '):
+                new_text = ' {i}' + new_text[1:]
+            else:
+                new_text = '{i}' + new_text
+            if new_text.endswith(' '):
+                new_text = new_text[:-1] + '{/i} '
+            else:
+                new_text = new_text + '{/i}'
             string = string.replace(text, new_text)
 
         underline_texts = re.findall('<span.*?text-decoration.*?</span>', string)
         for text in underline_texts:
             new_text = re.sub('<.*?>', '', text)
-            new_text = '{u}' + new_text + '{/u}'
+            # keep spaces on the outside of formatting marks
+            if new_text.startswith(' '):
+                new_text = ' {u}' + new_text[1:]
+            else:
+                new_text = '{u}' + new_text
+            if new_text.endswith(' '):
+                new_text = new_text[:-1] + '{/u} '
+            else:
+                new_text = new_text + '{/u}'
             string = string.replace(text, new_text)
 
         # convert preserved tags back to their original form
         string = re.sub('<.*?>', '', string)
-        string = string.replace('{p}', '<p>')
-        string = string.replace('{/p}', '</p>\n')
+        string = string.strip().replace('{p}', '<p>')
+        string = string.strip().replace('{/p}', '</p>\n')
         string = string.replace('{ul}', '<ul>')
         string = string.replace('{/ul}', '</ul>')
         string = string.replace('{li}', '<li>')
@@ -1117,7 +1130,7 @@ class CustomTextEdit(QTextEdit):
     def paintEvent(self, evt):
         if not self.full_spell_check_done:
             spell_check = SpellCheck(self, 'whole', self.gui)
-            self.gui.spd.spell_check_thread_pool.start(spell_check)
+            self.gui.main.spell_check_thread_pool.start(spell_check)
             self.full_spell_check_done = True
         super().paintEvent(evt)
 
@@ -1246,15 +1259,15 @@ class SearchBox(QWidget):
         # be sure to check for changes before pulling up the new record
         goon = True
         if self.gui.changes:
-            goon = self.gui.spd.ask_save()
+            goon = self.gui.main.ask_save()
         if goon:
             id_ = model.index(selection, 0).data()
             index = 0
-            for item in self.gui.spd.ids:
+            for item in self.gui.main.ids:
                 if int(item) == int(id_):
                     break
                 index += 1
-            self.gui.spd.get_by_index(index)
+            self.gui.main.get_by_index(index)
             self.gui.tabbed_frame.setCurrentWidget(self.gui.tabbed_frame.widget(0))
 
     def remove_self(self):
@@ -1278,12 +1291,12 @@ class SermonView(QWidget):
         self.num_pages = 0
         self.current_page = 0
         self.current_font = QFont(
-            self.gui.spd.user_settings['font_family'], int(self.gui.spd.user_settings['font_size']))
+            self.gui.main.user_settings['font_family'], int(self.gui.main.user_settings['font_size']))
         self.page_label = None
 
         self.init_components()
         self.showMaximized()
-        self.gui.spd.app.processEvents()
+        self.gui.main.app.processEvents()
 
         self.page_width = self.width() - 40
         self.page_height = self.height() - self.button_bar.height() - 40

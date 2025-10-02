@@ -275,7 +275,7 @@ class GetFromDocx:
                 else:
                     errors.append([file_list[i], 'Unable to find any text in file'])
 
-        self.gui.spd.insert_imports(errors, sermons)
+        self.gui.main.insert_imports(errors, sermons)
         self.gui.close_import_splash.emit()
 
         self.gui.tabbed_frame.setCurrentWidget(self.gui.sermon_frame)

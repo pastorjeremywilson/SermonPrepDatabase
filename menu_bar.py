@@ -22,21 +22,21 @@ class MenuBar:
     """
     Builds the QMainWindow's menuBar and handles the actions performed by the menu.
     """
-    def __init__(self, gui, spd):
+    def __init__(self, gui, main):
         """
         :param GUI gui: The program's GUI Object
         :param SermonPrepDatabase spd: The program's SermonPrepDatabase object
         """
         self.keyboard = Controller()
         self.gui = gui
-        self.spd = spd
+        self.main = main
         menu_bar = self.gui.menuBar()
 
         file_menu = menu_bar.addMenu('File')
         file_menu.setToolTipsVisible(True)
 
         save_action = file_menu.addAction('Save (Ctrl-S)')
-        save_action.triggered.connect(self.spd.save_rec)
+        save_action.triggered.connect(self.main.save_rec)
 
         print_action = file_menu.addAction('Print (Ctrl-P)')
         print_action.setToolTip('Print the current record')
@@ -161,7 +161,7 @@ class MenuBar:
         self.disable_spell_check_action = config_menu.addAction('Disable Spell Check')
         self.disable_spell_check_action.setToolTip('Disabling spell check improves performance and memory usage')
         self.disable_spell_check_action.setCheckable(True)
-        if self.spd.disable_spell_check:
+        if self.main.disable_spell_check:
             self.disable_spell_check_action.setChecked(True)
         else:
             self.disable_spell_check_action.setChecked(False)
@@ -171,24 +171,24 @@ class MenuBar:
         record_menu.setToolTipsVisible(True)
 
         first_rec_action = record_menu.addAction('Jump to First Record')
-        first_rec_action.triggered.connect(self.spd.first_rec)
+        first_rec_action.triggered.connect(self.main.first_rec)
 
         prev_rec_action = record_menu.addAction('Go to Previous Record')
-        prev_rec_action.triggered.connect(self.spd.prev_rec)
+        prev_rec_action.triggered.connect(self.main.prev_rec)
 
         next_rec_action = record_menu.addAction('Go to Next Record')
-        next_rec_action.triggered.connect(self.spd.next_rec)
+        next_rec_action.triggered.connect(self.main.next_rec)
 
         last_rec_action = record_menu.addAction('Jump to Last Record')
-        last_rec_action.triggered.connect(self.spd.last_rec)
+        last_rec_action.triggered.connect(self.main.last_rec)
 
         record_menu.addSeparator()
 
         new_rec_action = record_menu.addAction('Create New Record')
-        new_rec_action.triggered.connect(self.spd.new_rec)
+        new_rec_action.triggered.connect(self.main.new_rec)
 
         del_rec_action = record_menu.addAction('Delete Current Record')
-        del_rec_action.triggered.connect(self.spd.del_rec)
+        del_rec_action.triggered.connect(self.main.del_rec)
 
         help_menu = menu_bar.addMenu('Help')
 
@@ -215,8 +215,8 @@ class MenuBar:
                 return
 
             import shutil
-            shutil.copy(self.spd.db_loc, fileName[0])
-            self.spd.write_to_log('Created Backup as ' + fileName[0])
+            shutil.copy(self.main.db_loc, fileName[0])
+            self.main.write_to_log('Created Backup as ' + fileName[0])
 
             QMessageBox.information(
                 None,
@@ -226,7 +226,7 @@ class MenuBar:
             )
         # make this more precise you lazy turd
         except Exception as ex:
-            self.spd.write_to_log('There was a problem creating the backup:\n\n' + str(ex), True)
+            self.main.write_to_log('There was a problem creating the backup:\n\n' + str(ex), True)
 
     def restore_backup(self):
         """
@@ -237,16 +237,16 @@ class MenuBar:
         dialog.setWindowTitle('Restore from Backup')
         dialog.setNameFilter('Database File (*.db)')
         dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-        dialog.setDirectory(self.spd.app_dir)
+        dialog.setDirectory(self.main.app_dir)
 
         dialog.exec()
 
         if dialog.selectedFiles():
             db_file = dialog.selectedFiles()[0]
             import shutil
-            shutil.copy(self.spd.db_loc, self.spd.app_dir + '/active-database-backup.db')
-            os.remove(self.spd.db_loc)
-            shutil.copy(db_file, self.spd.db_loc)
+            shutil.copy(self.main.db_loc, self.main.app_dir + '/active-database-backup.db')
+            os.remove(self.main.db_loc)
+            shutil.copy(db_file, self.main.db_loc)
 
             QMessageBox.information(
                 None,
@@ -256,17 +256,17 @@ class MenuBar:
             )
 
             try:
-                self.spd.get_ids()
-                self.spd.get_date_list()
-                self.spd.get_scripture_list()
-                self.spd.get_user_settings()
-                self.gui.toolbar.dates_cb.addItems(self.spd.dates)
-                for item in self.spd.references:
+                self.main.get_ids()
+                self.main.get_date_list()
+                self.main.get_scripture_list()
+                self.main.get_user_settings()
+                self.gui.toolbar.dates_cb.addItems(self.main.dates)
+                for item in self.main.references:
                     self.gui.toolbar.references_cb.addItem(item[0])
-                self.spd.last_rec()
+                self.main.last_rec()
             except Exception as err:
-                shutil.copy(self.spd.app_dir + '/active-database-backup.db', self.spd.db_loc)
-                self.spd.write_to_log('MenuBar.restore_backup: ' + str(err), True)
+                shutil.copy(self.main.app_dir + '/active-database-backup.db', self.main.db_loc)
+                self.main.write_to_log('MenuBar.restore_backup: ' + str(err), True)
 
                 QMessageBox.critical(
                     None,
@@ -276,19 +276,19 @@ class MenuBar:
                     QMessageBox.StandardButton.Ok
                 )
 
-                self.spd.get_ids()
-                self.spd.get_date_list()
-                self.spd.get_scripture_list()
-                self.spd.get_user_settings()
-                self.gui.toolbar.dates_cb.addItems(self.spd.dates)
-                for item in self.spd.references:
+                self.main.get_ids()
+                self.main.get_date_list()
+                self.main.get_scripture_list()
+                self.main.get_user_settings()
+                self.gui.toolbar.dates_cb.addItems(self.main.dates)
+                for item in self.main.references:
                     self.gui.references_cb.addItem(item[0])
-                self.spd.last_rec()
+                self.main.last_rec()
             else:
                 QMessageBox.information(
                     None,
                     'Backup Restored',
-                    'Backup successfully restored.\n\nA copy of your prior database has been saved as ' + self.spd.app_dir
+                    'Backup successfully restored.\n\nA copy of your prior database has been saved as ' + self.main.app_dir
                     + '/active-database-backup.db',
                     QMessageBox.StandardButton.Ok
                 )
@@ -321,12 +321,12 @@ class MenuBar:
         )
         try:
             if file[0]:
-                shutil.copy(file[0], self.spd.app_dir + '/my_bible.xml')
-                self.spd.bible_file = self.spd.app_dir + '/my_bible.xml'
+                shutil.copy(file[0], self.main.app_dir + '/my_bible.xml')
+                self.main.bible_file = self.main.app_dir + '/my_bible.xml'
 
                 # verify the file by attempting to get a passage from the new file
                 from get_scripture import GetScripture
-                self.gui.gs = GetScripture(self.spd)
+                self.gui.gs = GetScripture(self.main)
                 passage = self.gui.gs.get_passage('John 3:16')
 
                 if not passage or passage == -1 or passage == '':
@@ -339,8 +339,8 @@ class MenuBar:
                     )
 
                     # we're just not going to worry about the option to have multiple bibles
-                    if exists(self.spd.app_dir + '/my_bible.xml'):
-                        os.remove(self.spd.app_dir + '/my_bible.xml')
+                    if exists(self.main.app_dir + '/my_bible.xml'):
+                        os.remove(self.main.app_dir + '/my_bible.xml')
                 else:
                     QMessageBox.information(
                         self.gui,
@@ -354,12 +354,12 @@ class MenuBar:
                         self.gui.auto_fill_checkbox.setChecked(True)
                         self.gui.set_style_sheets()
                         self.gui.tabbed_frame.setCurrentIndex(0)
-                        self.spd.get_by_index(self.spd.current_rec_index)
+                        self.main.get_by_index(self.main.current_rec_index)
                     except Exception:
                         logging.exception('')
 
         except Exception as ex:
-            self.spd.write_to_log(str(ex))
+            self.main.write_to_log(str(ex))
             QMessageBox.warning(
                 self.gui,
                 'Import Error',
@@ -367,8 +367,8 @@ class MenuBar:
                 QMessageBox.StandardButton.Ok
             )
 
-            if exists(self.spd.app_dir + '/my_bible.xml'):
-                os.remove(self.spd.app_dir + '/my_bible.xml')
+            if exists(self.main.app_dir + '/my_bible.xml'):
+                os.remove(self.main.app_dir + '/my_bible.xml')
 
     def rename_labels(self):
         """
@@ -387,12 +387,12 @@ class MenuBar:
 
         # provide two columns in the QTableView; one that will contain the labels as they are, the other to provide
         # an area to change the label's name
-        model = QStandardItemModel(len(self.spd.user_settings), 2)
+        model = QStandardItemModel(len(self.main.user_settings), 2)
         for i in range(1, 22):
-            item = QStandardItem(self.spd.user_settings[f'label{i}'])
+            item = QStandardItem(self.main.user_settings[f'label{i}'])
             item.setEditable(False)
             model.setItem(i, 0, item)
-            item2 = QStandardItem(self.spd.user_settings[f'label{i}'])
+            item2 = QStandardItem(self.main.user_settings[f'label{i}'])
             model.setItem(i, 1, item2)
         model.setHeaderData(0, Qt.Orientation.Horizontal, 'Current Label')
         model.setHeaderData(1, Qt.Orientation.Horizontal, 'New Label')
@@ -417,10 +417,9 @@ class MenuBar:
         :param QStandardItemModel model: The QStandardItemModel that contains the user's new label names.
         """
         for i in range(model.rowCount()):
-            self.spd.user_settings[f'label{i + 1}'] = model.data(model.index(i, 1))
-        print(self.spd.user_settings)
+            self.main.user_settings[f'label{i + 1}'] = model.data(model.index(i, 1))
         return
-        self.spd.save_user_settings()
+        self.main.save_user_settings()
 
         self.rename_widget.destroy()
 
@@ -429,7 +428,7 @@ class MenuBar:
                 self.gui.layout.removeWidget(widget)
 
         self.gui.menu_bar = self
-        self.gui.toolbar = Toolbar(self.gui, self.spd)
+        self.gui.toolbar = Toolbar(self.gui, self.main)
         self.gui.layout.addWidget(self.gui.toolbar)
         self.gui.build_tabbed_frame()
         self.gui.build_scripture_tab()
@@ -439,7 +438,7 @@ class MenuBar:
         self.gui.build_sermon_tab()
         self.gui.set_style_sheets()
 
-        self.spd.get_by_index(self.spd.current_rec_index)
+        self.main.get_by_index(self.main.current_rec_index)
 
     def color_change(self, type):
         """
@@ -510,16 +509,16 @@ class MenuBar:
             else:
                 self.gui.tabbed_frame.setTabIcon(i, self.gui.light_tab_icons[i])
 
-        self.spd.user_settings['theme'] = type
-        self.spd.save_user_settings()
+        self.main.user_settings['theme'] = type
+        self.main.save_user_settings()
 
     def disable_spell_check(self):
         """
         Method to turn on or off the spell checking capabilities of the CustomTextEdit.
         """
         if self.disable_spell_check_action.isChecked():
-            self.spd.user_settings['disable_spell_check'] = True
-            self.spd.save_user_settings()
+            self.main.user_settings['disable_spell_check'] = True
+            self.main.save_user_settings()
 
             # remove any red formatting created by spell check
             for widget in self.gui.tabbed_frame.findChildren(QTextEdit, 'custom_text_edit'):
@@ -539,16 +538,16 @@ class MenuBar:
 
         else:
             # if spell check is enabled after having been disabled at startup, the dictionary will need to be loaded
-            if not self.spd.sym_spell:
-                ld = LoadDictionary(self.spd)
-                self.spd.load_dictionary_thread_pool.start(ld)
-            self.spd.user_settings['disable_spell_check'] = False
-            self.spd.save_user_settings()
+            if not self.main.sym_spell:
+                ld = LoadDictionary(self.main)
+                self.main.load_dictionary_thread_pool.start(ld)
+            self.main.user_settings['disable_spell_check'] = False
+            self.main.save_user_settings()
 
             # run spell check on all CustomTextEdits
             for widget in self.gui.tabbed_frame.findChildren(QTextEdit, 'custom_text_edit'):
                 spell_check = SpellCheck(widget, 'whole', self.gui)
-                self.gui.spd.spell_check_thread_pool.start(spell_check)
+                self.gui.main.spell_check_thread_pool.start(spell_check)
 
     def show_help(self):
         """
@@ -562,10 +561,10 @@ class MenuBar:
         help_layout = QVBoxLayout(self.help_widget)
 
         help_label = QLabel('Help Topics')
-        help_label.setFont(QFont(self.gui.spd.user_settings['font_family'], 20))
+        help_label.setFont(QFont(self.gui.main.user_settings['font_family'], 20))
         help_layout.addWidget(help_label)
 
-        sh = ShowHelp(self.gui, self.spd)
+        sh = ShowHelp(self.gui, self.main)
         help_layout.addWidget(sh)
 
         self.help_widget.showMaximized()
@@ -578,7 +577,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         self.about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.5.0.3')
+        about_label = QLabel('Sermon Prep Database v.5.0.3.001')
         about_layout.addWidget(about_label)
 
         about_text = QTextBrowser()
@@ -616,15 +615,15 @@ class MenuBar:
         Instantiate the RemoveCustomWords class from dialogs.py
         """
         from dialogs import RemoveCustomWords
-        self.rcm = RemoveCustomWords(self.spd)
+        self.rcm = RemoveCustomWords(self.main)
 
     def change_font(self):
         """
         Method to provide a font choosing widget to the user by obtaining a list of all the fonts available to
         the system.
         """
-        current_font = self.spd.user_settings['font_family']
-        current_size = self.spd.user_settings['font_size']
+        current_font = self.main.user_settings['font_family']
+        current_size = self.main.user_settings['font_size']
 
         global font_chooser
         font_chooser = QWidget()
@@ -672,14 +671,14 @@ class MenuBar:
         to be effected, ask for save first.
         """
         if spacing == 'compact':
-            self.spd.user_settings['line_spacing'] = '1.0'
+            self.main.user_settings['line_spacing'] = '1.0'
         elif spacing == 'regular':
-            self.spd.user_settings['line_spacing'] = '1.2'
+            self.main.user_settings['line_spacing'] = '1.2'
         elif spacing == 'wide':
-            self.spd.user_settings['line_spacing'] = '1.5'
+            self.main.user_settings['line_spacing'] = '1.5'
 
         self.gui.apply_line_spacing()
-        self.spd.save_user_settings()
+        self.main.save_user_settings()
 
     def press_ctrl_z(self):
         """
@@ -732,7 +731,7 @@ class MenuBar:
         """
         goon = True
         if self.gui.changes:
-            goon = self.spd.ask_save()
+            goon = self.main.ask_save()
         if goon:
             sys.exit(0)
 
@@ -1084,7 +1083,7 @@ class FontFaceComboBox(QComboBox):
                 row += 1
 
         except Exception:
-            self.gui.spd.error_log()
+            self.gui.main.error_log()
 
 
 class PrintHandler(QWidget):
@@ -1161,7 +1160,7 @@ class PrintHandler(QWidget):
 
             if has_contents:
                 text_with_headers.append(
-                    f'<b><u>{self.gui.spd.user_settings["label" + str(i + 1)]}</u></b>'
+                    f'<b><u>{self.gui.main.user_settings["label" + str(i + 1)]}</u></b>'
                 )
                 text_with_headers.append(all_data[i])
 

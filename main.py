@@ -4,7 +4,7 @@ Author: Jeremy G. Wilson
 Copyright: 2025 Jeremy G. Wilson
 
 This file, and the files contained in the distribution are parts of
-the Sermon Prep Database program (v.5.0.3)
+the Sermon Prep Database program (v.5.0.3.001)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -29,7 +29,7 @@ import sys
 import time
 import traceback
 
-from PyQt6.QtCore import Qt, QThreadPool
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QPixmap
 from PyQt6.QtWidgets import QLineEdit, QTextEdit, QDateEdit, QLabel, QDialog, QVBoxLayout, \
     QMessageBox, QWidget, QApplication
@@ -37,8 +37,10 @@ from datetime import datetime
 from os.path import exists
 from sqlite3 import OperationalError
 
+from gui import GUI
 
-class SermonPrepDatabase:
+
+class Main:
     """
     The main program class that handles startup methods such as checking for/creating a new database, instantiating
     the gui, and polling the database for data. Also handles any database reading and writing methods.
@@ -60,17 +62,15 @@ class SermonPrepDatabase:
     cwd = ''
     sym_spell = None
 
-    def __init__(self, gui):
+    def __init__(self):
         """
         On startup, initialize a QApplication, get the platform, set the app_dir and db_loc, instantiate the GUI
         Use the change_text signal to alter the text on the splash screen
         """
         os.chdir(os.path.dirname(__file__))
-        self.gui = gui
-        self.spell_check_thread_pool = QThreadPool()
-        self.spell_check_thread_pool.setStackSize(256000000)
-        self.load_dictionary_thread_pool = QThreadPool()
         self.app = QApplication(sys.argv)
+        self.gui = GUI(self)
+        self.app.exec()
 
     def get_system_info(self):
         self.platform = sys.platform
@@ -91,7 +91,7 @@ class SermonPrepDatabase:
             if not exists(self.app_dir):
                 os.mkdir(self.app_dir)
 
-            self.write_to_log('application version is v.5.0.3')
+            self.write_to_log('application version is v.5.0.3.001')
             self.write_to_log('platform is ' + self.platform)
             self.write_to_log('current working directory is ' + os.path.dirname(__file__))
             self.write_to_log('application directory is ' + self.app_dir)
@@ -703,6 +703,7 @@ class SermonPrepDatabase:
             self.gui.toolbar.references_cb.blockSignals(False)
 
             self.last_rec()
+            self.gui.changes = False
 
     def del_rec(self):
         """
@@ -881,16 +882,16 @@ class SermonPrepDatabase:
         self.widget.setLayout(layout)
 
         importing_label = QLabel('Importing...')
-        importing_label.setFont(QFont(self.gui.spd.user_settings['font_family'], int(self.gui.spd.user_settings['font_size']), QFont.Weight.Bold))
+        importing_label.setFont(QFont(self.gui.main.user_settings['font_family'], int(self.gui.main.user_settings['font_size']), QFont.Weight.Bold))
         layout.addWidget(importing_label)
         layout.addSpacing(50)
 
         self.dir_label = QLabel('Looking in...')
-        self.dir_label.setFont(QFont(self.gui.spd.user_settings['font_family'], int(self.gui.spd.user_settings['font_size'])))
+        self.dir_label.setFont(QFont(self.gui.main.user_settings['font_family'], int(self.gui.main.user_settings['font_size'])))
         layout.addWidget(self.dir_label)
 
         self.file_label = QLabel('Examining...')
-        self.file_label.setFont(QFont(self.gui.spd.user_settings['font_family'], int(self.gui.spd.user_settings['font_size'])))
+        self.file_label.setFont(QFont(self.gui.main.user_settings['font_family'], int(self.gui.main.user_settings['font_size'])))
         layout.addWidget(self.file_label)
 
         self.widget.setWindowModality(Qt.WindowModality.WindowModal)
@@ -972,7 +973,4 @@ def log_unhandled_exception(exc_type, exc_value, exc_traceback):
 # main entry point for the program
 if __name__ == '__main__':
     sys.excepthook = log_unhandled_exception
-    from gui import GUI
-    app = QApplication(sys.argv)
-    gui = GUI()
-    app.exec()
+    Main()

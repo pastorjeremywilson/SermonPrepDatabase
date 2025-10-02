@@ -7,10 +7,10 @@ class Toolbar(QWidget):
     """
     Toolbar creates the uppermost QWidget of the GUI that holds formatting, search, and navigation elements.
     """
-    def __init__(self, gui, spd):
+    def __init__(self, gui, main):
         super().__init__()
         self.gui = gui
-        self.spd = spd
+        self.main = main
         self.setObjectName('toolbar')
 
         icon_size = QSize(16, 16)
@@ -89,8 +89,9 @@ class Toolbar(QWidget):
         toolbar_layout.addWidget(dates_label)
 
         self.dates_cb = QComboBox()
-        self.dates_cb.addItems(self.spd.dates)
-        self.dates_cb.currentIndexChanged.connect(lambda: self.spd.get_by_index(self.dates_cb.currentIndex()))
+        self.dates_cb.addItems(self.main.dates)
+        self.dates_cb.currentIndexChanged.connect(lambda: self.main.get_by_index(self.dates_cb.currentIndex()))
+        self.dates_cb.setMinimumWidth(100)
         toolbar_layout.addWidget(self.dates_cb)
 
         references_label = QLabel('Choose Record by Sermon Reference:')
@@ -98,7 +99,7 @@ class Toolbar(QWidget):
         toolbar_layout.addWidget(references_label)
 
         self.references_cb = QComboBox()
-        for item in self.spd.references:
+        for item in self.main.references:
             self.references_cb.addItem(item[0])
         self.references_cb.currentIndexChanged.connect(
             lambda: self.get_index_of_reference(self.references_cb.currentIndex()))
@@ -118,32 +119,32 @@ class Toolbar(QWidget):
         self.first_rec_button = QPushButton()
         self.first_rec_button.setIcon(QIcon('resources/svg/spFirstRecIcon.svg'))
         self.first_rec_button.setIconSize(icon_size)
-        self.first_rec_button.clicked.connect(lambda: self.spd.first_rec())
+        self.first_rec_button.clicked.connect(self.main.first_rec)
         self.first_rec_button.setToolTip('Jump to First Record')
         toolbar_layout.addWidget(self.first_rec_button)
 
         self.prev_rec_button = QPushButton()
         self.prev_rec_button.setIcon(QIcon('resources/svg/spPrevRecIcon.svg'))
         self.prev_rec_button.setIconSize(icon_size)
-        self.prev_rec_button.clicked.connect(lambda: self.spd.prev_rec())
+        self.prev_rec_button.clicked.connect(self.main.prev_rec)
         self.prev_rec_button.setToolTip('Go to Previous Record')
         toolbar_layout.addWidget(self.prev_rec_button)
 
         self.next_rec_button = QPushButton()
         self.next_rec_button.setIcon(QIcon('resources/svg/spNextRecIcon.svg'))
-        self.next_rec_button.clicked.connect(lambda: self.spd.next_rec())
+        self.next_rec_button.clicked.connect(self.main.next_rec)
         self.next_rec_button.setToolTip('Go to Next Record')
         toolbar_layout.addWidget(self.next_rec_button)
 
         self.last_rec_button = QPushButton()
         self.last_rec_button.setIcon(QIcon('resources/svg/spLastRecIcon.svg'))
-        self.last_rec_button.clicked.connect(lambda: self.spd.last_rec())
+        self.last_rec_button.clicked.connect(self.main.last_rec)
         self.last_rec_button.setToolTip('Jump to Last Record')
         toolbar_layout.addWidget(self.last_rec_button)
 
         self.new_rec_button = QPushButton()
         self.new_rec_button.setIcon(QIcon('resources/svg/spNewIcon.svg'))
-        self.new_rec_button.clicked.connect(lambda: self.spd.new_rec())
+        self.new_rec_button.clicked.connect(self.main.new_rec)
         self.new_rec_button.setToolTip('Create a New Record')
         toolbar_layout.addWidget(self.new_rec_button)
         toolbar_layout.addSpacing(20)
@@ -151,7 +152,7 @@ class Toolbar(QWidget):
         self.save_button = QPushButton()
         self.save_button.setIcon(QIcon('resources/svg/spSaveIcon.svg'))
         self.save_button.setIconSize(icon_size)
-        self.save_button.clicked.connect(lambda: self.spd.save_rec())
+        self.save_button.clicked.connect(self.main.save_rec)
         self.save_button.setToolTip('Save this Record')
         toolbar_layout.addWidget(self.save_button)
 
@@ -200,13 +201,13 @@ class Toolbar(QWidget):
 
         :param int index: The index of the reference combo box's chosen reference
         """
-        id_to_find = self.spd.references[index][1]
+        id_to_find = self.main.references[index][1]
         counter = 0
-        for item in self.spd.ids:
+        for item in self.main.ids:
             if item == id_to_find:
                 break
             counter += 1
-        self.spd.get_by_index(counter)
+        self.main.get_by_index(counter)
 
     def do_search(self, text):
         """
@@ -214,7 +215,7 @@ class Toolbar(QWidget):
 
         :param str text: The user's search term(s)
         """
-        result_list = self.spd.get_search_results(text)
+        result_list = self.main.get_search_results(text)
         if len(result_list) == 0:
             QMessageBox.information(
                 None,

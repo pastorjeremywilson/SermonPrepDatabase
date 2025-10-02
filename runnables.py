@@ -38,7 +38,7 @@ class SpellCheck(QRunnable):
         self.cursor.movePosition(QTextCursor.MoveOperation.Start)
 
         marked_word_indices = []
-        while not self.gui.spd.disable_spell_check:
+        while not self.gui.main.disable_spell_check:
             self.cursor.select(QTextCursor.SelectionType.WordUnderCursor)
             word = self.cursor.selection().toPlainText()
 
@@ -66,7 +66,7 @@ class SpellCheck(QRunnable):
             suggestions = None
             if len(cleaned_word) > 0 and not any(c.isnumeric() for c in cleaned_word):
                 if any(h.isalpha() for h in cleaned_word):
-                    suggestions = self.gui.spd.sym_spell.lookup(
+                    suggestions = self.gui.main.sym_spell.lookup(
                         cleaned_word, Verbosity.CLOSEST,
                         max_edit_distance=2,
                         include_unknown=True
@@ -115,8 +115,8 @@ class SpellCheck(QRunnable):
 
         suggestions = None
         if len(cleaned_word) > 0 and not any(c.isnumeric() for c in cleaned_word):
-            suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
-                                                        include_unknown=True)
+            suggestions = self.gui.main.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+                                                         include_unknown=True)
             word_index = [self.cursor.selectionStart()]
             if suggestions:
                 # if the first suggestion is the same as the word, then it's not spelled wrong
@@ -136,8 +136,8 @@ class SpellCheck(QRunnable):
         suggestions = None
         if len(cleaned_word) > 0 and not any(c.isnumeric() for c in cleaned_word):
             if any(h.isalpha() for h in cleaned_word):
-                suggestions = self.gui.spd.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
-                                                            include_unknown=True)
+                suggestions = self.gui.main.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+                                                             include_unknown=True)
 
             if suggestions:
                 return suggestions
