@@ -154,7 +154,11 @@ class Toolbar(QWidget):
 
         toolbar_layout.addStretch(1)
 
-        dates_label = QLabel('Choose Record by Date:')
+        choose_label = QLabel('Get Sermon:')
+        choose_label.setAutoFillBackground(False)
+        toolbar_layout.addWidget(choose_label)
+
+        dates_label = QLabel('by Date')
         dates_label.setAutoFillBackground(False)
         toolbar_layout.addWidget(dates_label)
 
@@ -164,7 +168,7 @@ class Toolbar(QWidget):
         self.dates_cb.setMinimumWidth(100)
         toolbar_layout.addWidget(self.dates_cb)
 
-        references_label = QLabel('Choose Record by Sermon Reference:')
+        references_label = QLabel('by Reference')
         references_label.setAutoFillBackground(False)
         toolbar_layout.addWidget(references_label)
 
@@ -174,13 +178,14 @@ class Toolbar(QWidget):
         self.references_cb.currentIndexChanged.connect(
             lambda: self.get_index_of_reference(self.references_cb.currentIndex()))
         toolbar_layout.addWidget(self.references_cb)
+        toolbar_layout.addStretch(1)
 
         search_label = QLabel('Keyword Search:')
         search_label.setAutoFillBackground(False)
         toolbar_layout.addWidget(search_label)
 
         search_field = QLineEdit()
-        search_field.setMinimumWidth(200)
+        search_field.setMinimumWidth(175)
         search_field.returnPressed.connect(lambda: self.do_search(search_field.text()))
         toolbar_layout.addWidget(search_field)
 
@@ -294,7 +299,7 @@ class Toolbar(QWidget):
                 QMessageBox.StandardButton.Ok
             )
         else:
-            from gui import SearchBox
+            from widgets import SearchBox
             search_box = SearchBox(self.gui)
             self.gui.tabbed_frame.addTab(search_box, QIcon('resources/svg/spSearchIcon.svg'), 'Search')
             search_box.show_results(result_list)
@@ -980,7 +985,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         self.about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.5.0.3.002')
+        about_label = QLabel('Sermon Prep Database v.5.0.3.003')
         about_layout.addWidget(about_label)
 
         about_text = QTextBrowser()

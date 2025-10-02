@@ -109,6 +109,7 @@ def timed_popup(gui, message, millis):
 
     dialog.show()
 
+
 class RemoveCustomWords:
     """
     Class to enable the user to remove words they have added to the dictionary.
@@ -176,7 +177,7 @@ class RemoveCustomWords:
                 for word in self.removed_words:
                     self.spd.sym_spell.delete_dictionary_entry(word)
 
-                from gui import CustomTextEdit
+                from widgets import CustomTextEdit
                 for widget in self.spd.gui.tabbed_frame.currentWidget().findChildren(CustomTextEdit):
                     widget.check_whole_text()
             except Exception as ex:
