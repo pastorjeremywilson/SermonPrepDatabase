@@ -41,7 +41,7 @@ class InitialStartup(QRunnable):
         self.gui.main.get_scripture_list()
         self.gui.main.backup_db()
 
-        self.startup_splash.update_text.emit('Finishing Up')
+        self.startup_splash.update_text.emit(' Finishing Up ')
         self.gui.create_main_gui.emit()
         self.startup_splash.end.emit()
 

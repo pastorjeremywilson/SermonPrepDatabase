@@ -473,9 +473,11 @@ class GUI(QMainWindow):
             font_height = font_metrics.height()
             line_height_pixels = font_height * float(line_height)
             cursor = text_edit.textCursor()
+            block_count = 0
             while block.isValid():
                 block_format = block.blockFormat()
                 block_format.setLineHeight(line_height_pixels, QTextBlockFormat.LineHeightTypes.FixedHeight.value)
+                block_format.setTopMargin(0)
                 block_format.setBottomMargin(line_height_pixels / 2)
 
                 # Apply the format using a cursor
@@ -484,6 +486,7 @@ class GUI(QMainWindow):
                 cursor.setBlockFormat(block_format)
 
                 block = block.next()
+                block_count += 1
 
         self.menuBar().findChild(QAction, 'compact').setChecked(str(line_height) == '1.0')
         self.menuBar().findChild(QAction, 'regular').setChecked(str(line_height) == '1.2')

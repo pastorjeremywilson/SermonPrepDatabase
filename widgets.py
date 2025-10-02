@@ -3,6 +3,7 @@ import os
 import re
 import shutil
 import sys
+import time
 from os.path import exists
 
 import wmi
@@ -31,19 +32,18 @@ class StartupSplash(QDialog):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setMinimumWidth(300)
 
-        layout = QGridLayout()
-        self.setLayout(layout)
+        layout = QVBoxLayout(self)
 
         self.working_label = QLabel()
         self.working_label.setAutoFillBackground(False)
         self.working_label.setPixmap(QPixmap('resources/icon.png'))
-        layout.addWidget(self.working_label, 0, 0, Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(self.working_label, Qt.AlignmentFlag.AlignHCenter)
 
         self.status_label = QLabel('Starting...')
-        self.status_label.setFont(QFont('Helvetica', 16, QFont.Weight.Bold))
+        self.status_label.setFont(QFont('Helvetica', 14, QFont.Weight.Bold))
         self.status_label.setStyleSheet('color: #d7d7f4; text-align: center;')
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.status_label, 1, 0, Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.status_label, Qt.AlignmentFlag.AlignCenter)
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(1, progress_end)
@@ -57,7 +57,7 @@ class StartupSplash(QDialog):
                 'background: #d7d7f4;'
             '}'
         )
-        layout.addWidget(self.progress_bar)
+        layout.addWidget(self.progress_bar, Qt.AlignmentFlag.AlignCenter)
 
         self.show()
         QApplication.processEvents()
