@@ -141,10 +141,12 @@ QPushButton {
 	padding-right: 10px;
 	padding-top: 5px;
 	padding-bottom: 5px;
+	border: 1px solid #202020;
 	border-style: outset;
 }
 QPushButton:hover {
 	background: #000000;
+	color: #ffffff;
 }
 QPushButton:pressed {
 	background: #aaaaaa;

@@ -2,9 +2,50 @@ import os
 import re
 from os.path import exists
 
-from PyQt6.QtCore import QRunnable, Qt
+from PyQt6.QtCore import QRunnable, Qt, QThreadPool
 from PyQt6.QtGui import QTextCursor
 from symspellpy import Verbosity, SymSpell
+
+from widgets import StartupSplash
+
+
+class InitialStartup(QRunnable):
+    """
+    QDialog class that shows the user the process of starting up the application.
+
+    :param GUI gui: The GUI class.
+    """
+    def __init__(self, gui):
+        super().__init__()
+
+        self.gui = gui
+        self.startup_splash = StartupSplash(gui, 6)
+
+    def run(self):
+        self.startup_splash.update_text.emit('Getting System Info')
+        self.gui.main.get_system_info()
+
+        self.startup_splash.update_text.emit('Getting User Settings')
+        self.gui.main.get_user_settings()
+
+        self.startup_splash.update_text.emit('Loading Dictionaries')
+        self.gui.main.spell_check_thread_pool = QThreadPool()
+        self.gui.main.spell_check_thread_pool.setStackSize(256000000)
+        self.gui.main.load_dictionary_thread_pool = QThreadPool()
+        ld = LoadDictionary(self.gui.main)
+        self.gui.main.load_dictionary_thread_pool.start(ld)
+
+        self.startup_splash.update_text.emit('Getting Indices')
+        self.gui.main.get_ids()
+        self.gui.main.get_date_list()
+        self.gui.main.get_scripture_list()
+        self.gui.main.backup_db()
+
+        self.startup_splash.update_text.emit('Finishing Up')
+        self.gui.create_main_gui.emit()
+        self.startup_splash.end.emit()
+
+        self.gui.changes = False
 
 
 class SpellCheck(QRunnable):
