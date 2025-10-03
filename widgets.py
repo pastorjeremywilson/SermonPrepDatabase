@@ -2094,7 +2094,7 @@ class SearchBox(QWidget):
         header_layout.addWidget(results_label)
 
         close_button = QPushButton()
-        close_button.setIcon(QIcon('resources/svg/spCloseIcon.svg'))
+        close_button.setIcon(QIcon('resources/svg/spCloseIconDark.svg'))
         close_button.setToolTip('Close the search tab')
         close_button.pressed.connect(self.remove_self)
         header_layout.addStretch()
