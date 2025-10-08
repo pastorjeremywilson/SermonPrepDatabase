@@ -3,10 +3,10 @@ from os.path import exists
 from PyQt6.QtCore import Qt, QSize, QDate, QDateTime, pyqtSignal, QThreadPool
 from PyQt6.QtGui import QIcon, QFont, QPixmap, QColor, QCloseEvent, QAction, QUndoStack, QTextCursor, QTextBlockFormat
 from PyQt6.QtWidgets import QWidget, QTabWidget, QGridLayout, QLabel, QLineEdit, \
-    QCheckBox, QDateEdit, QTextEdit, QMainWindow, QVBoxLayout, QPushButton, QTabBar
+    QCheckBox, QDateEdit, QTextEdit, QMainWindow, QVBoxLayout, QPushButton, QTabBar, QApplication
 
 from get_scripture import GetScripture
-from widgets import MenuBar
+from widgets import MenuBar, StartupSplash
 from runnables import InitialStartup
 from widgets import Toolbar
 from widgets import CustomTextEdit, ScriptureBox, SermonView
@@ -14,6 +14,8 @@ from widgets import CustomTextEdit, ScriptureBox, SermonView
 
 class GUI(QMainWindow):
     main = None
+    update_startup_splash_text = pyqtSignal(str)
+    startup_splash_end = pyqtSignal()
     undo_stack = None
     changes = False
     gs = None
@@ -34,10 +36,14 @@ class GUI(QMainWindow):
         super().__init__()
         self.main = main
 
+        self.update_startup_splash_text.connect(self.change_startup_splash_text)
+        self.startup_splash_end.connect(self.end_startup_splash)
+
         self.create_main_gui.connect(self.create_gui)
         self.clear_changes_signal.connect(self.clear_changes)
         self.set_text_cursor_signal.connect(self.set_text_cursor)
         self.selection_color_signal.connect(self.set_text_color_on_selection)
+        self.set_text_color_signal.connect(self.set_multiple_text_color)
         self.reset_cursor_color_signal.connect(self.reset_cursor_color)
 
         self.standard_font = None
@@ -77,9 +83,26 @@ class GUI(QMainWindow):
             QIcon('resources/svg/spSermonIconDark.svg')
         ]
 
+        self.startup_splash = StartupSplash(self, 6)
+        self.startup_splash.show()
+        self.main.app.processEvents()
+
         initial_startup = InitialStartup(self)
         startup_thread_pool = QThreadPool()
         startup_thread_pool.start(initial_startup)
+
+    def change_startup_splash_text(self, text):
+        """
+        Method to change the text shown on the splash screen.
+
+        :param str text: The text to display.
+        """
+        self.startup_splash.status_label.setText(text)
+        self.startup_splash.progress_bar.setValue(self.startup_splash.progress_bar.value() + 1)
+        self.main.app.processEvents()
+
+    def end_startup_splash(self):
+        self.startup_splash.deleteLater()
 
     def create_gui(self):
         """
@@ -115,11 +138,12 @@ class GUI(QMainWindow):
         self.menu_bar.color_change(self.main.user_settings['theme'])
 
         self.main.current_rec_index = len(self.main.ids) - 1
-        self.main.get_by_index(self.main.current_rec_index)
         self.apply_font(self.main.user_settings['font_family'], self.main.user_settings['font_size'])
         self.apply_line_spacing()
 
         self.showMaximized()
+        QApplication.processEvents()
+        self.main.get_by_index(self.main.current_rec_index)
     
     def build_tabbed_frame(self):
         """
@@ -732,6 +756,19 @@ class GUI(QMainWindow):
         this_cursor.setPosition(selection_end, QTextCursor.MoveMode.KeepAnchor)
         char_format = this_cursor.charFormat()
         char_format.setForeground(color)
+        this_cursor.mergeCharFormat(char_format)
+
+    def set_multiple_text_color(self, widget, indices, color):
+        this_cursor = widget.textCursor()
+
+        for index in indices:
+            this_cursor.setPosition(index[0], QTextCursor.MoveMode.MoveAnchor)
+            this_cursor.setPosition(index[1], QTextCursor.MoveMode.KeepAnchor)
+            char_format = this_cursor.charFormat()
+            char_format.setForeground(color)
+            char_format.setFontUnderline(True)
+            this_cursor.mergeCharFormat(char_format)
+            this_cursor.clearSelection()
 
     def reset_cursor_color(self, widget):
         cursor = widget.textCursor()

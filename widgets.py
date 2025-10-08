@@ -3,32 +3,26 @@ import os
 import re
 import shutil
 import sys
-import time
 from os.path import exists
 
 import wmi
-from PyQt6.QtCore import pyqtSignal, Qt, QSize, QSizeF, QRectF
+from PyQt6.QtCore import Qt, QSize, QSizeF, QRectF
 from PyQt6.QtGui import QPixmap, QFont, QAction, QTextCursor, QIcon, QStandardItemModel, QStandardItem, QTextDocument, \
-    QTextOption, QPainter, QTextListFormat, QTextCharFormat, QFontDatabase
+    QTextOption, QPainter, QTextListFormat, QTextCharFormat, QFontDatabase, QSyntaxHighlighter
 from PyQt6.QtPrintSupport import QPrinter
-from PyQt6.QtWidgets import QDialog, QTextEdit, QWidget, QGridLayout, QLabel, QProgressBar, QApplication, QVBoxLayout, \
-    QHBoxLayout, QPushButton, QTableView, QMessageBox, QLineEdit, QComboBox, QFileDialog, QTabWidget, QTextBrowser, \
-    QSpinBox, QDateEdit
+from PyQt6.QtWidgets import QTextEdit, QWidget, QLabel, QProgressBar, QVBoxLayout, QHBoxLayout, QPushButton, \
+    QTableView, QMessageBox, QLineEdit, QComboBox, QFileDialog, QTabWidget, QTextBrowser, QSpinBox, QDateEdit
 from pynput.keyboard import Key, Controller
+from symspellpy import Verbosity
 
 
-class StartupSplash(QDialog):
-    update_text = pyqtSignal(str)
-    end = pyqtSignal()
-
+class StartupSplash(QWidget):
     def __init__(self, gui, progress_end):
         super().__init__()
         self.gui = gui
-        self.update_text.connect(self.change_text)
-        self.end.connect(lambda: self.done(0))
 
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
-        self.setModal(True)
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setMinimumWidth(300)
 
@@ -58,19 +52,6 @@ class StartupSplash(QDialog):
             '}'
         )
         layout.addWidget(self.progress_bar, Qt.AlignmentFlag.AlignCenter)
-
-        self.show()
-        QApplication.processEvents()
-
-    def change_text(self, text):
-        """
-        Method to change the text shown on the splash screen.
-
-        :param str text: The text to display.
-        """
-        self.status_label.setText(text)
-        self.progress_bar.setValue(self.progress_bar.value() + 1)
-        QApplication.processEvents()
 
 
 class Toolbar(QWidget):
@@ -985,7 +966,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         self.about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.5.0.3.003')
+        about_label = QLabel('Sermon Prep Database v.5.0.3.004')
         about_layout.addWidget(about_label)
 
         about_text = QTextBrowser()
@@ -1835,30 +1816,9 @@ class CustomTextEdit(QTextEdit):
             '}'
         )
 
+        self.spell_check_highlighter = SpellCheckHighlighter(self.document(), self.gui)
+
         self.textChanged.connect(self.text_changed)
-        from runnables import SpellCheck
-        self.word_spell_check = SpellCheck(self, 'previous', self.gui)
-        self.word_spell_check.setAutoDelete(False)
-
-    def keyReleaseEvent(self, evt):
-        cursor = self.textCursor()
-        if cursor.charFormat().foreground() == Qt.GlobalColor.red:
-            self.word_spell_check.type = 'current'
-            self.gui.main.spell_check_thread_pool.start(self.word_spell_check)
-        elif (evt.key() == Qt.Key.Key_Space
-                or evt.key() == Qt.Key.Key_Return
-                or evt.key() == Qt.Key.Key_Enter):
-            if not self.gui.main.user_settings['disable_spell_check']:
-                self.word_spell_check.type = 'previous'
-                self.gui.main.spell_check_thread_pool.start(self.word_spell_check)
-        else:
-            super().keyReleaseEvent(evt)
-
-    def keyPressEvent(self, evt):
-        if evt.key() == Qt.Key.Key_Enter or evt.key() == Qt.Key.Key_Return:
-            self.insertPlainText('\n')
-        else:
-            super().keyPressEvent(evt)
 
     def contextMenuEvent(self, evt):
         """
@@ -1877,15 +1837,21 @@ class CustomTextEdit(QTextEdit):
             cursor = self.cursorForPosition(evt.pos())
             cursor.select(QTextCursor.SelectionType.WordUnderCursor)
             word = cursor.selection().toPlainText()
+            cleaned_word = word.replace('’', '\'')
+            cleaned_word = re.sub('[^a-z\']', '', cleaned_word.lower())
+            cleaned_word = cleaned_word.replace('\'s', '')
+            if cleaned_word.endswith('\''):
+                cleaned_word = cleaned_word[:-1]
+            if cleaned_word.startswith('\''):
+                cleaned_word = cleaned_word[1:]
 
-            if len(word) > 0:
+            if len(cleaned_word) > 0:
                 upper = False
                 if word[0].isupper():
                     upper = True
 
-                from runnables import SpellCheck
-                spell_check = SpellCheck(None, None, self.gui)
-                suggestions = spell_check.check_single_word(word)
+                suggestions = self.gui.main.sym_spell.lookup(
+                    cleaned_word, Verbosity.CLOSEST, max_edit_distance=2, include_unknown=False)
 
                 next_menu_index = 0
                 spell_actions = {}
@@ -1906,7 +1872,7 @@ class CustomTextEdit(QTextEdit):
 
                 menu.insertSeparator(menu.actions()[next_menu_index])
                 action = QAction('Add to dictionary')
-                action.triggered.connect(lambda: self.gui.main.add_to_dictionary(self, spell_check.clean_word(word)))
+                action.triggered.connect(lambda: self.gui.main.add_to_dictionary(self, cleaned_word))
                 menu.insertAction(menu.actions()[next_menu_index + 2], action)
                 menu.insertSeparator(menu.actions()[next_menu_index + 3])
 
@@ -2015,10 +1981,7 @@ class CustomTextEdit(QTextEdit):
         cursor.movePosition(QTextCursor.MoveOperation.PreviousCharacter, QTextCursor.MoveMode.MoveAnchor)
         self.setTextCursor(cursor)
 
-        if len(punctuation) > 0:
-            self.textCursor().insertText(term + punctuation)
-        else:
-            self.textCursor().insertText(term + punctuation + ' ')
+        self.textCursor().insertText(term)
 
         self.gui.changes = True
 
@@ -2035,13 +1998,40 @@ class CustomTextEdit(QTextEdit):
             component.setHtml(string)
         self.gui.changes = True
 
-    def paintEvent(self, evt):
-        if not self.full_spell_check_done:
-            from runnables import SpellCheck
-            spell_check = SpellCheck(self, 'whole', self.gui)
-            self.gui.main.spell_check_thread_pool.start(spell_check)
-            self.full_spell_check_done = True
-        super().paintEvent(evt)
+
+class SpellCheckHighlighter(QSyntaxHighlighter):
+    def __init__(self, parent, gui):
+        super().__init__(parent)
+        self.gui = gui
+        self.misspell_format = QTextCharFormat()
+        self.misspell_format.setUnderlineColor(Qt.GlobalColor.red)
+        self.misspell_format.setUnderlineStyle(QTextCharFormat.UnderlineStyle.SpellCheckUnderline)
+        self.position = 0
+        self.length = 0
+
+    def highlightBlock(self, text):
+        if not self.gui.main.user_settings['disable_spell_check']:
+            words = text.split()
+            current_pos = 0
+            for word in words:
+                cleaned_word = word.replace('’', '\'')
+                cleaned_word = re.sub('[^a-z\']', '', cleaned_word.lower())
+                cleaned_word = cleaned_word.replace('\'s', '')
+                if cleaned_word.endswith('\''):
+                    cleaned_word = cleaned_word[:-1]
+                if cleaned_word.startswith('\''):
+                    cleaned_word = cleaned_word[1:]
+
+                suggestions = self.gui.main.sym_spell.lookup(
+                    cleaned_word, Verbosity.CLOSEST, max_edit_distance=2, include_unknown=False)
+                # if the first suggestion isn't the same as the word, or there are no suggestions, the word is spelled wrong
+                if len(suggestions) == 0 or not suggestions[0].term == cleaned_word:
+                    start = text.find(word, current_pos)
+                    if start != -1:
+                        self.setFormat(start, len(cleaned_word), self.misspell_format)
+                        current_pos = start + len(word)
+                else:
+                    current_pos += len(word) + 1
 
 
 class ScriptureBox(QWidget):
