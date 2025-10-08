@@ -176,10 +176,6 @@ class RemoveCustomWords:
 
                 for word in self.removed_words:
                     self.spd.sym_spell.delete_dictionary_entry(word)
-
-                from widgets import CustomTextEdit
-                for widget in self.spd.gui.tabbed_frame.currentWidget().findChildren(CustomTextEdit):
-                    widget.check_whole_text()
             except Exception as ex:
                 self.spd.write_to_log(str(ex), True)
         self.widget.close()

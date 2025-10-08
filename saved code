@@ -1,0 +1,211 @@
+class SpellCheck(QRunnable):
+    finished = False
+
+    def __init__(self, widget=None, type=None, gui=None):
+        super().__init__()
+        self.widget = widget
+        self.type = type
+        if not type:
+            self.type = 'whole'
+        self.gui = gui
+        self.setAutoDelete(True)
+        if self.widget:
+            self.cursor = self.widget.textCursor()
+        else:
+            widget = QApplication.focusWidget()
+            if widget.objectName() == 'custom_text_edit':
+                self.widget = widget
+
+    def run(self):
+        # don't run a spell check if the widget is devoid of text
+        if len(self.widget.toPlainText().strip()) == 0:
+            return
+        if self.type == 'whole':
+            self.check_whole_text()
+        else:
+            self.check_words()
+
+    def check_whole_text(self):
+        """
+        Method to check every word in this QTextEdit for spelling errors.
+        """
+        return
+        if self.gui.main.user_settings['disable_spell_check']:
+            return
+
+        self.cursor = self.widget.textCursor()
+        self.cursor.movePosition(QTextCursor.MoveOperation.Start)
+
+        marked_word_indices = []
+        current_selection_end = -1
+        while not self.gui.main.user_settings['disable_spell_check']:
+            self.cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+            if self.cursor.selectionEnd() == current_selection_end:
+                break
+            else:
+                current_selection_end = self.cursor.selectionEnd()
+            word = self.cursor.selection().toPlainText().strip()
+            selection_start = self.cursor.selectionStart()
+            selection_end = self.cursor.selectionEnd()
+
+            # Straight apostrophes are ignored in selecting WordUnderCursor. Check for a straight apostrophe and
+            # (a) following contraction letter(s) before continuing.
+            self.cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.MoveAnchor)
+            self.cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor)
+            if self.cursor.selection().toPlainText() == '\'':
+                self.cursor.movePosition(QTextCursor.MoveOperation.NextWord, QTextCursor.MoveMode.KeepAnchor)
+                selection_end = self.cursor.selectionEnd()
+                word = self.cursor.selection().toPlainText().strip()
+                if len(re.sub('[^a-zA-Z]', '', word)) > 0:
+                    self.cursor.setPosition(selection_start, QTextCursor.MoveMode.MoveAnchor)
+                    self.cursor.setPosition(selection_end, QTextCursor.MoveMode.KeepAnchor)
+                    word = self.cursor.selection().toPlainText().strip()
+                    selection_start = self.cursor.selectionStart()
+                    selection_end = self.cursor.selectionEnd()
+
+            cleaned_word = self.clean_word(word)
+            if len(cleaned_word) > 0:
+                suggestions = self.gui.main.sym_spell.lookup(
+                    cleaned_word, Verbosity.CLOSEST, max_edit_distance=2, include_unknown=True)
+                # if the first suggestion is the same as the word, and that suggestion doesn't have a '0' count, it's spelled right
+                if not (suggestions[0].term == cleaned_word and suggestions[0].count > 0):
+                    marked_word_indices.append([selection_start, selection_end])
+
+            self.cursor.clearSelection()
+            self.cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.MoveAnchor)
+
+        self.gui.set_text_color_signal.emit(self.widget, marked_word_indices, QColor(200, 0, 00))
+        self.gui.clear_changes_signal.emit()
+
+    def check_words(self):
+        """
+        Method to spell-check words adjacent to the user's cursor.
+        """
+        if not self.widget:
+            return
+        try:
+            self.cursor = self.widget.textCursor()
+        except Exception:
+            return
+
+        self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord, QTextCursor.MoveMode.MoveAnchor)
+        self.cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+        word = self.cursor.selection().toPlainText().strip()
+        selection_start = self.cursor.selectionStart()
+        selection_end = self.cursor.selectionEnd()
+
+        # previous word may actually be punctuation, get next if so
+        if len(word) > 0 and len(re.sub('[^a-zA-Z]', '', word)) == 0:
+            self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord, QTextCursor.MoveMode.MoveAnchor)
+            self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord, QTextCursor.MoveMode.MoveAnchor)
+            self.cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+            word = self.cursor.selection().toPlainText().strip()
+            selection_start = self.cursor.selectionStart()
+            selection_end = self.cursor.selectionEnd()
+
+        # Straight apostrophes are ignored in selecting WordUnderCursor. Check for a straight apostrophe and
+        # (a) following contraction letter(s) before continuing.
+        self.cursor.movePosition(QTextCursor.MoveOperation.PreviousCharacter, QTextCursor.MoveMode.MoveAnchor)
+        self.cursor.movePosition(QTextCursor.MoveOperation.PreviousCharacter, QTextCursor.MoveMode.KeepAnchor)
+        if self.cursor.selection().toPlainText() == '\'':
+            self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord, QTextCursor.MoveMode.KeepAnchor)
+            selection_start = self.cursor.selectionStart()
+            word = self.cursor.selection().toPlainText().strip()
+            if len(re.sub('[^a-zA-Z]', '', word)) > 0:
+                self.cursor.setPosition(selection_start, QTextCursor.MoveMode.MoveAnchor)
+                self.cursor.setPosition(selection_end, QTextCursor.MoveMode.KeepAnchor)
+                word = self.cursor.selection().toPlainText().strip()
+                selection_start = self.cursor.selectionStart()
+                selection_end = self.cursor.selectionEnd()
+
+        cleaned_word = self.clean_word(word)
+        if len(cleaned_word) > 0:
+            suggestions = self.gui.main.sym_spell.lookup(
+                cleaned_word, Verbosity.CLOSEST, max_edit_distance=2, include_unknown=True)
+
+            # if the first suggestion is the same as the word, and that suggestion doesn't have a '0' count, it's spelled right
+            if suggestions[0].term == cleaned_word and suggestions[0].count > 0:
+                self.gui.selection_color_signal.emit(
+                    self.widget, selection_start, selection_end, Qt.GlobalColor.black)
+            else:
+                self.gui.selection_color_signal.emit(
+                    self.widget, selection_start, selection_end, QColor(200, 0, 00))
+
+        self.cursor.movePosition(QTextCursor.MoveOperation.NextWord, QTextCursor.MoveMode.MoveAnchor)
+        self.cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+        word = self.cursor.selection().toPlainText().strip()
+        selection_start = self.cursor.selectionStart()
+        selection_end = self.cursor.selectionEnd()
+
+        # previous word may actually be punctuation, get next if so
+        if len(word) > 0 and len(re.sub('[^a-zA-Z]', '', word)) == 0:
+            self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord, QTextCursor.MoveMode.MoveAnchor)
+            self.cursor.movePosition(QTextCursor.MoveOperation.PreviousWord, QTextCursor.MoveMode.MoveAnchor)
+            self.cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+            word = self.cursor.selection().toPlainText().strip()
+            selection_start = self.cursor.selectionStart()
+            selection_end = self.cursor.selectionEnd()
+
+        # Straight apostrophes are ignored in selecting WordUnderCursor. Check for a straight apostrophe and
+        # (a) following contraction letter(s) before continuing.
+        self.cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.MoveAnchor)
+        self.cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor)
+        if self.cursor.selection().toPlainText() == '\'':
+            self.cursor.movePosition(QTextCursor.MoveOperation.NextWord, QTextCursor.MoveMode.KeepAnchor)
+            selection_end = self.cursor.selectionEnd()
+            word = self.cursor.selection().toPlainText().strip()
+            if len(re.sub('[^a-zA-Z]', '', word)) > 0:
+                self.cursor.setPosition(selection_start, QTextCursor.MoveMode.MoveAnchor)
+                self.cursor.setPosition(selection_end, QTextCursor.MoveMode.KeepAnchor)
+                word = self.cursor.selection().toPlainText().strip()
+                selection_start = self.cursor.selectionStart()
+                selection_end = self.cursor.selectionEnd()
+
+        cleaned_word = self.clean_word(word)
+        if len(cleaned_word) > 0:
+            suggestions = self.gui.main.sym_spell.lookup(
+                cleaned_word, Verbosity.CLOSEST, max_edit_distance=2, include_unknown=True)
+
+            # if the first suggestion is the same as the word, and that suggestion doesn't have a '0' count, it's spelled right
+            if suggestions[0].term == cleaned_word and suggestions[0].count > 0:
+                self.gui.selection_color_signal.emit(
+                    self.widget, selection_start, selection_end, Qt.GlobalColor.black)
+            else:
+                self.gui.selection_color_signal.emit(
+                    self.widget, selection_start, selection_end, QColor(200, 0, 00))
+
+    def clean_word(self, word):
+        """
+        Method to strip any non-word characters as well as pluralizing apostrophes out of a word to be spell-checked.
+
+        :param str word: Word to be cleaned.
+        """
+        cleaned_word = word.lower()
+        cleaned_word = cleaned_word.replace('’', '\'')
+        cleaned_word = cleaned_word.replace('\'s', '')
+        cleaned_word = re.sub("[^a-zA-Z\']", '', cleaned_word)
+
+        if cleaned_word.startswith('\''):
+            cleaned_word = cleaned_word[1:len(cleaned_word)]
+        if cleaned_word.endswith('\''):
+            cleaned_word = cleaned_word[0:len(cleaned_word) - 1]
+
+        # there's a chance that utf-8-sig artifacts will be attached to the word
+        # encoding to utf-8 then decoding as ascii removes them
+        cleaned_word = cleaned_word.encode('utf-8').decode('ascii', errors='ignore')
+
+        return cleaned_word
+
+    def check_single_word(self, word):
+        cleaned_word = self.clean_word(word)
+
+        suggestions = None
+        if len(cleaned_word) > 0 and not any(c.isnumeric() for c in cleaned_word):
+            if any(h.isalpha() for h in cleaned_word):
+                suggestions = self.gui.main.sym_spell.lookup(cleaned_word, Verbosity.CLOSEST, max_edit_distance=2,
+                                                             include_unknown=True)
+
+            if suggestions:
+                return suggestions
+            else:
+                return -1

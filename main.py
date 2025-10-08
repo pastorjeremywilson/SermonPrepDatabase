@@ -4,7 +4,7 @@ Author: Jeremy G. Wilson
 Copyright: 2025 Jeremy G. Wilson
 
 This file, and the files contained in the distribution are parts of
-the Sermon Prep Database program (v.5.0.3.003)
+the Sermon Prep Database program (v.5.0.3.004)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -61,6 +61,7 @@ class Main:
     platform = ''
     cwd = ''
     sym_spell = None
+    spell_check_thread_pool = None
 
     def __init__(self):
         """
@@ -91,7 +92,7 @@ class Main:
             if not exists(self.app_dir):
                 os.mkdir(self.app_dir)
 
-            self.write_to_log('application version is v.5.0.3.003')
+            self.write_to_log('application version is v.5.0.3.004')
             self.write_to_log('platform is ' + self.platform)
             self.write_to_log('current working directory is ' + os.path.dirname(__file__))
             self.write_to_log('application directory is ' + self.app_dir)
@@ -289,7 +290,6 @@ class Main:
             self.sym_spell.create_dictionary_entry(word, 1)
             with open(self.app_dir + '/custom_words.txt', 'a') as file:
                 file.write(word + '\n')
-            widget.check_whole_text()
 
         except Exception as ex:
             self.write_to_log(str(ex), True)
