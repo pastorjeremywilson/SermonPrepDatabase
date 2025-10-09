@@ -98,7 +98,7 @@ def timed_popup(gui, message, millis):
     label = QLabel(message)
     label.setObjectName('timed_popup')
     label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-    label.setFont(QFont(gui.spd.user_settings['font_family'], 24))
+    label.setFont(QFont(gui.main.user_settings['font_family'], 24))
     label.adjustSize()
     dialog.setFixedSize(label.width() + 40, label.height() + 20)
 
@@ -108,6 +108,7 @@ def timed_popup(gui, message, millis):
     timer.singleShot(millis, lambda: dialog.done(0))
 
     dialog.show()
+
 
 class RemoveCustomWords:
     """
@@ -175,10 +176,6 @@ class RemoveCustomWords:
 
                 for word in self.removed_words:
                     self.spd.sym_spell.delete_dictionary_entry(word)
-
-                from gui import CustomTextEdit
-                for widget in self.spd.gui.tabbed_frame.currentWidget().findChildren(CustomTextEdit):
-                    widget.check_whole_text()
             except Exception as ex:
                 self.spd.write_to_log(str(ex), True)
         self.widget.close()

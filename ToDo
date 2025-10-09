@@ -1,9 +1,4 @@
 DONE
-    Fixed spell-check not happening while typing
-    Fixed misspelled word remaining red after correcting it manually
-    Reimplimented keyPressEvent on the formattable text edit to prevent formatting loss when enter is pressed twice
-    Redesigned spell checking so that contractions are properly dealt with
 
 TO DO
-    Stress test the spell check
     Switch date recognition to native Python date parsing.

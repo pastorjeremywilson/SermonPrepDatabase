@@ -4,7 +4,7 @@ Author: Jeremy G. Wilson
 Copyright: 2025 Jeremy G. Wilson
 
 This file, and the files contained in the distribution are parts of
-the Sermon Prep Database program (v.5.0.3)
+the Sermon Prep Database program (v.5.1.0)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -29,16 +29,18 @@ import sys
 import time
 import traceback
 
-from PyQt6.QtCore import Qt, QThreadPool
+from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QPixmap
-from PyQt6.QtWidgets import QLineEdit, QTextEdit, QDateEdit, QLabel, QDialog, QVBoxLayout, \
-    QMessageBox, QWidget, QApplication
+from PyQt6.QtWidgets import QTextEdit, QDateEdit, QLabel, QDialog, QVBoxLayout, QMessageBox, QWidget, QApplication
 from datetime import datetime
 from os.path import exists
 from sqlite3 import OperationalError
 
+from gui import GUI
+from spell_check_widgets import SpellCheckLineEdit, SpellCheckTextEdit
 
-class SermonPrepDatabase:
+
+class Main:
     """
     The main program class that handles startup methods such as checking for/creating a new database, instantiating
     the gui, and polling the database for data. Also handles any database reading and writing methods.
@@ -59,18 +61,20 @@ class SermonPrepDatabase:
     platform = ''
     cwd = ''
     sym_spell = None
+    spell_check_thread_pool = None
 
-    def __init__(self, gui):
+    def __init__(self):
         """
         On startup, initialize a QApplication, get the platform, set the app_dir and db_loc, instantiate the GUI
         Use the change_text signal to alter the text on the splash screen
         """
         os.chdir(os.path.dirname(__file__))
-        self.gui = gui
-        self.spell_check_thread_pool = QThreadPool()
-        self.spell_check_thread_pool.setStackSize(256000000)
-        self.load_dictionary_thread_pool = QThreadPool()
         self.app = QApplication(sys.argv)
+        self.gui = GUI(self)
+        self.get_by_index(self.current_rec_index)
+        self.gui.showMaximized()
+        self.gui.changes = False
+        self.app.exec()
 
     def get_system_info(self):
         self.platform = sys.platform
@@ -91,7 +95,7 @@ class SermonPrepDatabase:
             if not exists(self.app_dir):
                 os.mkdir(self.app_dir)
 
-            self.write_to_log('application version is v.5.0.3')
+            self.write_to_log('application version is v.5.1.0')
             self.write_to_log('platform is ' + self.platform)
             self.write_to_log('current working directory is ' + os.path.dirname(__file__))
             self.write_to_log('application directory is ' + self.app_dir)
@@ -173,7 +177,7 @@ class SermonPrepDatabase:
             response = QMessageBox.question(
                 None,
                 'Database Not Found',
-                'It looks like this is the first time you\'ve run Sermon Prep Database v3.3.4.\n'
+                'It looks like this is the first time you\'ve run Sermon Prep Database v.5.1.0.\n'
                 'Would you like to import an old database?\n'
                 '(Choose "No" to create a new database)',
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
@@ -289,7 +293,6 @@ class SermonPrepDatabase:
             self.sym_spell.create_dictionary_entry(word, 1)
             with open(self.app_dir + '/custom_words.txt', 'a') as file:
                 file.write(word + '\n')
-            widget.check_whole_text()
 
         except Exception as ex:
             self.write_to_log(str(ex), True)
@@ -456,42 +459,42 @@ class SermonPrepDatabase:
             sql += '"' + columns[0] + '" = "' + str(rec_id) + '",'
 
             index = 1
-            for i in range(self.gui.scripture_frame_layout.count()):
-                component = self.gui.scripture_frame_layout.itemAt(i).widget()
-                if isinstance(component, QLineEdit):
+            for i in range(self.gui.scripture_layout.count()):
+                component = self.gui.scripture_layout.itemAt(i).widget()
+                if isinstance(component, SpellCheckLineEdit):
                     sql += '"' + columns[index] + '" = "' + component.text().replace('"', '&quot;') + '",'
                     index += 1
-                elif isinstance(component, QTextEdit):
+                elif isinstance(component, SpellCheckTextEdit):
                     string = component.toSimplifiedHtml()
                     sql += '"' + columns[index] + '" = "' + string + '",'
                     index += 1
-            for i in range(self.gui.exegesis_frame_layout.count()):
-                component = self.gui.exegesis_frame_layout.itemAt(i).widget()
-                if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+            for i in range(self.gui.exegesis_layout.count()):
+                component = self.gui.exegesis_layout.itemAt(i).widget()
+                if isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
                     string = component.toSimplifiedHtml()
                     sql += '"' + columns[index] + '" = "' + string + '",'
                     index += 1
-            for i in range(self.gui.outline_frame_layout.count()):
-                component = self.gui.outline_frame_layout.itemAt(i).widget()
-                if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+            for i in range(self.gui.outline_layout.count()):
+                component = self.gui.outline_layout.itemAt(i).widget()
+                if isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
                     string = component.toSimplifiedHtml()
                     sql += '"' + columns[index] + '" = "' + string + '",'
                     index += 1
-            for i in range(self.gui.research_frame_layout.count()):
-                component = self.gui.research_frame_layout.itemAt(i).widget()
-                if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+            for i in range(self.gui.research_layout.count()):
+                component = self.gui.research_layout.itemAt(i).widget()
+                if isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
                     string = component.toSimplifiedHtml()
                     sql += '"' + columns[index] + '" = "' + string + '",'
                     index += 1
-            for i in range(self.gui.sermon_frame_layout.count()):
-                component = self.gui.sermon_frame_layout.itemAt(i).widget()
-                if isinstance(component, QLineEdit) or isinstance(component, QDateEdit):
-                    if isinstance(component, QLineEdit):
+            for i in range(self.gui.sermon_layout.count()):
+                component = self.gui.sermon_layout.itemAt(i).widget()
+                if isinstance(component, SpellCheckLineEdit) or isinstance(component, QDateEdit):
+                    if isinstance(component, SpellCheckLineEdit):
                         sql += '"' + columns[index] + '" = "' + component.text().replace('"', '&quot;') + '",'
                     else:
                         sql += '"' + columns[index] + '" = "' + component.date().toString('yyyy-MM-dd') + '",'
                     index += 1
-                elif isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                elif isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
                     string = component.toSimplifiedHtml()
                     sql += '"' + columns[index] + '" = "' + string + '" WHERE ID = "' + str(rec_id) + '"'
 
@@ -703,6 +706,7 @@ class SermonPrepDatabase:
             self.gui.toolbar.references_cb.blockSignals(False)
 
             self.last_rec()
+            self.gui.changes = False
 
     def del_rec(self):
         """
@@ -881,16 +885,16 @@ class SermonPrepDatabase:
         self.widget.setLayout(layout)
 
         importing_label = QLabel('Importing...')
-        importing_label.setFont(QFont(self.gui.spd.user_settings['font_family'], int(self.gui.spd.user_settings['font_size']), QFont.Weight.Bold))
+        importing_label.setFont(QFont(self.gui.main.user_settings['font_family'], int(self.gui.main.user_settings['font_size']), QFont.Weight.Bold))
         layout.addWidget(importing_label)
         layout.addSpacing(50)
 
         self.dir_label = QLabel('Looking in...')
-        self.dir_label.setFont(QFont(self.gui.spd.user_settings['font_family'], int(self.gui.spd.user_settings['font_size'])))
+        self.dir_label.setFont(QFont(self.gui.main.user_settings['font_family'], int(self.gui.main.user_settings['font_size'])))
         layout.addWidget(self.dir_label)
 
         self.file_label = QLabel('Examining...')
-        self.file_label.setFont(QFont(self.gui.spd.user_settings['font_family'], int(self.gui.spd.user_settings['font_size'])))
+        self.file_label.setFont(QFont(self.gui.main.user_settings['font_family'], int(self.gui.main.user_settings['font_size'])))
         layout.addWidget(self.file_label)
 
         self.widget.setWindowModality(Qt.WindowModality.WindowModal)
@@ -972,7 +976,4 @@ def log_unhandled_exception(exc_type, exc_value, exc_traceback):
 # main entry point for the program
 if __name__ == '__main__':
     sys.excepthook = log_unhandled_exception
-    from gui import GUI
-    app = QApplication(sys.argv)
-    gui = GUI()
-    app.exec()
+    Main()
