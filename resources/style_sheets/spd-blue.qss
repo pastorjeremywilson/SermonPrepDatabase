@@ -111,24 +111,6 @@ QTabBar::tab:last {
     border-right: none;
 }
 
-/*-------------------- QTabBar help_tab_widget--------------------*/
-QTabBar#help_tab_widget::tab {
-    background-color: #353550;
-    color: #f0f0ff;
-    font-weight: normal;
-    height:24px;
-    width: 80px;
-    border-right: 2px solid #f0f0ff;
-}
-QTabBar#help_tab_widget::tab:selected {
-    color: #000000;
-    background-color: #f0f0ff;
-    font-weight: bold;
-}
-QTabBar#help_tab_widget::tab:last
-    border-bottom: none;
-}
-
 /*-------------------- QPushButton --------------------*/
 QPushButton {
 	background: #f0f0ff;

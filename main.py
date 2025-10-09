@@ -4,7 +4,7 @@ Author: Jeremy G. Wilson
 Copyright: 2025 Jeremy G. Wilson
 
 This file, and the files contained in the distribution are parts of
-the Sermon Prep Database program (v.5.0.3.004)
+the Sermon Prep Database program (v.5.0.3.005)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -31,13 +31,13 @@ import traceback
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont, QPixmap
-from PyQt6.QtWidgets import QLineEdit, QTextEdit, QDateEdit, QLabel, QDialog, QVBoxLayout, \
-    QMessageBox, QWidget, QApplication
+from PyQt6.QtWidgets import QTextEdit, QDateEdit, QLabel, QDialog, QVBoxLayout, QMessageBox, QWidget, QApplication
 from datetime import datetime
 from os.path import exists
 from sqlite3 import OperationalError
 
 from gui import GUI
+from spell_check_widgets import SpellCheckLineEdit, SpellCheckTextEdit
 
 
 class Main:
@@ -71,6 +71,9 @@ class Main:
         os.chdir(os.path.dirname(__file__))
         self.app = QApplication(sys.argv)
         self.gui = GUI(self)
+        self.get_by_index(self.current_rec_index)
+        self.gui.showMaximized()
+        self.gui.changes = False
         self.app.exec()
 
     def get_system_info(self):
@@ -92,7 +95,7 @@ class Main:
             if not exists(self.app_dir):
                 os.mkdir(self.app_dir)
 
-            self.write_to_log('application version is v.5.0.3.004')
+            self.write_to_log('application version is v.5.0.3.005')
             self.write_to_log('platform is ' + self.platform)
             self.write_to_log('current working directory is ' + os.path.dirname(__file__))
             self.write_to_log('application directory is ' + self.app_dir)
@@ -174,7 +177,7 @@ class Main:
             response = QMessageBox.question(
                 None,
                 'Database Not Found',
-                'It looks like this is the first time you\'ve run Sermon Prep Database v3.3.4.\n'
+                'It looks like this is the first time you\'ve run Sermon Prep Database v.5.0.3.005.\n'
                 'Would you like to import an old database?\n'
                 '(Choose "No" to create a new database)',
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
@@ -456,42 +459,42 @@ class Main:
             sql += '"' + columns[0] + '" = "' + str(rec_id) + '",'
 
             index = 1
-            for i in range(self.gui.scripture_frame_layout.count()):
-                component = self.gui.scripture_frame_layout.itemAt(i).widget()
-                if isinstance(component, QLineEdit):
+            for i in range(self.gui.scripture_layout.count()):
+                component = self.gui.scripture_layout.itemAt(i).widget()
+                if isinstance(component, SpellCheckLineEdit):
                     sql += '"' + columns[index] + '" = "' + component.text().replace('"', '&quot;') + '",'
                     index += 1
-                elif isinstance(component, QTextEdit):
+                elif isinstance(component, SpellCheckTextEdit):
                     string = component.toSimplifiedHtml()
                     sql += '"' + columns[index] + '" = "' + string + '",'
                     index += 1
-            for i in range(self.gui.exegesis_frame_layout.count()):
-                component = self.gui.exegesis_frame_layout.itemAt(i).widget()
-                if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+            for i in range(self.gui.exegesis_layout.count()):
+                component = self.gui.exegesis_layout.itemAt(i).widget()
+                if isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
                     string = component.toSimplifiedHtml()
                     sql += '"' + columns[index] + '" = "' + string + '",'
                     index += 1
-            for i in range(self.gui.outline_frame_layout.count()):
-                component = self.gui.outline_frame_layout.itemAt(i).widget()
-                if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+            for i in range(self.gui.outline_layout.count()):
+                component = self.gui.outline_layout.itemAt(i).widget()
+                if isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
                     string = component.toSimplifiedHtml()
                     sql += '"' + columns[index] + '" = "' + string + '",'
                     index += 1
-            for i in range(self.gui.research_frame_layout.count()):
-                component = self.gui.research_frame_layout.itemAt(i).widget()
-                if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+            for i in range(self.gui.research_layout.count()):
+                component = self.gui.research_layout.itemAt(i).widget()
+                if isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
                     string = component.toSimplifiedHtml()
                     sql += '"' + columns[index] + '" = "' + string + '",'
                     index += 1
-            for i in range(self.gui.sermon_frame_layout.count()):
-                component = self.gui.sermon_frame_layout.itemAt(i).widget()
-                if isinstance(component, QLineEdit) or isinstance(component, QDateEdit):
-                    if isinstance(component, QLineEdit):
+            for i in range(self.gui.sermon_layout.count()):
+                component = self.gui.sermon_layout.itemAt(i).widget()
+                if isinstance(component, SpellCheckLineEdit) or isinstance(component, QDateEdit):
+                    if isinstance(component, SpellCheckLineEdit):
                         sql += '"' + columns[index] + '" = "' + component.text().replace('"', '&quot;') + '",'
                     else:
                         sql += '"' + columns[index] + '" = "' + component.date().toString('yyyy-MM-dd') + '",'
                     index += 1
-                elif isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+                elif isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
                     string = component.toSimplifiedHtml()
                     sql += '"' + columns[index] + '" = "' + string + '" WHERE ID = "' + str(rec_id) + '"'
 

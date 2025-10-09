@@ -278,4 +278,4 @@ class GetFromDocx:
         self.gui.main.insert_imports(errors, sermons)
         self.gui.close_import_splash.emit()
 
-        self.gui.tabbed_frame.setCurrentWidget(self.gui.sermon_frame)
+        self.gui.tab_widget.setCurrentWidget(self.gui.sermon_widget)

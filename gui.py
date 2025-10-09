@@ -1,30 +1,23 @@
 from os.path import exists
 
 from PyQt6.QtCore import Qt, QSize, QDate, QDateTime, pyqtSignal, QThreadPool
-from PyQt6.QtGui import QIcon, QFont, QPixmap, QColor, QCloseEvent, QAction, QUndoStack, QTextCursor, QTextBlockFormat
-from PyQt6.QtWidgets import QWidget, QTabWidget, QGridLayout, QLabel, QLineEdit, \
-    QCheckBox, QDateEdit, QTextEdit, QMainWindow, QVBoxLayout, QPushButton, QTabBar, QApplication
+from PyQt6.QtGui import QIcon, QFont, QPixmap, QCloseEvent, QAction, QUndoStack, QTextCursor, QTextBlockFormat
+from PyQt6.QtWidgets import QWidget, QTabWidget, QGridLayout, QLabel, QCheckBox, QDateEdit, QTextEdit, QMainWindow, \
+    QVBoxLayout, QPushButton, QTabBar
 
 from get_scripture import GetScripture
+from spell_check_widgets import SpellCheckTextEdit, SpellCheckLineEdit
 from widgets import MenuBar, StartupSplash
-from runnables import InitialStartup
+from runnables import LoadDictionary
 from widgets import Toolbar
-from widgets import CustomTextEdit, ScriptureBox, SermonView
+from widgets import ScriptureBox, SermonView
 
 
 class GUI(QMainWindow):
-    main = None
-    update_startup_splash_text = pyqtSignal(str)
-    startup_splash_end = pyqtSignal()
+    clear_changes_signal = pyqtSignal()
     undo_stack = None
     changes = False
     gs = None
-    create_main_gui = pyqtSignal()
-    clear_changes_signal = pyqtSignal()
-    set_text_cursor_signal = pyqtSignal(QWidget, QTextCursor)
-    set_text_color_signal = pyqtSignal(QTextEdit, list, QColor)
-    selection_color_signal = pyqtSignal(QTextEdit, int, int, QColor)
-    reset_cursor_color_signal = pyqtSignal(QTextEdit)
     spell_check = None
     
     def __init__(self, main):
@@ -32,41 +25,58 @@ class GUI(QMainWindow):
         GUI handles all the operations from the user interface. It builds the QT window and elements and requires the
         SermonPrepDatabase object in order to access its methods.
         """
-
         super().__init__()
         self.main = main
-
-        self.update_startup_splash_text.connect(self.change_startup_splash_text)
-        self.startup_splash_end.connect(self.end_startup_splash)
-
-        self.create_main_gui.connect(self.create_gui)
         self.clear_changes_signal.connect(self.clear_changes)
-        self.set_text_cursor_signal.connect(self.set_text_cursor)
-        self.selection_color_signal.connect(self.set_text_color_on_selection)
-        self.set_text_color_signal.connect(self.set_multiple_text_color)
-        self.reset_cursor_color_signal.connect(self.reset_cursor_color)
 
-        self.standard_font = None
-        self.bold_font = None
-        self.main_widget = None
-        self.layout = None
-        self.menu_bar = None
-        self.toolbar = None
-        self.tabbed_frame = None
-        self.scripture_frame = None
-        self.scripture_frame_layout = None
-        self.sermon_reference_field = None
-        self.auto_fill_checkbox = None
-        self.sermon_text_edit = None
-        self.exegesis_frame = None
-        self.exegesis_frame_layout = None
-        self.outline_frame = None
-        self.outline_frame_layout = None
-        self.research_frame = None
-        self.research_frame_layout = None
-        self.sermon_frame = None
-        self.sermon_frame_layout = None
-        self.sermon_date_edit = None
+        self.startup_splash = StartupSplash(self, 6)
+        self.startup_splash.show()
+        self.main.app.processEvents()
+
+        self.change_startup_splash_text('Getting System Info')
+        self.main.get_system_info()
+
+        self.change_startup_splash_text('Getting User Settings')
+        self.main.get_user_settings()
+
+        self.change_startup_splash_text('Loading Dictionaries')
+        self.main.spell_check_thread_pool = QThreadPool()
+        self.main.spell_check_thread_pool.setStackSize(256000000)
+        self.main.load_dictionary_thread_pool = QThreadPool()
+        ld = LoadDictionary(self.main)
+        self.main.load_dictionary_thread_pool.start(ld)
+        self.main.load_dictionary_thread_pool.waitForDone()
+
+        self.change_startup_splash_text('Getting Indices')
+        self.main.get_ids()
+        self.main.get_date_list()
+        self.main.get_scripture_list()
+        self.main.backup_db()
+
+        self.change_startup_splash_text('Finishing Up')
+
+        self.standard_font = QFont(self.main.user_settings['font_family'], int(self.main.user_settings['font_size']))
+        self.bold_font = QFont(
+            self.main.user_settings['font_family'], int(self.main.user_settings['font_size']), QFont.Weight.Bold)
+        self.central_widget = QWidget()
+        self.central_layout = QVBoxLayout(self.central_widget)
+        self.tab_widget = QTabWidget()
+        self.menu_bar = MenuBar(self, self.main)
+        self.toolbar = Toolbar(self, self.main)
+        self.scripture_widget = QWidget()
+        self.scripture_layout = QGridLayout(self.scripture_widget)
+        self.sermon_reference_field = SpellCheckLineEdit(self)
+        self.auto_fill_checkbox = QCheckBox('Auto-fill ' + self.main.user_settings['label4'])
+        self.sermon_text_edit = SpellCheckTextEdit(self)
+        self.exegesis_widget = QWidget()
+        self.exegesis_layout = QGridLayout(self.exegesis_widget)
+        self.outline_widget = QWidget()
+        self.outline_layout = QGridLayout(self.outline_widget)
+        self.research_widget = QWidget()
+        self.research_layout = QGridLayout(self.research_widget)
+        self.sermon_widget = QWidget()
+        self.sermon_layout = QGridLayout(self.sermon_widget)
+        self.sermon_date_edit = QDateEdit()
 
         self.light_tab_icons = [
             QIcon('resources/svg/spScriptureIcon.svg'),
@@ -83,13 +93,9 @@ class GUI(QMainWindow):
             QIcon('resources/svg/spSermonIconDark.svg')
         ]
 
-        self.startup_splash = StartupSplash(self, 6)
-        self.startup_splash.show()
-        self.main.app.processEvents()
+        self.create_gui()
 
-        initial_startup = InitialStartup(self)
-        startup_thread_pool = QThreadPool()
-        startup_thread_pool.start(initial_startup)
+        self.startup_splash.deleteLater()
 
     def change_startup_splash_text(self, text):
         """
@@ -100,9 +106,6 @@ class GUI(QMainWindow):
         self.startup_splash.status_label.setText(text)
         self.startup_splash.progress_bar.setValue(self.startup_splash.progress_bar.value() + 1)
         self.main.app.processEvents()
-
-    def end_startup_splash(self):
-        self.startup_splash.deleteLater()
 
     def create_gui(self):
         """
@@ -118,15 +121,11 @@ class GUI(QMainWindow):
         icon_pixmap = QPixmap('resources/svg/spIcon.svg')
         self.setWindowIcon(QIcon(icon_pixmap))
 
-        self.main_widget = QWidget()
-        self.setCentralWidget(self.main_widget)
-        self.layout = QVBoxLayout(self.main_widget)
+        self.setCentralWidget(self.central_widget)
 
-        self.undo_stack = QUndoStack(self.main_widget)
+        self.undo_stack = QUndoStack(self.central_widget)
 
-        self.menu_bar = MenuBar(self, self.main)
-        self.toolbar = Toolbar(self, self.main)
-        self.layout.addWidget(self.toolbar)
+        self.central_layout.addWidget(self.toolbar)
 
         self.build_tabbed_frame()
         self.build_scripture_tab()
@@ -140,10 +139,6 @@ class GUI(QMainWindow):
         self.main.current_rec_index = len(self.main.ids) - 1
         self.apply_font(self.main.user_settings['font_family'], self.main.user_settings['font_size'])
         self.apply_line_spacing()
-
-        self.showMaximized()
-        QApplication.processEvents()
-        self.main.get_by_index(self.main.current_rec_index)
     
     def build_tabbed_frame(self):
         """
@@ -154,13 +149,12 @@ class GUI(QMainWindow):
         tab_container.setAutoFillBackground(True)
         tab_container_layout = QVBoxLayout(tab_container)
         tab_container_layout.setContentsMargins(0, 10, 0, 0)
-        self.layout.addWidget(tab_container)
+        self.central_layout.addWidget(tab_container)
 
-        self.tabbed_frame = QTabWidget()
-        self.tabbed_frame.setAutoFillBackground(True)
-        self.tabbed_frame.setIconSize(QSize(24, 24))
-        self.tabbed_frame.tabBar().currentChanged.connect(self.current_tab_changed)
-        tab_container_layout.addWidget(self.tabbed_frame)
+        self.tab_widget.setAutoFillBackground(True)
+        self.tab_widget.setIconSize(QSize(24, 24))
+        self.tab_widget.tabBar().currentChanged.connect(self.current_tab_changed)
+        tab_container_layout.addWidget(self.tab_widget)
 
     def current_tab_changed(self):
         if self.main.user_settings['theme'] == 'dark':
@@ -168,9 +162,9 @@ class GUI(QMainWindow):
         index = self.sender().currentIndex()
         for i in range(5):
             if i == index:
-                self.tabbed_frame.setTabIcon(i, self.dark_tab_icons[i])
+                self.tab_widget.setTabIcon(i, self.dark_tab_icons[i])
             else:
-                self.tabbed_frame.setTabIcon(i, self.light_tab_icons[i])
+                self.tab_widget.setTabIcon(i, self.light_tab_icons[i])
         
     def build_scripture_tab(self, insert=False):
         """
@@ -178,67 +172,55 @@ class GUI(QMainWindow):
 
         :param boolean insert: If other tabs already exist, insert tab at position 0.
         """
-        self.scripture_frame = QWidget()
-        self.scripture_frame_layout = QGridLayout()
-        self.scripture_frame_layout.setColumnStretch(0, 1)
-        self.scripture_frame_layout.setColumnStretch(1, 1)
-        self.scripture_frame_layout.setColumnStretch(2, 0)
-        self.scripture_frame.setLayout(self.scripture_frame_layout)
+        self.scripture_layout.setColumnStretch(0, 1)
+        self.scripture_layout.setColumnStretch(1, 1)
+        self.scripture_layout.setColumnStretch(2, 0)
         
         pericope_label = QLabel(self.main.user_settings['label1'])
-        self.scripture_frame_layout.addWidget(pericope_label, 0, 0)
+        self.scripture_layout.addWidget(pericope_label, 0, 0)
         
-        pericope_field = QLineEdit()
-        pericope_field.textEdited.connect(self.changes_detected)
-        self.scripture_frame_layout.addWidget(pericope_field, 1, 0)
+        pericope_line_edit = SpellCheckLineEdit(self)
+        self.scripture_layout.addWidget(pericope_line_edit, 1, 0)
         
         pericope_text_label = QLabel(self.main.user_settings['label2'])
-        self.scripture_frame_layout.addWidget(pericope_text_label, 2, 0)
+        self.scripture_layout.addWidget(pericope_text_label, 2, 0)
 
-        pericope_text_edit = CustomTextEdit(self)
+        pericope_text_edit = SpellCheckTextEdit(self)
         pericope_text_edit.cursorPositionChanged.connect(self.set_style_buttons)
-        self.scripture_frame_layout.addWidget(pericope_text_edit, 3, 0)
+        self.scripture_layout.addWidget(pericope_text_edit, 3, 0)
         
         sermon_reference_label = QLabel(self.main.user_settings['label3'])
-        self.scripture_frame_layout.addWidget(sermon_reference_label, 0, 1)
-
-        self.sermon_reference_field = QLineEdit()
-        self.sermon_reference_field.textEdited.connect(self.reference_changes)
+        self.scripture_layout.addWidget(sermon_reference_label, 0, 1)
 
         if exists(self.main.app_dir + '/my_bible.xml'):
-            self.scripture_frame_layout.addWidget(self.sermon_reference_field, 1, 1)
+            self.scripture_layout.addWidget(self.sermon_reference_field, 1, 1)
 
-            self.auto_fill_checkbox = QCheckBox('Auto-fill ' + self.main.user_settings['label4'])
             self.auto_fill_checkbox.setChecked(True)
-            self.scripture_frame_layout.addWidget(self.auto_fill_checkbox, 1, 2)
+            self.scripture_layout.addWidget(self.auto_fill_checkbox, 1, 2)
             if self.main.user_settings['auto_fill']:
                 self.auto_fill_checkbox.setChecked(True)
             else:
                 self.auto_fill_checkbox.setChecked(False)
             self.auto_fill_checkbox.stateChanged.connect(self.auto_fill)
         else:
-            self.scripture_frame_layout.addWidget(self.sermon_reference_field, 1, 1, 1, 2)
+            self.scripture_layout.addWidget(self.sermon_reference_field, 1, 1, 1, 2)
         
         sermon_text_label = QLabel(self.main.user_settings['label4'])
-        self.scripture_frame_layout.addWidget(sermon_text_label, 2, 1, 1, 2)
-        
-        self.sermon_text_edit = CustomTextEdit(self)
-        self.sermon_text_edit.cursorPositionChanged.connect(self.set_style_buttons)
-        self.scripture_frame_layout.addWidget(self.sermon_text_edit, 3, 1, 1, 2)
+        self.scripture_layout.addWidget(sermon_text_label, 2, 1, 1, 2)
 
-        self.sermon_reference_field.textChanged.connect(self.reference_changes)
-        self.sermon_reference_field.textEdited.connect(self.reference_changes)
+        self.sermon_text_edit.cursorPositionChanged.connect(self.set_style_buttons)
+        self.scripture_layout.addWidget(self.sermon_text_edit, 3, 1, 1, 2)
 
         if insert:
-            self.tabbed_frame.insertTab(
+            self.tab_widget.insertTab(
                 0,
-                self.scripture_frame,
+                self.scripture_widget,
                 self.light_tab_icons[0],
                 'Scripture'
             )
         else:
-            self.tabbed_frame.addTab(
-                self.scripture_frame,
+            self.tab_widget.addTab(
+                self.scripture_widget,
                 self.light_tab_icons[0],
                 'Scripture'
             )
@@ -247,181 +229,163 @@ class GUI(QMainWindow):
         """
         Create a QWidget to hold the exegesis tab's elements. Adds the elements.
         """
-        self.exegesis_frame = QWidget()
-        self.exegesis_frame_layout = QGridLayout()
-        self.exegesis_frame_layout.setColumnMinimumWidth(1, 20)
-        self.exegesis_frame_layout.setColumnMinimumWidth(3, 20)
-        self.exegesis_frame_layout.setColumnMinimumWidth(5, 20)
-        self.exegesis_frame_layout.setRowMinimumHeight(2, 50)
-        self.exegesis_frame_layout.setRowMinimumHeight(5, 50)
-        self.exegesis_frame_layout.setRowStretch(8, 100)
-        self.exegesis_frame.setLayout(self.exegesis_frame_layout)
+        self.exegesis_layout.setColumnMinimumWidth(1, 20)
+        self.exegesis_layout.setColumnMinimumWidth(3, 20)
+        self.exegesis_layout.setColumnMinimumWidth(5, 20)
+        self.exegesis_layout.setRowMinimumHeight(2, 50)
+        self.exegesis_layout.setRowMinimumHeight(5, 50)
+        self.exegesis_layout.setRowStretch(8, 100)
         
         fcft_label = QLabel(self.main.user_settings['label5'])
-        self.exegesis_frame_layout.addWidget(fcft_label, 0, 0)
+        self.exegesis_layout.addWidget(fcft_label, 0, 0)
         
-        fcft_text = CustomTextEdit(self)
+        fcft_text = SpellCheckTextEdit(self)
         fcft_text.cursorPositionChanged.connect(self.set_style_buttons)
-        self.exegesis_frame_layout.addWidget(fcft_text, 1, 0)
+        self.exegesis_layout.addWidget(fcft_text, 1, 0)
         
         gat_label = QLabel(self.main.user_settings['label6'])
-        self.exegesis_frame_layout.addWidget(gat_label, 3, 0)
+        self.exegesis_layout.addWidget(gat_label, 3, 0)
         
-        gat_text = CustomTextEdit(self)
+        gat_text = SpellCheckTextEdit(self)
         gat_text.cursorPositionChanged.connect(self.set_style_buttons)
-        self.exegesis_frame_layout.addWidget(gat_text, 4, 0)
+        self.exegesis_layout.addWidget(gat_text, 4, 0)
         
         cpt_label = QLabel(self.main.user_settings['label7'])
-        self.exegesis_frame_layout.addWidget(cpt_label, 6, 0)
+        self.exegesis_layout.addWidget(cpt_label, 6, 0)
         
-        cpt_text = CustomTextEdit(self)
+        cpt_text = SpellCheckTextEdit(self)
         cpt_text.cursorPositionChanged.connect(self.set_style_buttons)
-        self.exegesis_frame_layout.addWidget(cpt_text, 7, 0)
+        self.exegesis_layout.addWidget(cpt_text, 7, 0)
         
         pb_label = QLabel(self.main.user_settings['label8'])
-        self.exegesis_frame_layout.addWidget(pb_label, 3, 2)
+        self.exegesis_layout.addWidget(pb_label, 3, 2)
         
-        pb_text = CustomTextEdit(self)
+        pb_text = SpellCheckTextEdit(self)
         pb_text.cursorPositionChanged.connect(self.set_style_buttons)
-        self.exegesis_frame_layout.addWidget(pb_text, 4, 2)
+        self.exegesis_layout.addWidget(pb_text, 4, 2)
         
         fcfs_label = QLabel(self.main.user_settings['label9'])
-        self.exegesis_frame_layout.addWidget(fcfs_label, 0, 4)
+        self.exegesis_layout.addWidget(fcfs_label, 0, 4)
         
-        fcfs_text = CustomTextEdit(self)
+        fcfs_text = SpellCheckTextEdit(self)
         fcfs_text.cursorPositionChanged.connect(self.set_style_buttons)
-        self.exegesis_frame_layout.addWidget(fcfs_text, 1, 4)
+        self.exegesis_layout.addWidget(fcfs_text, 1, 4)
         
         gas_label = QLabel(self.main.user_settings['label10'])
-        self.exegesis_frame_layout.addWidget(gas_label, 3, 4)
+        self.exegesis_layout.addWidget(gas_label, 3, 4)
         
-        gas_text = CustomTextEdit(self)
+        gas_text = SpellCheckTextEdit(self)
         gas_text.cursorPositionChanged.connect(self.set_style_buttons)
-        self.exegesis_frame_layout.addWidget(gas_text, 4, 4)
+        self.exegesis_layout.addWidget(gas_text, 4, 4)
         
         cps_label = QLabel(self.main.user_settings['label11'])
-        self.exegesis_frame_layout.addWidget(cps_label, 6, 4)
+        self.exegesis_layout.addWidget(cps_label, 6, 4)
         
-        cps_text = CustomTextEdit(self)
+        cps_text = SpellCheckTextEdit(self)
         cps_text.cursorPositionChanged.connect(self.set_style_buttons)
-        self.exegesis_frame_layout.addWidget(cps_text, 7, 4)
+        self.exegesis_layout.addWidget(cps_text, 7, 4)
 
         scripture_box = ScriptureBox()
-        self.exegesis_frame_layout.addWidget(scripture_box, 0, 6, 8, 1)
+        self.exegesis_layout.addWidget(scripture_box, 0, 6, 8, 1)
         
-        self.tabbed_frame.addTab(self.exegesis_frame, self.light_tab_icons[1], 'Exegesis')
+        self.tab_widget.addTab(self.exegesis_widget, self.light_tab_icons[1], 'Exegesis')
 
     def build_outline_tab(self):
         """
         Create a QWidget to hold the outline tab's elements. Adds the elements.
         """
-        self.outline_frame = QWidget()
-        self.outline_frame_layout = QGridLayout()
-        self.outline_frame_layout.setColumnMinimumWidth(1, 20)
-        self.outline_frame_layout.setColumnMinimumWidth(3, 20)
-        self.outline_frame_layout.setColumnMinimumWidth(5, 20)
-        self.outline_frame.setLayout(self.outline_frame_layout)
+        self.outline_layout.setColumnMinimumWidth(1, 20)
+        self.outline_layout.setColumnMinimumWidth(3, 20)
+        self.outline_layout.setColumnMinimumWidth(5, 20)
         
         scripture_outline_label = QLabel(self.main.user_settings['label12'])
-        self.outline_frame_layout.addWidget(scripture_outline_label, 0, 0)
+        self.outline_layout.addWidget(scripture_outline_label, 0, 0)
         
-        scripture_outline_text = CustomTextEdit(self)
+        scripture_outline_text = SpellCheckTextEdit(self)
         scripture_outline_text.cursorPositionChanged.connect(self.set_style_buttons)
-        self.outline_frame_layout.addWidget(scripture_outline_text, 1, 0)
+        self.outline_layout.addWidget(scripture_outline_text, 1, 0)
         
         sermon_outline_label = QLabel(self.main.user_settings['label13'])
-        self.outline_frame_layout.addWidget(sermon_outline_label, 0, 2)
+        self.outline_layout.addWidget(sermon_outline_label, 0, 2)
         
-        sermon_outline_text = CustomTextEdit(self)
+        sermon_outline_text = SpellCheckTextEdit(self)
         sermon_outline_text.cursorPositionChanged.connect(self.set_style_buttons)
-        self.outline_frame_layout.addWidget(sermon_outline_text, 1, 2)
+        self.outline_layout.addWidget(sermon_outline_text, 1, 2)
         
         illustration_label = QLabel(self.main.user_settings['label14'])
-        self.outline_frame_layout.addWidget(illustration_label, 0, 4)
+        self.outline_layout.addWidget(illustration_label, 0, 4)
         
-        illustration_text = CustomTextEdit(self)
+        illustration_text = SpellCheckTextEdit(self)
         illustration_text.cursorPositionChanged.connect(self.set_style_buttons)
-        self.outline_frame_layout.addWidget(illustration_text, 1, 4)
+        self.outline_layout.addWidget(illustration_text, 1, 4)
 
         scripture_box = ScriptureBox()
-        self.outline_frame_layout.addWidget(scripture_box, 0, 6, 5, 1)
+        self.outline_layout.addWidget(scripture_box, 0, 6, 5, 1)
 
-        self.tabbed_frame.addTab(self.outline_frame, self.light_tab_icons[2], 'Outlines')
+        self.tab_widget.addTab(self.outline_widget, self.light_tab_icons[2], 'Outlines')
         
     def build_research_tab(self):
         """
         Create a QWidget to hold the research tab's elements. Adds the elements.
         """
-        self.research_frame = QWidget()
-        self.research_frame_layout = QGridLayout()
-        self.research_frame.setLayout(self.research_frame_layout)
-        self.research_frame_layout.setColumnMinimumWidth(1, 20)
+        self.research_layout.setColumnMinimumWidth(1, 20)
         
         research_label = QLabel(self.main.user_settings['label15'])
-        self.research_frame_layout.addWidget(research_label, 0, 0)
+        self.research_layout.addWidget(research_label, 0, 0)
         
-        research_text = CustomTextEdit(self)
-        research_text.setObjectName('custom_text_edit')
-        research_text.cursorPositionChanged.connect(self.set_style_buttons)
-        self.research_frame_layout.addWidget(research_text, 1, 0)
+        research_text_edit = SpellCheckTextEdit(self)
+        research_text_edit.cursorPositionChanged.connect(self.set_style_buttons)
+        self.research_layout.addWidget(research_text_edit, 1, 0)
 
         scripture_box = ScriptureBox()
-        self.research_frame_layout.addWidget(scripture_box, 0, 2, 2, 1)
+        self.research_layout.addWidget(scripture_box, 0, 2, 2, 1)
         
-        self.tabbed_frame.addTab(self.research_frame, self.light_tab_icons[3], 'Research')
+        self.tab_widget.addTab(self.research_widget, self.light_tab_icons[3], 'Research')
         
     def build_sermon_tab(self):
         """
         Create a QWidget to hold the sermon tab's elements. Adds the elements.
         """
-        self.sermon_frame = QWidget()
-        self.sermon_frame_layout = QGridLayout()
-        self.sermon_frame.setLayout(self.sermon_frame_layout)
-        self.sermon_frame_layout.setColumnStretch(0, 5)
-        self.sermon_frame_layout.setColumnStretch(1, 2)
-        self.sermon_frame_layout.setColumnStretch(2, 5)
-        self.sermon_frame_layout.setColumnStretch(3, 2)
+        self.sermon_layout.setColumnStretch(0, 5)
+        self.sermon_layout.setColumnStretch(1, 2)
+        self.sermon_layout.setColumnStretch(2, 5)
+        self.sermon_layout.setColumnStretch(3, 2)
         
         sermon_title_label = QLabel(self.main.user_settings['label16'])
-        self.sermon_frame_layout.addWidget(sermon_title_label, 0, 0)
+        self.sermon_layout.addWidget(sermon_title_label, 0, 0)
         
-        sermon_title_field = QLineEdit()
-        sermon_title_field.textEdited.connect(self.changes_detected)
-        self.sermon_frame_layout.addWidget(sermon_title_field, 1, 0)
+        sermon_title_field = SpellCheckLineEdit(self)
+        self.sermon_layout.addWidget(sermon_title_field, 1, 0)
         
         sermon_date_label = QLabel(self.main.user_settings['label17'])
-        self.sermon_frame_layout.addWidget(sermon_date_label, 0, 1)
+        self.sermon_layout.addWidget(sermon_date_label, 0, 1)
 
-        self.sermon_date_edit = QDateEdit()
         self.sermon_date_edit.setCalendarPopup(True)
-        self.sermon_date_edit.setMinimumHeight(30)
+        self.sermon_date_edit.setFixedHeight(30)
         self.sermon_date_edit.dateChanged.connect(self.date_changes)
-        self.sermon_frame_layout.addWidget(self.sermon_date_edit, 1, 1)
+        self.sermon_layout.addWidget(self.sermon_date_edit, 1, 1)
         
         sermon_location_label = QLabel(self.main.user_settings['label18'])
-        self.sermon_frame_layout.addWidget(sermon_location_label, 0, 2)
+        self.sermon_layout.addWidget(sermon_location_label, 0, 2)
         
-        sermon_location_field = QLineEdit()
-        sermon_location_field.textEdited.connect(self.changes_detected)
-        self.sermon_frame_layout.addWidget(sermon_location_field, 1, 2)
+        sermon_location_field = SpellCheckLineEdit(self)
+        self.sermon_layout.addWidget(sermon_location_field, 1, 2)
         
         ctw_label = QLabel(self.main.user_settings['label19'])
-        self.sermon_frame_layout.addWidget(ctw_label, 2, 0)
+        self.sermon_layout.addWidget(ctw_label, 2, 0)
         
-        ctw_field = QLineEdit()
-        ctw_field.textEdited.connect(self.changes_detected)
-        self.sermon_frame_layout.addWidget(ctw_field, 3, 0)
+        ctw_field = SpellCheckLineEdit(self)
+        self.sermon_layout.addWidget(ctw_field, 3, 0)
         
         hr_label = QLabel(self.main.user_settings['label20'])
-        self.sermon_frame_layout.addWidget(hr_label, 2, 2)
+        self.sermon_layout.addWidget(hr_label, 2, 2)
         
-        hr_field = QLineEdit()
-        hr_field.textEdited.connect(self.changes_detected)
-        self.sermon_frame_layout.addWidget(hr_field, 3, 2)
+        hr_field = SpellCheckLineEdit(self)
+        self.sermon_layout.addWidget(hr_field, 3, 2)
 
-        sermon_text = CustomTextEdit(self)
+        sermon_text = SpellCheckTextEdit(self)
         sermon_text.cursorPositionChanged.connect(self.set_style_buttons)
-        self.sermon_frame_layout.addWidget(sermon_text, 5, 0, 1, 4)
+        self.sermon_layout.addWidget(sermon_text, 5, 0, 1, 4)
 
         self.sermon_view_button = QPushButton()
         if self.main.user_settings['theme'] == 'dark':
@@ -432,15 +396,15 @@ class GUI(QMainWindow):
         self.sermon_view_button.setFixedSize(QSize(56, 56))
         self.sermon_view_button.setToolTip('Open a window that shows your sermon')
         self.sermon_view_button.released.connect(lambda: SermonView(self, sermon_text.toSimplifiedHtml()))
-        self.sermon_frame_layout.addWidget(self.sermon_view_button, 0, 3, 4, 1)
+        self.sermon_layout.addWidget(self.sermon_view_button, 0, 3, 4, 1)
         
         sermon_label = QLabel(self.main.user_settings['label21'])
-        self.sermon_frame_layout.addWidget(sermon_label, 4, 0)
+        self.sermon_layout.addWidget(sermon_label, 4, 0)
 
         scripture_box = ScriptureBox()
-        self.sermon_frame_layout.addWidget(scripture_box, 0, 5, 6, 1)
+        self.sermon_layout.addWidget(scripture_box, 0, 5, 6, 1)
         
-        self.tabbed_frame.addTab(self.sermon_frame, self.light_tab_icons[4], 'Sermon')
+        self.tab_widget.addTab(self.sermon_widget, self.light_tab_icons[4], 'Sermon')
 
     def clear_changes(self):
         self.changes = False
@@ -463,9 +427,9 @@ class GUI(QMainWindow):
         font = QFont(self.main.user_settings['font_family'], int(self.main.user_settings['font_size']))
         for label in self.findChildren(QLabel):
             label.setFont(font)
-        for line_edit in self.findChildren(QLineEdit):
+        for line_edit in self.findChildren(SpellCheckLineEdit):
             line_edit.setFont(font)
-        for text_edit in self.findChildren(CustomTextEdit):
+        for text_edit in self.findChildren(SpellCheckTextEdit):
             html = text_edit.toSimplifiedHtml()
             text_edit.setFont(font)
             text_edit.document().setDefaultStyleSheet(
@@ -491,7 +455,7 @@ class GUI(QMainWindow):
     def apply_line_spacing(self):
         current_changes_status = self.changes
         line_height = self.main.user_settings['line_spacing']
-        for text_edit in self.findChildren(CustomTextEdit):
+        for text_edit in self.findChildren(SpellCheckTextEdit):
             block = text_edit.document().begin()
             font_metrics = text_edit.fontMetrics()
             font_height = font_metrics.height()
@@ -552,17 +516,17 @@ class GUI(QMainWindow):
         index = 1
         self.setWindowTitle('Sermon Prep Database - ' + str(record[0][17]) + ' - ' + str(record[0][3]))
 
-        for i in range(self.scripture_frame_layout.count()):
-            component = self.scripture_frame_layout.itemAt(i).widget()
+        for i in range(self.scripture_layout.count()):
+            component = self.scripture_layout.itemAt(i).widget()
 
-            if isinstance(component, QLineEdit):
+            if isinstance(component, SpellCheckLineEdit):
                 if record[0][index]:
                     component.setText(str(record[0][index].replace('&quot;', '"')).strip())
                 else:
                     component.clear()
                 index += 1
 
-            elif isinstance(component, CustomTextEdit):
+            elif isinstance(component, SpellCheckTextEdit):
                 component.clear()
                 component.full_spell_check_done = False
 
@@ -571,24 +535,10 @@ class GUI(QMainWindow):
 
                 index += 1
 
-        for i in range(self.exegesis_frame_layout.count()):
-            component = self.exegesis_frame_layout.itemAt(i).widget()
+        for i in range(self.exegesis_layout.count()):
+            component = self.exegesis_layout.itemAt(i).widget()
 
-            if isinstance(component, CustomTextEdit) and not component.objectName() == 'text_box':
-                component.clear()
-                component.full_spell_check_done = False
-
-                if record[0][index]:
-                    component.setHtml(self.main.reformat_string_for_load(record[0][index]))
-                    """spell_check = SpellCheck(component, 'whole', self)
-                    self.spd.spell_check_thread_pool.start(spell_check)"""
-
-                index += 1
-
-        for i in range(self.outline_frame_layout.count()):
-            component = self.outline_frame_layout.itemAt(i).widget()
-
-            if isinstance(component, CustomTextEdit) and not component.objectName() == 'text_box':
+            if isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'text_box':
                 component.clear()
                 component.full_spell_check_done = False
 
@@ -599,10 +549,10 @@ class GUI(QMainWindow):
 
                 index += 1
 
-        for i in range(self.research_frame_layout.count()):
-            component = self.research_frame_layout.itemAt(i).widget()
+        for i in range(self.outline_layout.count()):
+            component = self.outline_layout.itemAt(i).widget()
 
-            if isinstance(component, CustomTextEdit):
+            if isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'text_box':
                 component.clear()
                 component.full_spell_check_done = False
 
@@ -613,10 +563,22 @@ class GUI(QMainWindow):
 
                 index += 1
 
-        for i in range(self.sermon_frame_layout.count()):
-            component = self.sermon_frame_layout.itemAt(i).widget()
+        for i in range(self.research_layout.count()):
+            component = self.research_layout.itemAt(i).widget()
 
-            if isinstance(component, QLineEdit):
+            if isinstance(component, SpellCheckTextEdit):
+                component.clear()
+                component.full_spell_check_done = False
+
+                if record[0][index]:
+                    component.setHtml(self.main.reformat_string_for_load(record[0][index]))
+
+                index += 1
+
+        for i in range(self.sermon_layout.count()):
+            component = self.sermon_layout.itemAt(i).widget()
+
+            if isinstance(component, SpellCheckLineEdit):
                 if record[0][index]:
                     component.setText(record[0][index].replace('&quot;', '"'))
                 else:
@@ -650,7 +612,7 @@ class GUI(QMainWindow):
                     component.setDate(QDateTime.currentDateTime().date())
                 index += 1
 
-            if isinstance(component, CustomTextEdit):
+            if isinstance(component, SpellCheckTextEdit):
                 component.clear()
                 component.full_spell_check_done = False
 
@@ -663,9 +625,9 @@ class GUI(QMainWindow):
                 component.clear()
                 index += 1
 
-        num_tabs = self.tabbed_frame.count()
+        num_tabs = self.tab_widget.count()
         for i in range(1, num_tabs):
-            frame = self.tabbed_frame.widget(i)
+            frame = self.tab_widget.widget(i)
             widget = frame.findChild(QWidget, 'text_box')
             if widget:
                 text_title = widget.findChild(QLabel, 'text_title')
@@ -695,10 +657,10 @@ class GUI(QMainWindow):
             self.toolbar.references_cb.setItemText(self.toolbar.references_cb.currentIndex(), self.sermon_reference_field.text())
             self.setWindowTitle('Sermon Prep Database - ' + self.sermon_date_edit.text() + ' - ' + self.sermon_reference_field.text())
 
-            num_tabs = self.tabbed_frame.count()
+            num_tabs = self.tab_widget.count()
             for i in range(num_tabs):
                 if i > 0:
-                    frame = self.tabbed_frame.widget(i)
+                    frame = self.tab_widget.widget(i)
                     widget = frame.findChild(QWidget, 'text_box')
                     text_title = widget.findChild(QLabel, 'text_title')
                     text_title.setText(self.sermon_reference_field.text())
@@ -730,10 +692,10 @@ class GUI(QMainWindow):
         Method to fill the optional sermon text box on each tab with scripture when the Scripture Text text is
         changed
         """
-        num_tabs = self.tabbed_frame.count()
+        num_tabs = self.tab_widget.count()
         for i in range(num_tabs):
             if i > 0:
-                frame = self.tabbed_frame.widget(i)
+                frame = self.tab_widget.widget(i)
                 widget = frame.findChild(QWidget, 'text_box')
                 text_edit = widget.findChild(QTextEdit, 'text_edit')
                 text_edit.setText(self.sermon_text_edit.toPlainText())
@@ -746,35 +708,6 @@ class GUI(QMainWindow):
         self.setWindowTitle(
             'Sermon Prep Database - ' + self.sermon_date_edit.text() + ' - ' + self.sermon_reference_field.text())
         self.changes = True
-
-    def set_text_cursor(self, widget, cursor):
-        widget.setTextCursor(cursor)
-
-    def set_text_color_on_selection(self, widget, selection_start, selection_end, color):
-        this_cursor = widget.textCursor()
-        this_cursor.setPosition(selection_start)
-        this_cursor.setPosition(selection_end, QTextCursor.MoveMode.KeepAnchor)
-        char_format = this_cursor.charFormat()
-        char_format.setForeground(color)
-        this_cursor.mergeCharFormat(char_format)
-
-    def set_multiple_text_color(self, widget, indices, color):
-        this_cursor = widget.textCursor()
-
-        for index in indices:
-            this_cursor.setPosition(index[0], QTextCursor.MoveMode.MoveAnchor)
-            this_cursor.setPosition(index[1], QTextCursor.MoveMode.KeepAnchor)
-            char_format = this_cursor.charFormat()
-            char_format.setForeground(color)
-            char_format.setFontUnderline(True)
-            this_cursor.mergeCharFormat(char_format)
-            this_cursor.clearSelection()
-
-    def reset_cursor_color(self, widget):
-        cursor = widget.textCursor()
-        char_format = cursor.charFormat()
-        char_format.setForeground(Qt.GlobalColor.black)
-        widget.mergeCurrentCharFormat(char_format)
 
     def do_exit(self, evt):
         """

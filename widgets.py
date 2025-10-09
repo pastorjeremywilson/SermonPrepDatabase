@@ -15,6 +15,8 @@ from PyQt6.QtWidgets import QTextEdit, QWidget, QLabel, QProgressBar, QVBoxLayou
 from pynput.keyboard import Key, Controller
 from symspellpy import Verbosity
 
+from spell_check_widgets import SpellCheckLineEdit, SpellCheckTextEdit
+
 
 class StartupSplash(QWidget):
     def __init__(self, gui, progress_end):
@@ -158,6 +160,7 @@ class Toolbar(QWidget):
             self.references_cb.addItem(item[0])
         self.references_cb.currentIndexChanged.connect(
             lambda: self.get_index_of_reference(self.references_cb.currentIndex()))
+        self.references_cb.setMinimumWidth(100)
         toolbar_layout.addWidget(self.references_cb)
         toolbar_layout.addStretch(1)
 
@@ -230,10 +233,10 @@ class Toolbar(QWidget):
 
         if check_state:
             # add the reference and passage text to each tab's text_box then make it show
-            num_tabs = self.gui.tabbed_frame.count()
+            num_tabs = self.gui.tab_widget.count()
             for i in range(num_tabs):
                 if i > 0:
-                    frame = self.gui.tabbed_frame.widget(i)
+                    frame = self.gui.tab_widget.widget(i)
                     widget = frame.findChild(QWidget, 'text_box')
                     text_title = widget.findChild(QLabel, 'text_title')
                     text_edit = widget.findChild(QTextEdit, 'text_box_text_edit')
@@ -243,10 +246,10 @@ class Toolbar(QWidget):
                         widget.show()
         else:
             # hide the text_box on each tab
-            num_tabs = self.gui.tabbed_frame.count()
+            num_tabs = self.gui.tab_widget.count()
             for i in range(num_tabs):
                 if i > 0:
-                    frame = self.gui.tabbed_frame.widget(i)
+                    frame = self.gui.tab_widget.widget(i)
                     widget = frame.findChild(QWidget, 'text_box')
                     if widget:
                         widget.hide()
@@ -282,9 +285,9 @@ class Toolbar(QWidget):
         else:
             from widgets import SearchBox
             search_box = SearchBox(self.gui)
-            self.gui.tabbed_frame.addTab(search_box, QIcon('resources/svg/spSearchIcon.svg'), 'Search')
+            self.gui.tab_widget.addTab(search_box, QIcon('resources/svg/spSearchIcon.svg'), 'Search')
             search_box.show_results(result_list)
-            self.gui.tabbed_frame.setCurrentWidget(search_box)
+            self.gui.tab_widget.setCurrentWidget(search_box)
 
     def set_bold(self):
         """
@@ -736,11 +739,11 @@ class MenuBar:
                         QMessageBox.StandardButton.Ok
                     )
                     try:
-                        self.gui.tabbed_frame.removeTab(0)
+                        self.gui.tab_widget.removeTab(0)
                         self.gui.build_scripture_tab(True)
                         self.gui.auto_fill_checkbox.setChecked(True)
                         self.gui.set_style_sheets()
-                        self.gui.tabbed_frame.setCurrentIndex(0)
+                        self.gui.tab_widget.setCurrentIndex(0)
                         self.main.get_by_index(self.main.current_rec_index)
                     except Exception:
                         logging.exception('')
@@ -810,13 +813,13 @@ class MenuBar:
 
         self.rename_widget.destroy()
 
-        for widget in self.gui.main_widget.children():
+        for widget in self.gui.central_widget.children():
             if isinstance(widget, QWidget):
-                self.gui.layout.removeWidget(widget)
+                self.gui.central_layout.removeWidget(widget)
 
         self.gui.menu_bar = self
         self.gui.toolbar = Toolbar(self.gui, self.main)
-        self.gui.layout.addWidget(self.gui.toolbar)
+        self.gui.central_layout.addWidget(self.gui.toolbar)
         self.gui.build_tabbed_frame()
         self.gui.build_scripture_tab()
         self.gui.build_exegesis_tab()
@@ -890,25 +893,25 @@ class MenuBar:
             self.gui.toolbar.save_button.setIcon(QIcon('resources/svg/spSaveIcon.svg'))
             self.gui.toolbar.print_button.setIcon(QIcon('resources/svg/spPrintIcon.svg'))
             self.gui.sermon_view_button.setIcon(QIcon('resources/svg/spSermonViewIconDark.svg'))
-        for i in range(self.gui.tabbed_frame.count()):
-            if i == self.gui.tabbed_frame.currentIndex() and not type == 'dark':
-                self.gui.tabbed_frame.setTabIcon(i, self.gui.dark_tab_icons[i])
+        for i in range(self.gui.tab_widget.count()):
+            if i == self.gui.tab_widget.currentIndex() and not type == 'dark':
+                self.gui.tab_widget.setTabIcon(i, self.gui.dark_tab_icons[i])
             else:
-                self.gui.tabbed_frame.setTabIcon(i, self.gui.light_tab_icons[i])
+                self.gui.tab_widget.setTabIcon(i, self.gui.light_tab_icons[i])
 
         self.main.user_settings['theme'] = type
         self.main.save_user_settings()
 
     def disable_spell_check(self):
         """
-        Method to turn on or off the spell checking capabilities of the CustomTextEdit.
+        Method to turn on or off the spell checking capabilities of the SpellCheckTextEdit.
         """
         if self.disable_spell_check_action.isChecked():
             self.main.user_settings['disable_spell_check'] = True
             self.main.save_user_settings()
 
             # remove any red formatting created by spell check
-            for widget in self.gui.tabbed_frame.findChildren(QTextEdit, 'custom_text_edit'):
+            for widget in self.gui.tab_widget.findChildren(QTextEdit, 'custom_text_edit'):
                 widget.blockSignals(True)
 
                 cursor = widget.textCursor()
@@ -932,12 +935,6 @@ class MenuBar:
             self.main.user_settings['disable_spell_check'] = False
             self.main.save_user_settings()
 
-            # run spell check on all CustomTextEdits
-            for widget in self.gui.tabbed_frame.findChildren(QTextEdit, 'custom_text_edit'):
-                from runnables import SpellCheck
-                spell_check = SpellCheck(widget, 'whole', self.gui)
-                self.gui.main.spell_check_thread_pool.start(spell_check)
-
     def show_help(self):
         """
         Call the ShowHelp class on user's input
@@ -950,7 +947,8 @@ class MenuBar:
         help_layout = QVBoxLayout(self.help_widget)
 
         help_label = QLabel('Help Topics')
-        help_label.setFont(QFont(self.gui.main.user_settings['font_family'], 20))
+        help_label.setFont(QFont(self.gui.main.user_settings['font_family'], 24))
+        help_label.setStyleSheet('color: #202050; margin-top: 20px; margin-bottom: 20px;')
         help_layout.addWidget(help_label)
 
         sh = ShowHelp(self.gui, self.main)
@@ -966,7 +964,7 @@ class MenuBar:
         about_layout = QVBoxLayout()
         self.about_win.setLayout(about_layout)
 
-        about_label = QLabel('Sermon Prep Database v.5.0.3.004')
+        about_label = QLabel('Sermon Prep Database v.5.0.3.005')
         about_layout.addWidget(about_label)
 
         about_text = QTextBrowser()
@@ -1138,8 +1136,9 @@ class ShowHelp(QTabWidget):
 
         self.setObjectName('help_tab_widget')
         self.tabBar().setObjectName('help_tab_widget')
+        self.tabBar().setFont(
+            QFont(self.gui.main.user_settings['font_family'], int(self.gui.main.user_settings['font_size']) + 2))
 
-        self.resize(1200, 800)
         self.make_intro()
         self.make_menu()
         self.make_tool()
@@ -1339,7 +1338,7 @@ class ShowHelp(QTabWidget):
             'texts for that Pericope.<br><br>Next, you can enter the passage of the text you\'ll be using for your '
             'sermon, entering the text of that passage underneath.<br><br>If you have previously imported a Zefania '
             'XML bible file, the text of the passage you typed in will be automatically filled in. To turn this '
-            'feature off, simply uncheck the box labeled "Auto-fill ' + self.spd.user_settings[8] + '".'
+            'feature off, simply uncheck the box labeled "Auto-fill ' + self.gui.main.user_settings['label4'] + '".'
         )
         scripture_text.setFont(self.gui.standard_font)
         scripture_text.setReadOnly(True)
@@ -1439,9 +1438,13 @@ class ShowHelp(QTabWidget):
             'The sermon tab is for recording important details about your sermon, as well as the manuscript of the '
             'sermon itself.<br><br>At the top, you can enter such information as the date of the sermon, the location '
             'where the sermon will be given, as well as the title of your sermon. You can also record what call to '
-            'worship you\'ll be using that day as well as a hymn of response, if either of these apply.<br><br> Just '
-            'like in the research tab, you are able to format the text of your sermon manuscript with bold, italic, '
-            'and underline fonts as you need to.'
+            'worship you\'ll be using that day as well as a hymn of response, if either of these apply.<br><br> To the '
+            'right of the sermon information is "View Sermon" icon <img src="resources/svg/spSermonViewIconDark.svg" '
+            'width=36></img>. Clicking this will open up a window that will display just your sermon, with options to zoom '
+            'in/out and hidden buttons to the left and right that will turn the pages.<br><br>At the bottom of this '
+            'tab is the sermon manuscript area. In here you can type your sermon, or cut-and-paste your sermon from '
+            'your favorite word processor. Just like in the research tab, you are able to format the text of your '
+            'sermon manuscript with bold, italic, and underline fonts as you need to.'
         )
         sermon_text.setFont(self.gui.standard_font)
         sermon_text.setReadOnly(True)
@@ -1503,41 +1506,41 @@ class PrintHandler(QWidget):
         Gets all text values from the GUI and adds html-formatted headers
         """
         all_data = []
-        for i in range(self.gui.scripture_frame_layout.count()):
-            component = self.gui.scripture_frame_layout.itemAt(i).widget()
+        for i in range(self.gui.scripture_layout.count()):
+            component = self.gui.scripture_layout.itemAt(i).widget()
 
-            if isinstance(component, QLineEdit):
+            if isinstance(component, SpellCheckLineEdit):
                 all_data.append(component.text())
-            elif isinstance(component, QTextEdit):
+            elif isinstance(component, SpellCheckTextEdit):
                 all_data.append(component.toSimplifiedHtml())
 
-        for i in range(self.gui.exegesis_frame_layout.count()):
-            component = self.gui.exegesis_frame_layout.itemAt(i).widget()
+        for i in range(self.gui.exegesis_layout.count()):
+            component = self.gui.exegesis_layout.itemAt(i).widget()
 
-            if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+            if isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
                 all_data.append(component.toSimplifiedHtml())
 
-        for i in range(self.gui.outline_frame_layout.count()):
-            component = self.gui.outline_frame_layout.itemAt(i).widget()
+        for i in range(self.gui.outline_layout.count()):
+            component = self.gui.outline_layout.itemAt(i).widget()
 
-            if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+            if isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
                 all_data.append(component.toSimplifiedHtml())
 
-        for i in range(self.gui.research_frame_layout.count()):
-            component = self.gui.research_frame_layout.itemAt(i).widget()
+        for i in range(self.gui.research_layout.count()):
+            component = self.gui.research_layout.itemAt(i).widget()
 
-            if isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+            if isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
                 all_data.append(component.toSimplifiedHtml())
 
-        for i in range(self.gui.sermon_frame_layout.count()):
-            component = self.gui.sermon_frame_layout.itemAt(i).widget()
+        for i in range(self.gui.sermon_layout.count()):
+            component = self.gui.sermon_layout.itemAt(i).widget()
 
-            if isinstance(component, QLineEdit) or isinstance(component, QDateEdit):
-                if isinstance(component, QLineEdit):
+            if isinstance(component, SpellCheckLineEdit) or isinstance(component, QDateEdit):
+                if isinstance(component, SpellCheckLineEdit):
                     all_data.append(component.text())
                 else:
                     all_data.append(component.date().toString('yyyy-MM-dd'))
-            elif isinstance(component, QTextEdit) and not component.objectName() == 'textbox':
+            elif isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
                 all_data.append(component.toSimplifiedHtml())
 
         # add headers based on the user's chosen field names
@@ -1557,7 +1560,7 @@ class PrintHandler(QWidget):
                 )
                 text_with_headers.append(all_data[i])
 
-        # concatenate the text_with_headers lsit
+        # concatenate the text_with_headers list
         html = '\n'.join(text_with_headers)
         return html
 
@@ -1794,211 +1797,6 @@ class PrintHandler(QWidget):
         self.deleteLater()
 
 
-class CustomTextEdit(QTextEdit):
-    """
-    CustomTextEdit is an implementation of QTextEdit that adds spell-checking capabilities. Two different types of
-    spell checking are done depending on user input and current spell-check state: check previous word, or check
-    whole text. Also modifies the standard context menu to include spell check suggestions and an option to remove
-    extra white space from the text.
-
-    :param GUI gui: The GUI object
-    """
-    def __init__(self, gui):
-        super().__init__()
-        self.setObjectName('custom_text_edit')
-        self.gui = gui
-        self.full_spell_check_done = False
-        self.document().setDefaultStyleSheet(
-            'p {'
-                'font-family: ' + self.gui.main.user_settings['font_family'] + ';'
-                'font-size: ' + self.gui.main.user_settings['font_size'] + 'pt;'
-                'line-height: ' + self.gui.main.user_settings['line_spacing'] + ';'
-            '}'
-        )
-
-        self.spell_check_highlighter = SpellCheckHighlighter(self.document(), self.gui)
-
-        self.textChanged.connect(self.text_changed)
-
-    def contextMenuEvent(self, evt):
-        """
-        @override
-        Alters the standard context menu of this QTextEdit to include a list of spell-check words as well as an option
-        to remove extraneous whitespace from the text.
-        """
-        menu = self.createStandardContextMenu()
-
-        clean_whitespace_action = QAction("Remove extra whitespace")
-        clean_whitespace_action.triggered.connect(self.clean_whitespace)
-        menu.insertAction(menu.actions()[0], clean_whitespace_action)
-        menu.insertSeparator(menu.actions()[1])
-
-        if not self.gui.main.disable_spell_check:
-            cursor = self.cursorForPosition(evt.pos())
-            cursor.select(QTextCursor.SelectionType.WordUnderCursor)
-            word = cursor.selection().toPlainText()
-            cleaned_word = word.replace('’', '\'')
-            cleaned_word = re.sub('[^a-z\']', '', cleaned_word.lower())
-            cleaned_word = cleaned_word.replace('\'s', '')
-            if cleaned_word.endswith('\''):
-                cleaned_word = cleaned_word[:-1]
-            if cleaned_word.startswith('\''):
-                cleaned_word = cleaned_word[1:]
-
-            if len(cleaned_word) > 0:
-                upper = False
-                if word[0].isupper():
-                    upper = True
-
-                suggestions = self.gui.main.sym_spell.lookup(
-                    cleaned_word, Verbosity.CLOSEST, max_edit_distance=2, include_unknown=False)
-
-                next_menu_index = 0
-                spell_actions = {}
-
-                number_of_suggestions = len(suggestions)
-                if number_of_suggestions > 10: number_of_suggestions = 11
-
-                for i in range(number_of_suggestions):
-                    term = suggestions[i].term
-                    if upper:
-                        term = term[0].upper() + term[1:]
-                    spell_actions['action% s' % str(i)] = QAction(term)
-                    spell_actions['action% s' % str(i)].setData((cursor, term))
-                    spell_actions['action% s' % str(i)].triggered.connect(self.replace_word)
-                    menu.insertAction(menu.actions()[i], spell_actions['action% s' % str(i)])
-
-                    next_menu_index = i + 1
-
-                menu.insertSeparator(menu.actions()[next_menu_index])
-                action = QAction('Add to dictionary')
-                action.triggered.connect(lambda: self.gui.main.add_to_dictionary(self, cleaned_word))
-                menu.insertAction(menu.actions()[next_menu_index + 2], action)
-                menu.insertSeparator(menu.actions()[next_menu_index + 3])
-
-            menu.exec(evt.globalPos())
-            menu.close()
-
-    def toSimplifiedHtml(self):
-        """
-        Method to strip unneeded html tags and convert others to simpler tags
-        """
-        string = self.toHtml()
-        string = re.split('<body.*?>', string)[1]
-
-        # preserve any desired tags from getting removed during the wholesale <.*?> removal
-        string = re.sub('<p.*?>', '{p}', string)
-        string = re.sub('</p>', '{/p}', string)
-        string = re.sub('<ul.*?>', '{ul}', string)
-        string = re.sub('</ul>', '{/ul}', string)
-        string = re.sub('<li.*?>', '{li}', string)
-        string = re.sub('</li>', '{/li}', string)
-
-        bold_texts = re.findall('<span.*?font-weight.*?</span>', string)
-        for text in bold_texts:
-            new_text = re.sub('<.*?>', '', text)
-            # keep spaces on the outside of formatting marks
-            if new_text.startswith(' '):
-                new_text = ' {b}' + new_text[1:]
-            else:
-                new_text = '{b}' + new_text
-            if new_text.endswith(' '):
-                new_text = new_text[:-1] + '{/b} '
-            else:
-                new_text = new_text + '{/b}'
-            string = string.replace(text, new_text)
-
-        italic_texts = re.findall('<span.*?font-style.*?</span>', string)
-        for text in italic_texts:
-            new_text = re.sub('<.*?>', '', text)
-            # keep spaces on the outside of formatting marks
-            if new_text.startswith(' '):
-                new_text = ' {i}' + new_text[1:]
-            else:
-                new_text = '{i}' + new_text
-            if new_text.endswith(' '):
-                new_text = new_text[:-1] + '{/i} '
-            else:
-                new_text = new_text + '{/i}'
-            string = string.replace(text, new_text)
-
-        underline_texts = re.findall('<span.*?text-decoration.*?</span>', string)
-        for text in underline_texts:
-            new_text = re.sub('<.*?>', '', text)
-            # keep spaces on the outside of formatting marks
-            if new_text.startswith(' '):
-                new_text = ' {u}' + new_text[1:]
-            else:
-                new_text = '{u}' + new_text
-            if new_text.endswith(' '):
-                new_text = new_text[:-1] + '{/u} '
-            else:
-                new_text = new_text + '{/u}'
-            string = string.replace(text, new_text)
-
-        # convert preserved tags back to their original form
-        string = re.sub('<.*?>', '', string)
-        string = string.strip().replace('{p}', '<p>')
-        string = string.strip().replace('{/p}', '</p>\n')
-        string = string.replace('{ul}', '<ul>')
-        string = string.replace('{/ul}', '</ul>')
-        string = string.replace('{li}', '<li>')
-        string = string.replace('{/li}', '</li>\n')
-        string = string.replace('{b}', '<b>')
-        string = string.replace('{/b}', '</b>')
-        string = string.replace('{i}', '<i>')
-        string = string.replace('{/i}', '</i>')
-        string = string.replace('{u}', '<u>')
-        string = string.replace('{/u}', '</u>')
-
-        return string.strip()
-
-    def text_changed(self):
-        self.gui.changes = True
-
-    def replace_word(self):
-        """
-        Method to replace a misspelled word if the user chooses a replacement from the context menu.
-        """
-        sender = self.sender()
-        cursor = sender.data()[0]
-        term = sender.data()[1]
-
-        self.setTextCursor(cursor)
-        selected_word = self.textCursor().selectedText().strip()
-
-        # check if the original word includes punctuation so that it can be preserved
-        punctuation = ''
-        if not selected_word[len(selected_word) - 1].isalpha():
-            punctuation = selected_word[len(selected_word) - 1]
-
-        self.textCursor().removeSelectedText()
-        cursor = self.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.NextCharacter, QTextCursor.MoveMode.KeepAnchor)
-        self.setTextCursor(cursor)
-
-        cursor = self.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.PreviousCharacter, QTextCursor.MoveMode.MoveAnchor)
-        self.setTextCursor(cursor)
-
-        self.textCursor().insertText(term)
-
-        self.gui.changes = True
-
-    def clean_whitespace(self):
-        """
-        Method to remove duplicate spaces and tabs from the document.
-        """
-        component = self.gui.focusWidget()
-        if isinstance(component, QTextEdit):
-            string = component.toHtml()
-            string = re.sub(' +', ' ', string)
-            string = re.sub('\t+', '\t', string)
-
-            component.setHtml(string)
-        self.gui.changes = True
-
-
 class SpellCheckHighlighter(QSyntaxHighlighter):
     def __init__(self, parent, gui):
         super().__init__(parent)
@@ -2167,14 +1965,14 @@ class SearchBox(QWidget):
                     break
                 index += 1
             self.gui.main.get_by_index(index)
-            self.gui.tabbed_frame.setCurrentWidget(self.gui.tabbed_frame.widget(0))
+            self.gui.tab_widget.setCurrentWidget(self.gui.tab_widget.widget(0))
 
     def remove_self(self):
         """
         Method to remove this widget's tab from the GUI's tabbed widget.
         """
-        self.gui.tabbed_frame.removeTab(5)
-        self.gui.tabbed_frame.setCurrentWidget(self.gui.tabbed_frame.widget(0))
+        self.gui.tab_widget.removeTab(5)
+        self.gui.tab_widget.setCurrentWidget(self.gui.tab_widget.widget(0))
         self.destroy()
 
 
