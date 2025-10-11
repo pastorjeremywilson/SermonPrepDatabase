@@ -4,7 +4,7 @@ Author: Jeremy G. Wilson
 Copyright: 2025 Jeremy G. Wilson
 
 This file, and the files contained in the distribution are parts of
-the Sermon Prep Database program (v.5.1.0)
+the Sermon Prep Database program (v.5.1.1)
 
 Sermon Prep Database is free software: you can redistribute it and/or
 modify it under the terms of the GNU General Public License (GNU GPL)
@@ -95,7 +95,7 @@ class Main:
             if not exists(self.app_dir):
                 os.mkdir(self.app_dir)
 
-            self.write_to_log('application version is v.5.1.0')
+            self.write_to_log('application version is v.5.1.1')
             self.write_to_log('platform is ' + self.platform)
             self.write_to_log('current working directory is ' + os.path.dirname(__file__))
             self.write_to_log('application directory is ' + self.app_dir)
@@ -177,7 +177,7 @@ class Main:
             response = QMessageBox.question(
                 None,
                 'Database Not Found',
-                'It looks like this is the first time you\'ve run Sermon Prep Database v.5.1.0.\n'
+                'It looks like this is the first time you\'ve run Sermon Prep Database v.5.1.1.\n'
                 'Would you like to import an old database?\n'
                 '(Choose "No" to create a new database)',
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No | QMessageBox.StandardButton.Cancel
