@@ -194,6 +194,7 @@ class GUI(QMainWindow):
 
         if exists(self.main.app_dir + '/my_bible.xml'):
             self.scripture_layout.addWidget(self.sermon_reference_field, 1, 1)
+            self.sermon_reference_field.textChanged.connect(self.auto_fill)
 
             self.auto_fill_checkbox.setChecked(True)
             self.scripture_layout.addWidget(self.auto_fill_checkbox, 1, 2)
