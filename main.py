@@ -65,10 +65,14 @@ class Main:
 
     def __init__(self):
         """
-        On startup, initialize a QApplication, get the platform, set the app_dir and db_loc, instantiate the GUI
-        Use the change_text signal to alter the text on the splash screen
+        On startup, initialize a QApplication, instantiate the GUI
         """
+        sys.excepthook = log_unhandled_exception
         os.chdir(os.path.dirname(__file__))
+        # libxcb-cursor0 is a dependency (or libwayland-cursor0)
+        if 'linux' in sys.platform:
+            plugin_path = os.path.dirname(__file__) + '/resources/QTPlugins/'
+            os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = plugin_path
         self.app = QApplication(sys.argv)
         self.gui = GUI(self)
         self.get_by_index(self.current_rec_index)
@@ -88,7 +92,6 @@ class Main:
                 self.app_dir = user_dir + '/AppData/Roaming/Sermon Prep Database'
             elif self.platform == 'linux':
                 self.app_dir = user_dir + '/.sermonPrepDatabase'
-                os.environ['QT_QPA_PLATFORM'] = 'offscreen'
             self.db_loc = self.app_dir + '/sermon_prep_database.db'
 
             # create the user files directory if it doesn't exist
@@ -192,7 +195,6 @@ class Main:
                 shutil.copy('resources/config.json', self.app_dir)
                 QMessageBox.information(None, 'Database Created', 'A new database has been created.',
                                         QMessageBox.StandardButton.Ok)
-                self.gui.app.processEvents()
             else:
                 sys.exit(0)
         else:
@@ -338,6 +340,10 @@ class Main:
         """
         Method to retrieve all user settings from the user's database.
         """
+        if not exists(self.app_dir):
+            os.mkdir(self.app_dir)
+        if not exists(self.app_dir + '/config.json'):
+            shutil.copyfile('resources/config.json', self.app_dir + '/config.json')
         self.user_settings = json.loads(open(self.app_dir + '/config.json').read())
 
     def save_user_settings(self):
@@ -972,8 +978,6 @@ def log_unhandled_exception(exc_type, exc_value, exc_traceback):
     message_box.setStandardButtons(QMessageBox.StandardButton.Close)
     message_box.exec()
 
-
-# main entry point for the program
 if __name__ == '__main__':
-    sys.excepthook = log_unhandled_exception
     Main()
+
