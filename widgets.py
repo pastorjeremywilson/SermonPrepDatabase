@@ -5,7 +5,8 @@ import shutil
 import sys
 from os.path import exists
 
-import wmi
+if 'linux' not in sys.platform:
+    import wmi
 from PyQt6.QtCore import Qt, QSize, QSizeF, QRectF
 from PyQt6.QtGui import QPixmap, QFont, QAction, QTextCursor, QIcon, QStandardItemModel, QStandardItem, QTextDocument, \
     QTextOption, QPainter, QTextListFormat, QTextCharFormat, QFontDatabase, QSyntaxHighlighter
