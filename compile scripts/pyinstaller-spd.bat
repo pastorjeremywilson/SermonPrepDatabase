@@ -1,2 +1,0 @@
-@"../.venv/Scripts/pyinstaller.exe" --noconfirm --clean --windowed -i "../resources/icons.ico" --add-data "../resources;resources/" --add-data "../README.html;./" --add-data "../README.md;./" --add-data "../*.py;./src" --distpath "C:\Users\pasto\Desktop\output" --workpath "C:\Users\pasto\Desktop\output\work" "../main.py" --name="SermonPrepDatabase"
-@pause

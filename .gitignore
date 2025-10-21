@@ -1,5 +1,3 @@
-/linux-build/
-/compile scripts/S*.exe
 /nowDefunct/
 __pycache__/dialogs.cpython-311.pyc
 __pycache__/get_from_docx.cpython-311.pyc
@@ -10,3 +8,6 @@ __pycache__/menu_bar.cpython-311.pyc
 __pycache__/runnables.cpython-311.pyc
 __pycache__/toolbar.cpython-311.pyc
 .vscode/launch.json
+compile_scripts/*/
+compile_scripts/*.deb
+.idea/

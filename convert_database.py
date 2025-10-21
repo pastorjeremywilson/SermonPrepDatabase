@@ -48,7 +48,7 @@ class ConvertDatabase(QDialog):
             dialog = QFileDialog()
             dialog.setWindowTitle('Select Database')
             dialog.setNameFilter('Database File (*.db)')
-            dialog.setFileMode(QFileDialog.ExistingFile)
+            dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
             dialog.setDirectory(os.path.expanduser('~'))
 
             dialog.exec()

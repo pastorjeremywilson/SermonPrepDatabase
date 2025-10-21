@@ -186,7 +186,7 @@ class GetScripture:
                                 except ValueError:
                                     pass
 
-                            scripture_text = re.sub('\s+', ' ', scripture_text).strip()
+                            scripture_text = re.sub('s+', ' ', scripture_text).strip()
 
                             if len(scripture_text) > 0:
                                 return scripture_text
