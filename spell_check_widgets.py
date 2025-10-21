@@ -209,7 +209,6 @@ class SpellCheckTextEdit(QTextEdit):
         self.gui.changes = True
 
 
-# ToDo: fix tab on line edit to go to next widget
 class SpellCheckLineEdit(QTextEdit):
     """
     SpellCheckLineEdit is an implementation of QTextEdit that adds the same spell-checking capabilities as above, but

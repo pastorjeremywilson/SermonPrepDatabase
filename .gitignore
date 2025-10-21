@@ -8,6 +8,6 @@ __pycache__/menu_bar.cpython-311.pyc
 __pycache__/runnables.cpython-311.pyc
 __pycache__/toolbar.cpython-311.pyc
 .vscode/launch.json
-compile scripts/debian/sermon_prep_database_v.5.1.1/
-linux-build/SermonPrepDatabase.zip
+compile_scripts/*/
+compile_scripts/*.deb
 .idea/
