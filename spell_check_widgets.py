@@ -5,7 +5,6 @@ from PyQt6.QtGui import QAction, QTextCursor, QSyntaxHighlighter, QTextCharForma
 from PyQt6.QtWidgets import QTextEdit
 from symspellpy import Verbosity
 
-
 class SpellCheckTextEdit(QTextEdit):
     """
     SpellCheckTextEdit is an implementation of QTextEdit that adds spell-checking capabilities.
@@ -210,6 +209,7 @@ class SpellCheckTextEdit(QTextEdit):
         self.gui.changes = True
 
 
+# ToDo: fix tab on line edit to go to next widget
 class SpellCheckLineEdit(QTextEdit):
     """
     SpellCheckLineEdit is an implementation of QTextEdit that adds the same spell-checking capabilities as above, but
@@ -315,6 +315,16 @@ class SpellCheckLineEdit(QTextEdit):
 
     def text(self):
         return self.toPlainText()
+
+    def keyPressEvent(self, evt):
+        if evt.key() == Qt.Key.Key_Tab:
+            evt.ignore()
+            self.focusNextPrevChild(False)
+        elif evt.key() == Qt.Key.Key_Backtab:
+            evt.ignore()
+            self.focusNextPrevChild(True)
+        else:
+            super().keyPressEvent(evt)
 
 
 class SpellCheckHighlighter(QSyntaxHighlighter):
