@@ -2,7 +2,7 @@
 PROGRAMNAME=sermon-prep-database
 FRIENDLYNAME="Sermon Prep Database"
 VERSION=5.1.2
-ICON=resources/icon.png
+ICON=resources/svg/spIcon.png
 VENV=.linux_venv
 CONTROLSECTION=education
 DEPENDENCIES="python3, libxcb-cursor0, libwayland-cursor0"
@@ -53,6 +53,7 @@ EOF
 
 echo Creating Binary
 cat > $PROGRAMNAME.$VERSION/usr/bin/$PROGRAMNAME <<EOF
+#!/bin/bash
 cd /usr/local/$PROGRAMNAME
 ./$VENV/bin/python3 main.py
 EOF
