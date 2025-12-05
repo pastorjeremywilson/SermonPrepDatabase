@@ -9,6 +9,7 @@ Sermon Prep Database is a program to organize - and store for easy retrieval - y
 
 # What's New in v.5.1.4?</h2>
 - A bug crept in that deleted every "s" when a scripture passage was auto-filled. Fixed.
+- Prevented the "Enter" key from creating a new line in one-line widgets.
 
 # Why Sermon Prep Database?
 
