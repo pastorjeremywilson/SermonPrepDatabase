@@ -194,7 +194,7 @@ class GUI(QMainWindow):
 
         if exists(self.main.app_dir + '/my_bible.xml'):
             self.scripture_layout.addWidget(self.sermon_reference_field, 1, 1)
-            self.sermon_reference_field.textChanged.connect(self.auto_fill)
+            self.sermon_reference_field.textChanged.connect(self.reference_changes)
 
             self.auto_fill_checkbox.setChecked(True)
             self.scripture_layout.addWidget(self.auto_fill_checkbox, 1, 2)
@@ -685,8 +685,6 @@ class GUI(QMainWindow):
         """
         self.main.user_settings['auto_fill'] = self.auto_fill_checkbox.isChecked()
         self.main.save_user_settings()
-        if self.auto_fill_checkbox.isChecked():
-            self.reference_changes()
 
     def text_changes(self):
         """
