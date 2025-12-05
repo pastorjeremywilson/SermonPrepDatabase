@@ -1,7 +1,7 @@
 import re
 
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QAction, QTextCursor, QSyntaxHighlighter, QTextCharFormat, QTextOption
+from PyQt6.QtGui import QAction, QTextCursor, QSyntaxHighlighter, QTextCharFormat, QTextOption, QKeyEvent
 from PyQt6.QtWidgets import QTextEdit
 from symspellpy import Verbosity
 
@@ -202,8 +202,7 @@ class SpellCheckTextEdit(QTextEdit):
         component = self.gui.focusWidget()
         if isinstance(component, QTextEdit):
             string = component.toHtml()
-            string = re.sub(' +', ' ', string)
-            string = re.sub('\t+', '\t', string)
+            string = re.sub('[ \n\t]{2,}', ' ', string)
 
             component.setHtml(string)
         self.gui.changes = True
@@ -219,7 +218,8 @@ class SpellCheckLineEdit(QTextEdit):
     def __init__(self, gui):
         super().__init__()
         self.gui = gui
-        self.setWordWrapMode(QTextOption.WrapMode.NoWrap)
+        #self.setWordWrapMode(QTextOption.WrapMode.NoWrap)
+        self.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
         self.setFixedHeight(30)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
@@ -315,15 +315,21 @@ class SpellCheckLineEdit(QTextEdit):
     def text(self):
         return self.toPlainText()
 
-    def keyPressEvent(self, evt):
-        if evt.key() == Qt.Key.Key_Tab:
-            evt.ignore()
-            self.focusNextPrevChild(False)
-        elif evt.key() == Qt.Key.Key_Backtab:
-            evt.ignore()
-            self.focusNextPrevChild(True)
-        else:
-            super().keyPressEvent(evt)
+    def keyPressEvent(self, event: QKeyEvent):
+        key = event.key()
+        mods = event.modifiers()
+
+        if key == Qt.Key.Key_Tab:
+            self.parent().focusNextChild()
+            return
+        elif key == Qt.Key.Key_Backtab or (key == Qt.Key.Key_Tab and mods == Qt.KeyboardModifier.ShiftModifier):
+            self.parent().focusPreviousChild()
+            return
+        elif key in (Qt.Key.Key_Enter, Qt.Key.Key_Return):
+            self.parent().focusNextChild()
+            return
+
+        super().keyPressEvent(event)
 
 
 class SpellCheckHighlighter(QSyntaxHighlighter):
