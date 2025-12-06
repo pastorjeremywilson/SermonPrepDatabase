@@ -1,0 +1,5 @@
+pynput==1.8.1
+PyQt6==6.10.0
+symspellpy==6.9.0
+wmi==1.5.1
+pyinstaller==6.17.0
