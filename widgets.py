@@ -1,3 +1,4 @@
+import io
 import logging
 import os
 import re
@@ -5,405 +6,70 @@ import shutil
 import sys
 from os.path import exists
 
+from PyQt6.QtPdf import QPdfDocument
+
 if 'linux' not in sys.platform:
     import wmi
 from PyQt6.QtCore import Qt, QSize, QSizeF, QRectF
 from PyQt6.QtGui import QPixmap, QFont, QAction, QTextCursor, QIcon, QStandardItemModel, QStandardItem, QTextDocument, \
-    QTextOption, QPainter, QTextListFormat, QTextCharFormat, QFontDatabase, QSyntaxHighlighter
+    QTextOption, QPainter, QTextListFormat, QTextCharFormat, QFontDatabase, QSyntaxHighlighter, QPalette, QColor
 from PyQt6.QtPrintSupport import QPrinter
 from PyQt6.QtWidgets import QTextEdit, QWidget, QLabel, QProgressBar, QVBoxLayout, QHBoxLayout, QPushButton, \
-    QTableView, QMessageBox, QLineEdit, QComboBox, QFileDialog, QTabWidget, QTextBrowser, QSpinBox, QDateEdit
+    QTableView, QMessageBox, QLineEdit, QComboBox, QFileDialog, QTabWidget, QTextBrowser, QSpinBox, QDateEdit, QFrame, \
+    QMenu, QSizePolicy, QMainWindow, QScrollArea
 from pynput.keyboard import Key, Controller
 from symspellpy import Verbosity
 
 from spell_check_widgets import SpellCheckLineEdit, SpellCheckTextEdit
 
 
-class StartupSplash(QWidget):
-    def __init__(self, gui, progress_end):
+class AutoSelectLineEdit(QLineEdit):
+    def __init__(self):
+        super().__init__()
+        self.all_selected = False
+
+    def mouseReleaseEvent(self, evt):
+        if self.all_selected:
+            self.setCursorPosition(len(self.text()))
+            self.all_selected = False
+        else:
+            self.selectAll()
+            self.all_selected = True
+        super().mouseReleaseEvent(evt)
+
+
+class AutoSelectSpinBox(QSpinBox):
+    def __init__(self):
+        super().__init__()
+        self.setLineEdit(AutoSelectLineEdit())
+
+
+class FontFaceComboBox(QComboBox):
+    """
+    Creates a custom QComboBox that displays all fonts on the system in their own style.
+    :param gui.GUI gui: The current instance of GUI
+    """
+
+    def __init__(self, gui):
+        """
+        :param gui.GUI gui: The current instance of GUI
+        """
         super().__init__()
         self.gui = gui
+        self.populate_widget()
 
-        self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
-        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setMinimumWidth(300)
+    def populate_widget(self):
+        try:
+            row = 0
+            model = self.model()
+            families = QFontDatabase.families()
+            for font in families:
+                self.addItem(font)
+                model.setData(model.index(row, 0), QFont(font, 14), Qt.ItemDataRole.FontRole)
+                row += 1
 
-        layout = QVBoxLayout(self)
-
-        self.working_label = QLabel()
-        self.working_label.setAutoFillBackground(False)
-        self.working_label.setPixmap(QPixmap('resources/icon.png'))
-        layout.addWidget(self.working_label, Qt.AlignmentFlag.AlignHCenter)
-
-        self.status_label = QLabel('Starting...')
-        self.status_label.setFont(QFont('Helvetica', 14, QFont.Weight.Bold))
-        self.status_label.setStyleSheet('color: #d7d7f4; text-align: center;')
-        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.addWidget(self.status_label, Qt.AlignmentFlag.AlignCenter)
-
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setRange(1, progress_end)
-        self.progress_bar.setTextVisible(False)
-        self.progress_bar.setStyleSheet(
-            'QProgressBar {'
-                'border: 1px solid gray;'
-            '}'
-            'QProgressBar::chunk {'
-                'border: none;'
-                'background: #d7d7f4;'
-            '}'
-        )
-        layout.addWidget(self.progress_bar, Qt.AlignmentFlag.AlignCenter)
-
-
-class Toolbar(QWidget):
-    """
-    Toolbar creates the uppermost QWidget of the GUI that holds formatting, search, and navigation elements.
-    """
-    def __init__(self, gui, main):
-        super().__init__()
-        self.gui = gui
-        self.main = main
-        self.setObjectName('toolbar')
-
-        icon_size = QSize(16, 16)
-
-        toolbar_layout = QHBoxLayout(self)
-        toolbar_layout.setContentsMargins(5, 5, 5, 5)
-
-        self.undo_button = QPushButton()
-        self.undo_button.setIcon(QIcon('resources/svg/spUndoIcon.svg'))
-        self.undo_button.setIconSize(icon_size)
-        self.undo_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.undo_button.clicked.connect(self.gui.menu_bar.press_ctrl_z)
-        self.undo_button.setToolTip('Undo')
-        toolbar_layout.addWidget(self.undo_button)
-
-        self.redo_button = QPushButton()
-        self.redo_button.setIcon(QIcon('resources/svg/spRedoIcon.svg'))
-        self.redo_button.setIconSize(icon_size)
-        self.redo_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.redo_button.clicked.connect(self.gui.menu_bar.press_ctrl_y)
-        self.redo_button.setToolTip('Redo')
-        toolbar_layout.addWidget(self.redo_button)
-        toolbar_layout.addSpacing(20)
-
-        self.bold_button = QPushButton()
-        self.bold_button.setCheckable(True)
-        self.bold_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.bold_button.clicked.connect(self.set_bold)
-        self.bold_button.setIcon(QIcon('resources/svg/spBoldIcon.svg'))
-        self.bold_button.setIconSize(icon_size)
-        self.bold_button.setToolTip('Bold\n(Ctrl+B)')
-        toolbar_layout.addWidget(self.bold_button)
-
-        self.italic_button = QPushButton()
-        self.italic_button.setCheckable(True)
-        self.italic_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.italic_button.clicked.connect(self.set_italic)
-        self.italic_button.setIcon(QIcon('resources/svg/spItalicIcon.svg'))
-        self.italic_button.setIconSize(icon_size)
-        self.italic_button.setToolTip('Italic\n(Ctrl+I)')
-        toolbar_layout.addWidget(self.italic_button)
-
-        self.underline_button = QPushButton()
-        self.underline_button.setCheckable(True)
-        self.underline_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.underline_button.clicked.connect(self.set_underline)
-        self.underline_button.setIcon(QIcon('resources/svg/spUnderlineIcon.svg'))
-        self.underline_button.setIconSize(icon_size)
-        self.underline_button.setToolTip('Underline\n(Ctrl+U)')
-        toolbar_layout.addWidget(self.underline_button)
-
-        self.bullet_button = QPushButton()
-        self.bullet_button.setCheckable(True)
-        self.bullet_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.bullet_button.clicked.connect(self.set_bullet)
-        self.bullet_button.setIcon(QIcon('resources/svg/spBulletIcon.svg'))
-        self.bullet_button.setIconSize(icon_size)
-        self.bullet_button.setToolTip('Add Bullets\n(Ctrl+Shift+B)')
-        toolbar_layout.addWidget(self.bullet_button)
-        toolbar_layout.addSpacing(20)
-
-        self.text_visible = QPushButton()
-        self.text_visible.setObjectName('text_visible')
-        self.text_visible.setCheckable(True)
-        self.text_visible.setFocusPolicy(Qt.FocusPolicy.NoFocus)
-        self.text_visible.setToolTip('Show Sermon Text on All Tabs')
-        self.text_visible.setIcon(QIcon('resources/svg/spShowText.svg'))
-        self.text_visible.setIconSize(QSize(round(icon_size.width() * 2.5), icon_size.height()))
-        self.text_visible.clicked.connect(self.keep_text_visible)
-        toolbar_layout.addWidget(self.text_visible)
-
-        toolbar_layout.addStretch(1)
-
-        choose_label = QLabel('Get Sermon:')
-        choose_label.setAutoFillBackground(False)
-        toolbar_layout.addWidget(choose_label)
-
-        dates_label = QLabel('by Date')
-        dates_label.setAutoFillBackground(False)
-        toolbar_layout.addWidget(dates_label)
-
-        self.dates_cb = QComboBox()
-        self.dates_cb.addItems(self.main.dates)
-        self.dates_cb.currentIndexChanged.connect(lambda: self.main.get_by_index(self.dates_cb.currentIndex()))
-        self.dates_cb.setMinimumWidth(100)
-        toolbar_layout.addWidget(self.dates_cb)
-
-        references_label = QLabel('by Reference')
-        references_label.setAutoFillBackground(False)
-        toolbar_layout.addWidget(references_label)
-
-        self.references_cb = QComboBox()
-        for item in self.main.references:
-            self.references_cb.addItem(item[0])
-        self.references_cb.currentIndexChanged.connect(
-            lambda: self.get_index_of_reference(self.references_cb.currentIndex()))
-        self.references_cb.setMinimumWidth(100)
-        toolbar_layout.addWidget(self.references_cb)
-        toolbar_layout.addStretch(1)
-
-        search_label = QLabel('Keyword Search:')
-        search_label.setAutoFillBackground(False)
-        toolbar_layout.addWidget(search_label)
-
-        search_field = QLineEdit()
-        search_field.setMinimumWidth(175)
-        search_field.returnPressed.connect(lambda: self.do_search(search_field.text()))
-        toolbar_layout.addWidget(search_field)
-
-        toolbar_layout.addStretch(1)
-
-        self.first_rec_button = QPushButton()
-        self.first_rec_button.setIcon(QIcon('resources/svg/spFirstRecIcon.svg'))
-        self.first_rec_button.setIconSize(icon_size)
-        self.first_rec_button.clicked.connect(self.main.first_rec)
-        self.first_rec_button.setToolTip('Jump to First Record')
-        toolbar_layout.addWidget(self.first_rec_button)
-
-        self.prev_rec_button = QPushButton()
-        self.prev_rec_button.setIcon(QIcon('resources/svg/spPrevRecIcon.svg'))
-        self.prev_rec_button.setIconSize(icon_size)
-        self.prev_rec_button.clicked.connect(self.main.prev_rec)
-        self.prev_rec_button.setToolTip('Go to Previous Record')
-        toolbar_layout.addWidget(self.prev_rec_button)
-
-        self.next_rec_button = QPushButton()
-        self.next_rec_button.setIcon(QIcon('resources/svg/spNextRecIcon.svg'))
-        self.next_rec_button.clicked.connect(self.main.next_rec)
-        self.next_rec_button.setToolTip('Go to Next Record')
-        toolbar_layout.addWidget(self.next_rec_button)
-
-        self.last_rec_button = QPushButton()
-        self.last_rec_button.setIcon(QIcon('resources/svg/spLastRecIcon.svg'))
-        self.last_rec_button.clicked.connect(self.main.last_rec)
-        self.last_rec_button.setToolTip('Jump to Last Record')
-        toolbar_layout.addWidget(self.last_rec_button)
-
-        self.new_rec_button = QPushButton()
-        self.new_rec_button.setIcon(QIcon('resources/svg/spNewIcon.svg'))
-        self.new_rec_button.clicked.connect(self.main.new_rec)
-        self.new_rec_button.setToolTip('Create a New Record')
-        toolbar_layout.addWidget(self.new_rec_button)
-        toolbar_layout.addSpacing(20)
-
-        self.save_button = QPushButton()
-        self.save_button.setIcon(QIcon('resources/svg/spSaveIcon.svg'))
-        self.save_button.setIconSize(icon_size)
-        self.save_button.clicked.connect(self.main.save_rec)
-        self.save_button.setToolTip('Save this Record')
-        toolbar_layout.addWidget(self.save_button)
-
-        self.print_button = QPushButton()
-        self.print_button.setIcon(QIcon('resources/svg/spPrintIcon.svg'))
-        self.print_button.setIconSize(icon_size)
-        self.print_button.clicked.connect(self.gui.menu_bar.print_rec)
-        self.print_button.setToolTip('Print this Record')
-        toolbar_layout.addWidget(self.print_button)
-
-        self.id_label = QLabel()
-        toolbar_layout.addWidget(self.id_label)
-
-    def keep_text_visible(self):
-        """
-        Handle the user's toggling of the text_visible button.
-        """
-        check_state = self.text_visible.isChecked()
-
-        if check_state:
-            # add the reference and passage text to each tab's text_box then make it show
-            num_tabs = self.gui.tab_widget.count()
-            for i in range(num_tabs):
-                if i > 0:
-                    frame = self.gui.tab_widget.widget(i)
-                    widget = frame.findChild(QWidget, 'text_box')
-                    text_title = widget.findChild(QLabel, 'text_title')
-                    text_edit = widget.findChild(QTextEdit, 'text_box_text_edit')
-                    text_edit.setText(self.gui.sermon_text_edit.toPlainText())
-                    text_title.setText(self.gui.sermon_reference_field.text())
-                    if widget:
-                        widget.show()
-        else:
-            # hide the text_box on each tab
-            num_tabs = self.gui.tab_widget.count()
-            for i in range(num_tabs):
-                if i > 0:
-                    frame = self.gui.tab_widget.widget(i)
-                    widget = frame.findChild(QWidget, 'text_box')
-                    if widget:
-                        widget.hide()
-
-    def get_index_of_reference(self, index):
-        """
-        Method to find the index number of the user's chosen reference.
-
-        :param int index: The index of the reference combo box's chosen reference
-        """
-        id_to_find = self.main.references[index][1]
-        counter = 0
-        for item in self.main.ids:
-            if item == id_to_find:
-                break
-            counter += 1
-        self.main.get_by_index(counter)
-
-    def do_search(self, text):
-        """
-        Method to call get_search_results from SermonPrepDatabase and display the results
-
-        :param str text: The user's search term(s)
-        """
-        result_list = self.main.get_search_results(text)
-        if len(result_list) == 0:
-            QMessageBox.information(
-                None,
-                'No Results',
-                'No results were found. Please try your search again.',
-                QMessageBox.StandardButton.Ok
-            )
-        else:
-            from widgets import SearchBox
-            search_box = SearchBox(self.gui)
-            self.gui.tab_widget.addTab(search_box, QIcon('resources/svg/spSearchIcon.svg'), 'Search')
-            search_box.show_results(result_list)
-            self.gui.tab_widget.setCurrentWidget(search_box)
-
-    def set_bold(self):
-        """
-        Method to toggle the bold state of the text at the user's cursor or selection.
-        """
-        component = self.gui.focusWidget()
-        if isinstance(component, QTextEdit):
-            cursor = component.textCursor()
-            # handle this differently if the user has a section of text selected
-            if cursor.hasSelection():
-                selection_start = cursor.selectionStart()
-                selection_end = cursor.selectionEnd()
-                cursor.setPosition(selection_start, QTextCursor.MoveMode.MoveAnchor)
-                cursor.setPosition(selection_end, QTextCursor.MoveMode.KeepAnchor)
-                char_format = cursor.charFormat()
-                if char_format.font().bold():
-                    char_format.setFontWeight(QFont.Weight.Normal)
-                    cursor.mergeCharFormat(char_format)
-                else:
-                    char_format.setFontWeight(QFont.Weight.Bold)
-                    cursor.mergeCharFormat(char_format)
-            else:
-                font = cursor.charFormat().font()
-                if font.weight() == QFont.Weight.Normal:
-                    font.setWeight(QFont.Weight.Bold)
-                    component.setCurrentFont(font)
-                else:
-                    font.setWeight(QFont.Weight.Normal)
-                    component.setCurrentFont(font)
-        else:
-            self.bold_button.setChecked(False)
-
-    def set_italic(self):
-        """
-        Method to toggle the italic state of the text at the user's cursor or selection.
-        """
-        component = self.gui.focusWidget()
-        if isinstance(component, QTextEdit):
-            cursor = component.textCursor()
-            if cursor.hasSelection():
-                font = QTextCharFormat(cursor.charFormat())
-                if not font.fontItalic():
-                    font.setFontItalic(True)
-                    cursor.setCharFormat(QTextCharFormat(font))
-                else:
-                    font.setFontItalic(False)
-                    cursor.mergeCharFormat(QTextCharFormat(font))
-            else:
-                font = cursor.charFormat().font()
-                if not font.italic():
-                    font.setItalic(True)
-                    component.setCurrentFont(font)
-                else:
-                    font.setItalic(False)
-                    component.setCurrentFont(font)
-        else:
-            self.italic_button.setChecked(False)
-
-    def set_underline(self):
-        """
-        Method to toggle the underline state of the text at the user's cursor or selection.
-        """
-        component = self.gui.focusWidget()
-        if isinstance(component, QTextEdit):
-            cursor = component.textCursor()
-            if cursor.hasSelection():
-                font = QTextCharFormat(cursor.charFormat())
-                if not font.fontUnderline():
-                    font.setFontUnderline(True)
-                    cursor.setCharFormat(QTextCharFormat(font))
-                else:
-                    font.setFontUnderline(False)
-                    cursor.mergeCharFormat(QTextCharFormat(font))
-            else:
-                font = cursor.charFormat().font()
-                if not font.underline():
-                    font.setUnderline(True)
-                    component.setCurrentFont(font)
-                else:
-                    font.setUnderline(False)
-                    component.setCurrentFont(font)
-        else:
-            self.underline_button.setChecked(False)
-
-    def set_bullet(self):
-        """
-        Method to toggle the bulleted list state of the text at the user's cursor or selection.
-        """
-        component = self.gui.focusWidget()
-        if isinstance(component, QTextEdit):
-            cursor = component.textCursor()
-            text_list = cursor.currentList()
-            if text_list:
-                start = cursor.selectionStart()
-                end = cursor.selectionEnd()
-                removed = 0
-                for i in range(text_list.count()):
-                    item = text_list.item(i - removed)
-                    if (item.position() <= end and
-                            item.position() + item.length() > start):
-                        text_list.remove(item)
-                        block_cursor = QTextCursor(item)
-                        block_format = block_cursor.blockFormat()
-                        block_format.setIndent(0)
-                        block_cursor.mergeBlockFormat(block_format)
-                        removed += 1
-                component.setTextCursor(cursor)
-            else:
-                list_format = QTextListFormat()
-                style = QTextListFormat.Style.ListDisc
-                list_format.setStyle(style)
-                cursor.createList(list_format)
-                component.setTextCursor(cursor)
-        else:
-            self.bullet_button.setChecked(False)
+        except Exception:
+            self.gui.main.error_log()
 
 
 class MenuBar:
@@ -497,16 +163,6 @@ class MenuBar:
         dark_color_action = color_menu.addAction('Dark')
         dark_color_action.triggered.connect(lambda: self.color_change('dark'))
 
-        """custom_color_menu = color_menu.addMenu('Custom Colors')
-
-        bg_color_action = custom_color_menu.addAction('Change Accent Color')
-        bg_color_action.setToolTip('Choose a different color for accents and borders')
-        bg_color_action.triggered.connect(lambda: self.color_change('bg'))
-
-        fg_color_action = custom_color_menu.addAction('Change Background Color')
-        fg_color_action.setToolTip('Choose a different color for the background')
-        fg_color_action.triggered.connect(lambda: self.color_change('fg'))"""
-
         font_action = config_menu.addAction('Change Font')
         font_action.setToolTip('Change the font and font size used in the program')
         font_action.triggered.connect(self.change_font)
@@ -557,6 +213,7 @@ class MenuBar:
         self.disable_spell_check_action.triggered.connect(self.disable_spell_check)
 
         record_menu = menu_bar.addMenu('Record')
+        record_menu.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Maximum)
         record_menu.setToolTipsVisible(True)
 
         first_rec_action = record_menu.addAction('Jump to First Record')
@@ -588,7 +245,8 @@ class MenuBar:
         about_action.triggered.connect(self.show_about)
 
     def print_rec(self):
-        PrintHandler(self.gui)
+        #PrintHandler(self.gui)
+        self.gui.make_pdf_document()
 
     def do_backup(self):
         """
@@ -919,7 +577,6 @@ class MenuBar:
                 cursor.select(QTextCursor.SelectionType.Document)
 
                 char_format = cursor.charFormat()
-                char_format.setForeground(Qt.GlobalColor.black)
                 cursor.mergeCharFormat(char_format)
                 cursor.clearSelection()
 
@@ -948,8 +605,8 @@ class MenuBar:
         help_layout = QVBoxLayout(self.help_widget)
 
         help_label = QLabel('Help Topics')
-        help_label.setFont(QFont(self.gui.main.user_settings['font_family'], 24))
-        help_label.setStyleSheet('color: #202050; margin-top: 20px; margin-bottom: 20px;')
+        help_label.setObjectName('title_label')
+        help_label.setFont(QFont(self.gui.main.user_settings['font_family'], 24, QFont.Weight.Bold))
         help_layout.addWidget(help_label)
 
         sh = ShowHelp(self.gui, self.main)
@@ -961,40 +618,50 @@ class MenuBar:
         """
         Display the 'about' text on user's input
         """
-        self.about_win = QWidget()
-        about_layout = QVBoxLayout()
-        self.about_win.setLayout(about_layout)
+        self.about_win = QWidget(self.gui)
+        self.about_win.setObjectName('about_widget')
+        self.about_win.setWindowIcon(QIcon('resources/icon.ico'))
+        self.about_win.setWindowFlag(Qt.WindowType.Window)
 
-        about_label = QLabel('Sermon Prep Database v.5.1.4')
+        about_layout = QVBoxLayout(self.about_win)
+
+        about_label = QLabel('Sermon Prep Database v.5.1.4.001')
+        about_label.setObjectName('title_label')
+        about_label.setFont(QFont(self.gui.main.user_settings['font_family'], 16, QFont.Weight.Bold))
         about_layout.addWidget(about_label)
 
-        about_text = QTextBrowser()
-        about_text.setHtml('''
-            Sermon Prep Database is free software: you can redistribute it and/or
-            modify it under the terms of the GNU General Public License (GNU GPL)
-            published by the Free Software Foundation, either version 3 of the
-            License, or (at your option) any later version.<br><br>
+        style = ''
+        if self.main.user_settings['theme'] == 'dark':
+            style = ' style="color: #e0e0ff;"'
 
-            This program is distributed in the hope that it will be useful,
-            but WITHOUT ANY WARRANTY; without even the implied warranty of
-            MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-            GNU General Public License for more details.<br><br>
-
-            You should have received a copy of the GNU General Public License
-            along with this program.  If not, see <a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>.<br><br>
-
-            The Sermon Prep Database program includes Artifex Software's GhostScript,
-            licensed under the GNU Affero General Public License (GNU AGPL). See
-            <a href="https://www.ghostscript.com/licensing/index.html">https://www.ghostscript.com/licensing/index.html</a> for more information.<br><br>
-
-            This program is a work-in-progress by a guy who is not, in no way, a
-            professional programmer. If you run into any problems, unexpected behavior,
-            missing features, or attempts to assimilate your unique biological and
-            technological distinctiveness, email <a href="mailto:pastorjeremywilson@gmail.com">pastorjeremywilson@gmail.com</a>
-        ''')
+        about_text = QLabel()
+        about_text.setObjectName('about_text')
+        about_text.setWordWrap(True)
+        about_text.setTextFormat(Qt.TextFormat.RichText)
+        about_text.setAttribute(Qt.WidgetAttribute.WA_SetStyle, True)
+        about_text.setFont(QFont(self.gui.main.user_settings['font_family'], 12))
         about_text.setOpenExternalLinks(True)
-        about_text.setReadOnly(True)
+        about_text.setText(
+            f'Sermon Prep Database is free software: you can redistribute it and/or '
+            f'modify it under the terms of the GNU General Public License (GNU GPL) '
+            f'published by the Free Software Foundation, either version 3 of the '
+            f'License, or (at your option) any later version.<br><br>'
+
+            f'This program is distributed in the hope that it will be useful, '
+            f'but WITHOUT ANY WARRANTY; without even the implied warranty of '
+            f'MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the '
+            f'GNU General Public License for more details.<br><br>'
+
+            f'You should have received a copy of the GNU General Public License '
+            f'along with this program.  If not, see <a href="http://www.gnu.org/licenses/"{style}>http://www.gnu.org/licenses/</a>.<br><br> '
+
+            f'This program is a work-in-progress by a guy who is not, in no way, a '
+            f'professional programmer. If you run into any problems, unexpected behavior, '
+            f'missing features, or attempts to assimilate your unique biological and '
+            f'technological distinctiveness, email <a href="mailto:pastorjeremywilson@gmail.com"{style}>pastorjeremywilson@gmail.com</a> '
+        )
         about_layout.addWidget(about_text)
+        self.about_win.adjustSize()
 
         self.about_win.show()
 
@@ -1454,348 +1121,42 @@ class ShowHelp(QTabWidget):
         self.addTab(sermon_widget, 'Sermon Tab')
 
 
-class FontFaceComboBox(QComboBox):
-    """
-    Creates a custom QComboBox that displays all fonts on the system in their own style.
-    :param gui.GUI gui: The current instance of GUI
-    """
-
-    def __init__(self, gui):
-        """
-        :param gui.GUI gui: The current instance of GUI
-        """
+class StartupSplash(QWidget):
+    def __init__(self, gui, progress_end):
         super().__init__()
         self.gui = gui
-        self.populate_widget()
 
-    def populate_widget(self):
-        try:
-            row = 0
-            model = self.model()
-            families = QFontDatabase.families()
-            for font in families:
-                self.addItem(font)
-                model.setData(model.index(row, 0), QFont(font, 14), Qt.ItemDataRole.FontRole)
-                row += 1
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+        self.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setMinimumWidth(300)
 
-        except Exception:
-            self.gui.main.error_log()
+        layout = QVBoxLayout(self)
 
+        self.working_label = QLabel()
+        self.working_label.setAutoFillBackground(False)
+        self.working_label.setPixmap(QPixmap('resources/icon.png'))
+        layout.addWidget(self.working_label, Qt.AlignmentFlag.AlignHCenter)
 
-class PrintHandler(QWidget):
-    """
-    QWidget that handles printing of the current record's data. Pulls and organizes the various inputs and adds
-    headings, creates and formats a QTextDocument for printing, creates QPixmaps based on the pages of that document,
-    and shows itself with various formatting funcions and a printer chooser combobox.
+        self.status_label = QLabel('Starting...')
+        self.status_label.setFont(QFont('Helvetica', 14, QFont.Weight.Bold))
+        self.status_label.setStyleSheet('color: #d7d7f4; text-align: center;')
+        self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(self.status_label, Qt.AlignmentFlag.AlignCenter)
 
-    :param GUI gui: the current instance of GUI
-    """
-
-    def __init__(self, gui):
-        super().__init__()
-        self.gui = gui
-        self.print_font = self.gui.standard_font
-        self.print_font.setPointSize(self.gui.standard_font.pixelSize())
-        self.line_height = 1.14
-        self.html = self.get_all_data()
-        self.printer = QPrinter()
-        self.make_print_widget()
-        self.show()
-
-    def get_all_data(self):
-        """
-        Gets all text values from the GUI and adds html-formatted headers
-        """
-        all_data = []
-        for i in range(self.gui.scripture_layout.count()):
-            component = self.gui.scripture_layout.itemAt(i).widget()
-
-            if isinstance(component, SpellCheckLineEdit):
-                all_data.append(component.text())
-            elif isinstance(component, SpellCheckTextEdit):
-                all_data.append(component.toSimplifiedHtml())
-
-        for i in range(self.gui.exegesis_layout.count()):
-            component = self.gui.exegesis_layout.itemAt(i).widget()
-
-            if isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
-                all_data.append(component.toSimplifiedHtml())
-
-        for i in range(self.gui.outline_layout.count()):
-            component = self.gui.outline_layout.itemAt(i).widget()
-
-            if isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
-                all_data.append(component.toSimplifiedHtml())
-
-        for i in range(self.gui.research_layout.count()):
-            component = self.gui.research_layout.itemAt(i).widget()
-
-            if isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
-                all_data.append(component.toSimplifiedHtml())
-
-        for i in range(self.gui.sermon_layout.count()):
-            component = self.gui.sermon_layout.itemAt(i).widget()
-
-            if isinstance(component, SpellCheckLineEdit) or isinstance(component, QDateEdit):
-                if isinstance(component, SpellCheckLineEdit):
-                    all_data.append(component.text())
-                else:
-                    all_data.append(component.date().toString('yyyy-MM-dd'))
-            elif isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
-                all_data.append(component.toSimplifiedHtml())
-
-        # add headers based on the user's chosen field names
-        text_with_headers = []
-        for i in range(len(all_data)):
-            if '<p>' not in all_data[i]:
-                all_data[i] = f'<p>{all_data[i]}</p>'
-
-            has_contents = False
-            this_string = re.sub('<.*?>', '', all_data[i]).strip()
-            if len(this_string) > 0:
-                has_contents = True
-
-            if has_contents:
-                text_with_headers.append(
-                    f'<b><u>{self.gui.main.user_settings["label" + str(i + 1)]}</u></b>'
-                )
-                text_with_headers.append(all_data[i])
-
-        # concatenate the text_with_headers list
-        html = '\n'.join(text_with_headers)
-        return html
-
-    def make_document(self):
-        """
-        Uses the currently selected printer to create a page rect for the QTextDocument. Returns the document as well
-        as the pixmaps based on each page of the document.
-        """
-        printer_page_rect_inch = self.printer.pageRect(QPrinter.Unit.Inch)
-        # convert the printer's page rect to a standard 96-dpi resolution
-        page_rect = QRectF(
-            printer_page_rect_inch.x() * 96,
-            printer_page_rect_inch.y() * 96,
-            printer_page_rect_inch.width() * 96,
-            printer_page_rect_inch.height() * 96
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(1, progress_end)
+        self.progress_bar.setTextVisible(False)
+        self.progress_bar.setStyleSheet(
+            'QProgressBar {'
+                'border: 1px solid gray;'
+            '}'
+            'QProgressBar::chunk {'
+                'border: none;'
+                'background: #d7d7f4;'
+            '}'
         )
-
-        # create the document
-        document = QTextDocument()
-        text_option = QTextOption()
-        text_option.setWrapMode(QTextOption.WrapMode.WordWrap)
-        document.setDefaultTextOption(text_option)
-        document.setDefaultFont(self.print_font)
-        document.setPageSize(QSizeF(page_rect.width(), page_rect.height()))
-        document.setDocumentMargin(page_rect.width() * (0.5 / 8.5))
-        document.setDefaultStyleSheet(
-            'p { '
-            'font-family: "' + self.print_font.family() + '";'
-                                                          'font-size: ' + str(self.print_font.pointSize()) + 'pt;'
-                                                                                                             'line-height: ' + str(
-                self.line_height) + ';'
-                                    '}'
-        )
-        document.setHtml(self.html)
-
-        # create pixmaps from each page of the document
-        page_pixmaps = []
-        current_y = 0
-        painter = QPainter()
-        painter.setFont(self.print_font)
-        self.num_pages = document.pageCount()
-        for i in range(document.pageCount()):
-            pixmap = QPixmap(int(page_rect.width()), int(page_rect.height()))
-            pixmap.fill(Qt.GlobalColor.white)
-
-            painter.begin(pixmap)
-            painter.translate(0, -current_y)  # translates the pixmap to the y position of the current page
-            document.drawContents(painter)
-            painter.end()
-
-            page_pixmaps.append(pixmap)
-            current_y += int(page_rect.height())
-
-        return document, page_pixmaps
-
-    def make_print_widget(self):
-        """
-        Lays out all of the individual widgets to be shown to the user.
-        """
-        self.setWindowTitle('Print Record')
-        self.setWindowFlag(Qt.WindowType.Window)
-
-        print_layout = QHBoxLayout(self)
-
-        preview_widget = QWidget()
-        print_layout.addWidget(preview_widget)
-        preview_layout = QVBoxLayout(preview_widget)
-
-        self.preview_label = QLabel()
-        preview_layout.addWidget(self.preview_label)
-
-        page_widget = QWidget()
-        preview_layout.addWidget(page_widget)
-        page_layout = QHBoxLayout(page_widget)
-
-        previous_button = QPushButton('<')
-        previous_button.setObjectName('previous')
-        previous_button.setFont(self.gui.bold_font)
-        previous_button.pressed.connect(self.change_page)
-        page_layout.addStretch()
-        page_layout.addWidget(previous_button)
-
-        self.page_label = QLabel()
-        self.page_label.setFont(self.gui.bold_font)
-        page_layout.addSpacing(20)
-        page_layout.addWidget(self.page_label)
-        page_layout.addSpacing(20)
-
-        next_button = QPushButton('>')
-        next_button.setObjectName('next')
-        next_button.setFont(self.gui.bold_font)
-        next_button.pressed.connect(self.change_page)
-        page_layout.addWidget(next_button)
-        page_layout.addStretch()
-
-        options_box = QWidget()
-        options_layout = QVBoxLayout(options_box)
-        print_layout.addWidget(options_box)
-
-        print_to_label = QLabel('Print to:')
-        print_to_label.setFont(self.gui.bold_font)
-        options_layout.addWidget(print_to_label)
-
-        win_management = wmi.WMI()
-        printers = win_management.Win32_Printer()
-        printer_combobox = QComboBox()
-        printer_combobox.setFont(self.gui.standard_font)
-        default = ''
-        for printer in printers:
-            if not printer.Hidden:
-                printer_combobox.addItem(printer.Name)
-            if printer.Default:
-                default = printer.Name
-        printer_combobox.setCurrentText(default)
-        printer_combobox.currentIndexChanged.connect(lambda: self.printer_change(printer_combobox.currentText()))
-        options_layout.addWidget(printer_combobox)
-
-        self.printer_change(default)
-
-        text_options_widget = QWidget()
-        options_layout.addWidget(text_options_widget)
-        text_options_layout = QHBoxLayout(text_options_widget)
-
-        font_size_label = QLabel('Font Size:')
-        font_size_label.setFont(self.gui.bold_font)
-        text_options_layout.addWidget(font_size_label)
-
-        font_size_spinbox = QSpinBox()
-        font_size_spinbox.setObjectName('font_size')
-        font_size_spinbox.setSingleStep(2)
-        font_size_spinbox.setFont(self.gui.standard_font)
-        font_size_spinbox.setValue(self.print_font.pointSize())
-        font_size_spinbox.valueChanged.connect(self.change_text_options)
-        text_options_layout.addWidget(font_size_spinbox)
-
-        point_label = QLabel('pt')
-        point_label.setFont(self.gui.standard_font)
-        text_options_layout.addWidget(point_label)
-        text_options_layout.addSpacing(20)
-
-        line_spacing_label = QLabel('Line spacing:')
-        line_spacing_label.setFont(self.gui.bold_font)
-        text_options_layout.addWidget(line_spacing_label)
-
-        line_spacing_combobox = QComboBox()
-        line_spacing_combobox.setObjectName('line_spacing')
-        line_spacing_options = [
-            'Single',
-            '1.14',
-            '1.5',
-            'Double'
-        ]
-        line_spacing_combobox.addItems(line_spacing_options)
-        line_spacing_combobox.setCurrentIndex(1)
-        line_spacing_combobox.setFont(self.gui.standard_font)
-        line_spacing_combobox.currentIndexChanged.connect(self.change_text_options)
-        text_options_layout.addWidget(line_spacing_combobox)
-
-        button_box = QWidget()
-        button_layout = QHBoxLayout(button_box)
-        options_layout.addWidget(button_box)
-
-        ok_button = QPushButton('Ok')
-        ok_button.pressed.connect(self.do_print)
-        ok_button.setFont(self.gui.standard_font)
-        button_layout.addWidget(ok_button)
-
-        cancel_button = QPushButton('Cancel')
-        cancel_button.pressed.connect(self.deleteLater)
-        cancel_button.setFont(self.gui.standard_font)
-        button_layout.addWidget(cancel_button)
-
-        options_layout.addStretch()
-
-    def printer_change(self, printer_name):
-        """
-        Calls for the document to be recreated based on the user's selected printer.
-
-        :param str printer_name: the system's name for the currently selected printer
-        """
-        self.printer = QPrinter(QPrinter.PrinterMode.HighResolution)
-        self.printer.setPrinterName(printer_name)
-
-        self.document, self.page_pixmaps = self.make_document()
-        self.preview_label.setPixmap(
-            self.page_pixmaps[0].scaledToWidth(400, Qt.TransformationMode.SmoothTransformation))
-        self.current_page = 0
-        self.page_label.setText(f'Page {self.current_page + 1} of {len(self.page_pixmaps)}')
-
-    def change_text_options(self):
-        """
-        Calls for the document to be recreated based on the user's changes to the line height or font
-        """
-        if self.sender().objectName() == 'font_size':
-            self.print_font.setPointSize(self.sender().value())
-        else:
-            if self.sender().currentText() == 'Single':
-                self.line_height = 1
-            elif self.sender().currentText() == 'Double':
-                self.line_height = 2
-            elif self.sender().currentText() == '1.14':
-                self.line_height = 1.14
-            elif self.sender().currentText() == '1.5':
-                self.line_height = 1.5
-        self.document, self.page_pixmaps = self.make_document()
-        self.preview_label.setPixmap(
-            self.page_pixmaps[0].scaledToWidth(400, Qt.TransformationMode.SmoothTransformation))
-        self.current_page = 0
-        self.page_label.setText(f'Page {self.current_page + 1} of {len(self.page_pixmaps)}')
-
-    def change_page(self):
-        """
-        Shows the next or previous page's pixmap based on user input
-        """
-        if self.sender().objectName() == 'previous':
-            self.current_page -= 1
-            if self.current_page < 0:
-                self.current_page = 0
-        elif self.sender().objectName() == 'next':
-            self.current_page += 1
-            if self.current_page == len(self.page_pixmaps):
-                self.current_page = len(self.page_pixmaps) - 1
-
-        self.preview_label.setPixmap(
-            self.page_pixmaps[self.current_page].scaledToWidth(400, Qt.TransformationMode.SmoothTransformation))
-        self.page_label.setText(f'Page {self.current_page + 1} of {len(self.page_pixmaps)}')
-
-    def do_print(self):
-        """
-        Uses the QTextDocument's own print function to draw the document to the user's selected printer and deletes
-        this widget.
-        """
-        self.document.print(self.printer)
-        self.deleteLater()
+        layout.addWidget(self.progress_bar, Qt.AlignmentFlag.AlignCenter)
 
 
 class SpellCheckHighlighter(QSyntaxHighlighter):
@@ -2147,3 +1508,352 @@ class SermonView(QWidget):
 
         self.sermon_label.setPixmap(self.page_pixmaps[self.current_page])
         self.page_label.setText(f'Page {self.current_page + 1} of {self.num_pages}')
+
+
+class Toolbar(QWidget):
+    """
+    Toolbar creates the uppermost QWidget of the GUI that holds formatting, search, and navigation elements.
+    """
+    def __init__(self, gui, main):
+        super().__init__()
+        self.gui = gui
+        self.main = main
+        self.setObjectName('toolbar')
+
+        icon_size = QSize(16, 16)
+
+        toolbar_layout = QHBoxLayout(self)
+        toolbar_layout.setContentsMargins(5, 5, 5, 5)
+
+        self.undo_button = QPushButton()
+        self.undo_button.setIcon(QIcon('resources/svg/spUndoIcon.svg'))
+        self.undo_button.setIconSize(icon_size)
+        self.undo_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.undo_button.clicked.connect(self.gui.menu_bar.press_ctrl_z)
+        self.undo_button.setToolTip('Undo')
+        toolbar_layout.addWidget(self.undo_button)
+
+        self.redo_button = QPushButton()
+        self.redo_button.setIcon(QIcon('resources/svg/spRedoIcon.svg'))
+        self.redo_button.setIconSize(icon_size)
+        self.redo_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.redo_button.clicked.connect(self.gui.menu_bar.press_ctrl_y)
+        self.redo_button.setToolTip('Redo')
+        toolbar_layout.addWidget(self.redo_button)
+        toolbar_layout.addSpacing(20)
+
+        self.bold_button = QPushButton()
+        self.bold_button.setCheckable(True)
+        self.bold_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.bold_button.clicked.connect(self.set_bold)
+        self.bold_button.setIcon(QIcon('resources/svg/spBoldIcon.svg'))
+        self.bold_button.setIconSize(icon_size)
+        self.bold_button.setToolTip('Bold\n(Ctrl+B)')
+        toolbar_layout.addWidget(self.bold_button)
+
+        self.italic_button = QPushButton()
+        self.italic_button.setCheckable(True)
+        self.italic_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.italic_button.clicked.connect(self.set_italic)
+        self.italic_button.setIcon(QIcon('resources/svg/spItalicIcon.svg'))
+        self.italic_button.setIconSize(icon_size)
+        self.italic_button.setToolTip('Italic\n(Ctrl+I)')
+        toolbar_layout.addWidget(self.italic_button)
+
+        self.underline_button = QPushButton()
+        self.underline_button.setCheckable(True)
+        self.underline_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.underline_button.clicked.connect(self.set_underline)
+        self.underline_button.setIcon(QIcon('resources/svg/spUnderlineIcon.svg'))
+        self.underline_button.setIconSize(icon_size)
+        self.underline_button.setToolTip('Underline\n(Ctrl+U)')
+        toolbar_layout.addWidget(self.underline_button)
+
+        self.bullet_button = QPushButton()
+        self.bullet_button.setCheckable(True)
+        self.bullet_button.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.bullet_button.clicked.connect(self.set_bullet)
+        self.bullet_button.setIcon(QIcon('resources/svg/spBulletIcon.svg'))
+        self.bullet_button.setIconSize(icon_size)
+        self.bullet_button.setToolTip('Add Bullets\n(Ctrl+Shift+B)')
+        toolbar_layout.addWidget(self.bullet_button)
+        toolbar_layout.addSpacing(20)
+
+        self.text_visible = QPushButton()
+        self.text_visible.setObjectName('text_visible')
+        self.text_visible.setCheckable(True)
+        self.text_visible.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.text_visible.setToolTip('Show Sermon Text on All Tabs')
+        self.text_visible.setIcon(QIcon('resources/svg/spShowText.svg'))
+        self.text_visible.setIconSize(QSize(round(icon_size.width() * 2.5), icon_size.height()))
+        self.text_visible.clicked.connect(self.keep_text_visible)
+        toolbar_layout.addWidget(self.text_visible)
+
+        toolbar_layout.addStretch(1)
+
+        choose_label = QLabel('Get Sermon:')
+        choose_label.setAutoFillBackground(False)
+        toolbar_layout.addWidget(choose_label)
+
+        dates_label = QLabel('by Date')
+        dates_label.setAutoFillBackground(False)
+        toolbar_layout.addWidget(dates_label)
+
+        self.dates_cb = QComboBox()
+        self.dates_cb.addItems(self.main.dates)
+        self.dates_cb.currentIndexChanged.connect(lambda: self.main.get_by_index(self.dates_cb.currentIndex()))
+        self.dates_cb.setMinimumWidth(100)
+        toolbar_layout.addWidget(self.dates_cb)
+
+        references_label = QLabel('by Reference')
+        references_label.setAutoFillBackground(False)
+        toolbar_layout.addWidget(references_label)
+
+        self.references_cb = QComboBox()
+        for item in self.main.references:
+            self.references_cb.addItem(item[0])
+        self.references_cb.currentIndexChanged.connect(
+            lambda: self.get_index_of_reference(self.references_cb.currentIndex()))
+        self.references_cb.setMinimumWidth(100)
+        toolbar_layout.addWidget(self.references_cb)
+        toolbar_layout.addStretch(1)
+
+        search_label = QLabel('Keyword Search:')
+        search_label.setAutoFillBackground(False)
+        toolbar_layout.addWidget(search_label)
+
+        search_field = QLineEdit()
+        search_field.setMinimumWidth(175)
+        search_field.returnPressed.connect(lambda: self.do_search(search_field.text()))
+        toolbar_layout.addWidget(search_field)
+
+        toolbar_layout.addStretch(1)
+
+        self.first_rec_button = QPushButton()
+        self.first_rec_button.setIcon(QIcon('resources/svg/spFirstRecIcon.svg'))
+        self.first_rec_button.setIconSize(icon_size)
+        self.first_rec_button.clicked.connect(self.main.first_rec)
+        self.first_rec_button.setToolTip('Jump to First Record')
+        toolbar_layout.addWidget(self.first_rec_button)
+
+        self.prev_rec_button = QPushButton()
+        self.prev_rec_button.setIcon(QIcon('resources/svg/spPrevRecIcon.svg'))
+        self.prev_rec_button.setIconSize(icon_size)
+        self.prev_rec_button.clicked.connect(self.main.prev_rec)
+        self.prev_rec_button.setToolTip('Go to Previous Record')
+        toolbar_layout.addWidget(self.prev_rec_button)
+
+        self.next_rec_button = QPushButton()
+        self.next_rec_button.setIcon(QIcon('resources/svg/spNextRecIcon.svg'))
+        self.next_rec_button.clicked.connect(self.main.next_rec)
+        self.next_rec_button.setToolTip('Go to Next Record')
+        toolbar_layout.addWidget(self.next_rec_button)
+
+        self.last_rec_button = QPushButton()
+        self.last_rec_button.setIcon(QIcon('resources/svg/spLastRecIcon.svg'))
+        self.last_rec_button.clicked.connect(self.main.last_rec)
+        self.last_rec_button.setToolTip('Jump to Last Record')
+        toolbar_layout.addWidget(self.last_rec_button)
+
+        self.new_rec_button = QPushButton()
+        self.new_rec_button.setIcon(QIcon('resources/svg/spNewIcon.svg'))
+        self.new_rec_button.clicked.connect(self.main.new_rec)
+        self.new_rec_button.setToolTip('Create a New Record')
+        toolbar_layout.addWidget(self.new_rec_button)
+        toolbar_layout.addSpacing(20)
+
+        self.save_button = QPushButton()
+        self.save_button.setIcon(QIcon('resources/svg/spSaveIcon.svg'))
+        self.save_button.setIconSize(icon_size)
+        self.save_button.clicked.connect(self.main.save_rec)
+        self.save_button.setToolTip('Save this Record')
+        toolbar_layout.addWidget(self.save_button)
+
+        self.print_button = QPushButton()
+        self.print_button.setIcon(QIcon('resources/svg/spPrintIcon.svg'))
+        self.print_button.setIconSize(icon_size)
+        self.print_button.clicked.connect(self.gui.menu_bar.print_rec)
+        self.print_button.setToolTip('Print this Record')
+        toolbar_layout.addWidget(self.print_button)
+
+        self.id_label = QLabel()
+        toolbar_layout.addWidget(self.id_label)
+
+    def keep_text_visible(self):
+        """
+        Handle the user's toggling of the text_visible button.
+        """
+        check_state = self.text_visible.isChecked()
+
+        if check_state:
+            # add the reference and passage text to each tab's text_box then make it show
+            num_tabs = self.gui.tab_widget.count()
+            for i in range(num_tabs):
+                if i > 0:
+                    frame = self.gui.tab_widget.widget(i)
+                    widget = frame.findChild(QWidget, 'text_box')
+                    text_title = widget.findChild(QLabel, 'text_title')
+                    text_edit = widget.findChild(QTextEdit, 'text_box_text_edit')
+                    text_edit.setText(self.gui.sermon_text_edit.toPlainText())
+                    text_title.setText(self.gui.sermon_reference_field.text())
+                    if widget:
+                        widget.show()
+        else:
+            # hide the text_box on each tab
+            num_tabs = self.gui.tab_widget.count()
+            for i in range(num_tabs):
+                if i > 0:
+                    frame = self.gui.tab_widget.widget(i)
+                    widget = frame.findChild(QWidget, 'text_box')
+                    if widget:
+                        widget.hide()
+
+    def get_index_of_reference(self, index):
+        """
+        Method to find the index number of the user's chosen reference.
+
+        :param int index: The index of the reference combo box's chosen reference
+        """
+        id_to_find = self.main.references[index][1]
+        counter = 0
+        for item in self.main.ids:
+            if item == id_to_find:
+                break
+            counter += 1
+        self.main.get_by_index(counter)
+
+    def do_search(self, text):
+        """
+        Method to call get_search_results from SermonPrepDatabase and display the results
+
+        :param str text: The user's search term(s)
+        """
+        result_list = self.main.get_search_results(text)
+        if len(result_list) == 0:
+            QMessageBox.information(
+                None,
+                'No Results',
+                'No results were found. Please try your search again.',
+                QMessageBox.StandardButton.Ok
+            )
+        else:
+            from widgets import SearchBox
+            search_box = SearchBox(self.gui)
+            self.gui.tab_widget.addTab(search_box, QIcon('resources/svg/spSearchIcon.svg'), 'Search')
+            search_box.show_results(result_list)
+            self.gui.tab_widget.setCurrentWidget(search_box)
+
+    def set_bold(self):
+        """
+        Method to toggle the bold state of the text at the user's cursor or selection.
+        """
+        component = self.gui.focusWidget()
+        if isinstance(component, QTextEdit):
+            cursor = component.textCursor()
+            # handle this differently if the user has a section of text selected
+            if cursor.hasSelection():
+                selection_start = cursor.selectionStart()
+                selection_end = cursor.selectionEnd()
+                cursor.setPosition(selection_start, QTextCursor.MoveMode.MoveAnchor)
+                cursor.setPosition(selection_end, QTextCursor.MoveMode.KeepAnchor)
+                char_format = cursor.charFormat()
+                if char_format.font().bold():
+                    char_format.setFontWeight(QFont.Weight.Normal)
+                    cursor.mergeCharFormat(char_format)
+                else:
+                    char_format.setFontWeight(QFont.Weight.Bold)
+                    cursor.mergeCharFormat(char_format)
+            else:
+                font = cursor.charFormat().font()
+                if font.weight() == QFont.Weight.Normal:
+                    font.setWeight(QFont.Weight.Bold)
+                    component.setCurrentFont(font)
+                else:
+                    font.setWeight(QFont.Weight.Normal)
+                    component.setCurrentFont(font)
+        else:
+            self.bold_button.setChecked(False)
+
+    def set_italic(self):
+        """
+        Method to toggle the italic state of the text at the user's cursor or selection.
+        """
+        component = self.gui.focusWidget()
+        if isinstance(component, QTextEdit):
+            cursor = component.textCursor()
+            if cursor.hasSelection():
+                font = QTextCharFormat(cursor.charFormat())
+                if not font.fontItalic():
+                    font.setFontItalic(True)
+                    cursor.setCharFormat(QTextCharFormat(font))
+                else:
+                    font.setFontItalic(False)
+                    cursor.mergeCharFormat(QTextCharFormat(font))
+            else:
+                font = cursor.charFormat().font()
+                if not font.italic():
+                    font.setItalic(True)
+                    component.setCurrentFont(font)
+                else:
+                    font.setItalic(False)
+                    component.setCurrentFont(font)
+        else:
+            self.italic_button.setChecked(False)
+
+    def set_underline(self):
+        """
+        Method to toggle the underline state of the text at the user's cursor or selection.
+        """
+        component = self.gui.focusWidget()
+        if isinstance(component, QTextEdit):
+            cursor = component.textCursor()
+            if cursor.hasSelection():
+                font = QTextCharFormat(cursor.charFormat())
+                if not font.fontUnderline():
+                    font.setFontUnderline(True)
+                    cursor.setCharFormat(QTextCharFormat(font))
+                else:
+                    font.setFontUnderline(False)
+                    cursor.mergeCharFormat(QTextCharFormat(font))
+            else:
+                font = cursor.charFormat().font()
+                if not font.underline():
+                    font.setUnderline(True)
+                    component.setCurrentFont(font)
+                else:
+                    font.setUnderline(False)
+                    component.setCurrentFont(font)
+        else:
+            self.underline_button.setChecked(False)
+
+    def set_bullet(self):
+        """
+        Method to toggle the bulleted list state of the text at the user's cursor or selection.
+        """
+        component = self.gui.focusWidget()
+        if isinstance(component, QTextEdit):
+            cursor = component.textCursor()
+            text_list = cursor.currentList()
+            if text_list:
+                start = cursor.selectionStart()
+                end = cursor.selectionEnd()
+                removed = 0
+                for i in range(text_list.count()):
+                    item = text_list.item(i - removed)
+                    if (item.position() <= end and
+                            item.position() + item.length() > start):
+                        text_list.remove(item)
+                        block_cursor = QTextCursor(item)
+                        block_format = block_cursor.blockFormat()
+                        block_format.setIndent(0)
+                        block_cursor.mergeBlockFormat(block_format)
+                        removed += 1
+                component.setTextCursor(cursor)
+            else:
+                list_format = QTextListFormat()
+                style = QTextListFormat.Style.ListDisc
+                list_format.setStyle(style)
+                cursor.createList(list_format)
+                component.setTextCursor(cursor)
+        else:
+            self.bullet_button.setChecked(False)

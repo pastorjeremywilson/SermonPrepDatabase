@@ -5,8 +5,9 @@
       <excludeFolder url="file://$MODULE_DIR$/venv" />
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/.linux_venv" />
+      <excludeFolder url="file://$MODULE_DIR$/.win_venv" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.11 virtualenv at X:\Documents\Python Workspace\Sermon Prep Database\.venv" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.11 (Sermon Prep Database)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PackageRequirementsSettings">
