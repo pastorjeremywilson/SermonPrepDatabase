@@ -625,7 +625,7 @@ class MenuBar:
 
         about_layout = QVBoxLayout(self.about_win)
 
-        about_label = QLabel('Sermon Prep Database v.5.1.4.001')
+        about_label = QLabel('Sermon Prep Database v.5.2.0')
         about_label.setObjectName('title_label')
         about_label.setFont(QFont(self.gui.main.user_settings['font_family'], 16, QFont.Weight.Bold))
         about_layout.addWidget(about_label)

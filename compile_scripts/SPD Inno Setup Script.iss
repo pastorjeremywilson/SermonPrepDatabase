@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Sermon Prep Database"
-#define MyAppVersion "v.5.1.4.001"
+#define MyAppVersion "v.5.2.0"
 #define MyAppURL "https://sourceforge.net/projects/sermon-prep-database"
 #define MyAppExeName "SermonPrepDatabase.exe"
 #define OutputLocation "C:\Users\pasto\Desktop\output\SermonPrepDatabase"
