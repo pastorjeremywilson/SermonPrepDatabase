@@ -1,11 +1,15 @@
+import io
+import re
 from os.path import exists
 
-from PyQt6.QtCore import Qt, QSize, QDate, QDateTime, pyqtSignal, QThreadPool
+from PyQt6.QtCore import Qt, QSize, QDate, QDateTime, pyqtSignal, QThreadPool, QByteArray, QBuffer
 from PyQt6.QtGui import QIcon, QFont, QPixmap, QCloseEvent, QAction, QUndoStack, QTextCursor, QTextBlockFormat
+from PyQt6.QtPdf import QPdfDocument
 from PyQt6.QtWidgets import QWidget, QTabWidget, QGridLayout, QLabel, QCheckBox, QDateEdit, QTextEdit, QMainWindow, \
     QVBoxLayout, QPushButton, QTabBar
 
 from get_scripture import GetScripture
+from print_dialog import PrintDialog
 from spell_check_widgets import SpellCheckTextEdit, SpellCheckLineEdit
 from widgets import MenuBar, StartupSplash
 from runnables import LoadDictionary
@@ -685,6 +689,150 @@ class GUI(QMainWindow):
         """
         self.main.user_settings['auto_fill'] = self.auto_fill_checkbox.isChecked()
         self.main.save_user_settings()
+
+    def get_reportlab_data(self):
+        all_data = []
+        for i in range(self.scripture_layout.count()):
+            component = self.scripture_layout.itemAt(i).widget()
+
+            if isinstance(component, SpellCheckLineEdit):
+                all_data.append(component.text())
+            elif isinstance(component, SpellCheckTextEdit):
+                all_data.append(component.toSimplifiedHtml())
+
+        for i in range(self.exegesis_layout.count()):
+            component = self.exegesis_layout.itemAt(i).widget()
+
+            if isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
+                all_data.append(component.toSimplifiedHtml())
+
+        for i in range(self.outline_layout.count()):
+            component = self.outline_layout.itemAt(i).widget()
+
+            if isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
+                all_data.append(component.toSimplifiedHtml())
+
+        for i in range(self.research_layout.count()):
+            component = self.research_layout.itemAt(i).widget()
+
+            if isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
+                all_data.append(component.toSimplifiedHtml())
+
+        for i in range(self.sermon_layout.count()):
+            component = self.sermon_layout.itemAt(i).widget()
+
+            if isinstance(component, SpellCheckLineEdit) or isinstance(component, QDateEdit):
+                if isinstance(component, SpellCheckLineEdit):
+                    all_data.append(component.text())
+                else:
+                    all_data.append(component.date().toString('yyyy-MM-dd'))
+            elif isinstance(component, SpellCheckTextEdit) and not component.objectName() == 'textbox':
+                all_data.append(component.toSimplifiedHtml())
+
+        text_with_headers = []
+        for i in range(len(all_data)):
+            has_contents = False
+            if len(re.sub('<.*?>', '', all_data[i]).strip()) > 0:
+                has_contents = True
+
+            if has_contents:
+                text_with_headers.append(
+                    f'{self.main.user_settings["label" + str(i + 1)]}'
+                )
+                text_with_headers.append(all_data[i])
+
+        return text_with_headers
+
+    def make_pdf_document(self):
+        """
+        Uses the currently selected printer to create a page rect for the QTextDocument. Returns the document as well
+        as the pixmaps based on each page of the document.
+        """
+        from reportlab.lib.pagesizes import letter
+        from reportlab.lib.units import inch
+        from reportlab.lib.styles import ParagraphStyle
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.platypus import BaseDocTemplate
+        from reportlab.platypus import PageTemplate
+        from reportlab.platypus import Frame
+        from reportlab.platypus import Paragraph
+
+        page_frame = Frame(
+            id='page_frame',
+            x1=0,
+            y1=0,
+            width=8.5* inch,
+            height=11 * inch,
+            showBoundary=1
+        )
+
+        page_template = PageTemplate(
+            id='page_template',
+            frames=[page_frame]
+        )
+
+        subtitle_paragraph = ParagraphStyle(
+            name='Subtitle',
+            fontName='Times-Roman',
+            fontSize=12,
+            spaceBefore=18,
+            spaceAfter=18,
+            keepWithNext=True
+        )
+
+        normal_paragraph = ParagraphStyle(
+            name='Normal',
+            fontName='Times-Roman',
+            fontSize=12,
+            spaceAfter=14
+        )
+
+        bullet_string = '\u2022 '
+        bullet_string_width = pdfmetrics.stringWidth(bullet_string, normal_paragraph.fontName, normal_paragraph.fontSize)
+        bullet_paragraph = ParagraphStyle(
+            name='Bullet',
+            fontName='Times-Roman',
+            fontSize=12,
+            spaceAfter=7,
+            leftIndent=20,
+            firstLineIndent=-bullet_string_width
+        )
+
+        pdf_buffer = io.BytesIO()
+        doc = BaseDocTemplate(pdf_buffer, pagesize=letter, pageTemplates=(page_template,))
+
+        all_data = self.get_reportlab_data()
+        story = []
+        for i in range(0, len(all_data), 2):
+            story.append(Paragraph(f'<b><u>{all_data[i]}</u></b>', subtitle_paragraph))
+            data = all_data[i + 1].replace('<ul>', '').replace('</ul>', '')
+            if '<li>' in data:
+                data = data.replace('<li>', '\n\u2022 ')
+                data = re.sub(r'\n+', '\n', data)
+                data_split = data.split('\n')
+                for item in data_split:
+                    item = item.strip()
+                    if not len(item) == 0:
+                        if "\u2022" in item:
+                            story.append(Paragraph(item, bullet_paragraph))
+                        else:
+                            story.append(Paragraph(item, normal_paragraph))
+            else:
+                story.append(Paragraph(data, normal_paragraph))
+
+        doc.build(story)
+
+        byte_array = QByteArray(pdf_buffer.getvalue())
+        pdf_buffer.close()
+
+        buffer = QBuffer(byte_array)
+        buffer.setData(byte_array)
+        buffer.open(QBuffer.OpenModeFlag.ReadOnly)
+        pdf_document = QPdfDocument(self)
+        pdf_document.load(buffer)
+
+        print_dialog = PrintDialog(pdf_document, self, page_margins_vertical=0.75, page_margins_horizontal=0.75)
+        print_dialog.exec()
 
     def text_changes(self):
         """

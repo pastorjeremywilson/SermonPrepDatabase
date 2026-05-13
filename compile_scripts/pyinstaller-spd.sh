@@ -1,3 +1,4 @@
+#!/bin/bash
 ../.linux_venv/bin/pyinstaller --noconfirm --clean --windowed \
 -i "../resources/svg/spIcon.svg" \
 --add-data=../resources:resources/ \

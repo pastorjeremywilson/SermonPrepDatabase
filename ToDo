@@ -1,4 +1,6 @@
 DONE
+    Fix dark theme
+    Fix menu item widths
 
 TO DO
     Switch date recognition to native Python date parsing.

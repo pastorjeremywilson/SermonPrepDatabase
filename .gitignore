@@ -11,3 +11,4 @@ __pycache__/toolbar.cpython-311.pyc
 compile_scripts/*/
 compile_scripts/*.deb
 .idea/
+.win_venv/
